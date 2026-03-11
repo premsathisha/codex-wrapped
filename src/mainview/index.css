@@ -192,6 +192,64 @@ textarea {
   background: rgba(56, 189, 248, 0.28);
 }
 
+.wrapped-nav-liquid {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.36), 0 0 18px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(4px);
+  transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 2.2);
+}
+
+.wrapped-nav-liquid:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4), 0 0 24px rgba(77, 186, 255, 0.16);
+}
+
+.liquidGlass-effect {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  backdrop-filter: blur(3px);
+  filter: url(#glass-distortion);
+}
+
+.liquidGlass-tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.liquidGlass-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  box-shadow: inset 2px 2px 1px 0 rgba(255, 255, 255, 0.55), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.45);
+}
+
+.wrapped-nav-content {
+  position: relative;
+  z-index: 3;
+}
+
+.wrapped-nav-select {
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f1f5f9;
+  background: rgba(2, 6, 23, 0.52);
+}
+
+.wrapped-nav-select:focus-visible {
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
+}
+
+.wrapped-nav-filter {
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
 @keyframes wrappedRevealLeftToRight {
   from {
     clip-path: inset(0 100% 0 0);
