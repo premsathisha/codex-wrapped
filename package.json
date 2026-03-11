@@ -1,0 +1,56 @@
+{
+  "name": "ai-wrapped",
+  "version": "0.0.1",
+  "description": "Your year in AI — a Spotify Wrapped-style dashboard for AI coding agents",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/premsathisha/ai-wrapped.git"
+  },
+  "homepage": "https://github.com/premsathisha/ai-wrapped",
+  "keywords": ["ai", "wrapped", "claude", "codex", "gemini", "copilot", "stats", "dashboard"],
+  "bin": {
+    "ai-wrapped": "bin/cli.ts"
+  },
+  "files": [
+    "bin/",
+    "src/bun/",
+    "src/shared/",
+    "dist/",
+    "public/",
+    "assets/icons/icon.iconset/",
+    "assets/icons/icon.png",
+    "assets/icons/icon.ico",
+    "assets/icons/icon.icns",
+    "tsconfig.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "bun run build && bun --hot ./src/bun/index.ts",
+    "dev:hmr": "concurrently \"vite --port 5173\" \"VITE_DEV_SERVER_URL=http://127.0.0.1:5173 bun --hot ./src/bun/index.ts\"",
+    "build": "vite build",
+    "build:prod": "vite build",
+    "prepack": "vite build",
+    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
+    "clean": "rm -rf dist build .electrobun"
+  },
+  "dependencies": {
+    "lz-string": "^1.5.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "latest",
+    "@types/bun": "latest",
+    "@types/lz-string": "^1.5.0",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "latest",
+    "concurrently": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "recharts": "latest",
+    "tailwindcss": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  }
+}
