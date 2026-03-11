@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root,
@@ -5,9 +6,9 @@
   color-scheme: dark;
   --wrapped-header-clearance: 7rem;
   --wrapped-slide-bottom-space: 1rem;
-  --surface-0: #020617;
-  --surface-1: #091126;
-  --surface-2: #101a34;
+  --surface-0: #000000;
+  --surface-1: #000000;
+  --surface-2: #000000;
   --text-primary: #f8fbff;
   --text-secondary: #c8d2e7;
   --text-muted: #8ea2c2;
@@ -21,9 +22,9 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --surface-0: #eaf3ff;
-  --surface-1: #f8fbff;
-  --surface-2: #e5f1ff;
+  --surface-0: #000000;
+  --surface-1: #000000;
+  --surface-2: #000000;
   --text-primary: #101828;
   --text-secondary: #334155;
   --text-muted: #5b6b85;
@@ -38,9 +39,9 @@
 @media (prefers-color-scheme: light) {
   :root[data-theme="system"] {
     color-scheme: light;
-    --surface-0: #eaf3ff;
-    --surface-1: #f8fbff;
-    --surface-2: #e5f1ff;
+    --surface-0: #000000;
+    --surface-1: #000000;
+    --surface-2: #000000;
     --text-primary: #101828;
     --text-secondary: #334155;
     --text-muted: #5b6b85;
@@ -65,27 +66,26 @@ body,
 
 body {
   margin: 0;
-  font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
-  background:
-    radial-gradient(90rem 48rem at 92% -8%, rgba(59, 130, 246, 0.25) 0%, transparent 62%),
-    radial-gradient(75rem 42rem at -8% 108%, rgba(20, 184, 166, 0.28) 0%, transparent 55%),
-    var(--surface-0);
+  font-family: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+  background: #000000;
   color: var(--text-primary);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 .wrapped-scroll {
   height: 100%;
   overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  scroll-padding-top: var(--wrapped-header-clearance);
-  scroll-behavior: smooth;
   padding-top: var(--wrapped-header-clearance);
 }
 
 .wrapped-card {
   position: relative;
-  min-height: calc(100vh - var(--wrapped-header-clearance) - var(--wrapped-slide-bottom-space));
-  scroll-snap-align: start;
   border-radius: 2rem;
   border: 1px solid rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(18px);
@@ -93,7 +93,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .wrapped-card::after {
@@ -106,41 +106,39 @@ body {
 }
 
 .wrapped-card-hero {
-  background:
-    linear-gradient(135deg, rgba(38, 21, 91, 0.86), rgba(13, 59, 141, 0.8) 54%, rgba(13, 148, 136, 0.7)),
-    rgba(2, 6, 23, 0.78);
+  background: #1d1d1f;
 }
 
 .wrapped-card-time {
-  background: linear-gradient(140deg, rgba(14, 36, 87, 0.78), rgba(15, 70, 124, 0.68), rgba(14, 165, 233, 0.38));
+  background: #1d1d1f;
 }
 
 .wrapped-card-models {
-  background: linear-gradient(140deg, rgba(22, 36, 86, 0.8), rgba(10, 73, 107, 0.72), rgba(34, 197, 94, 0.22));
+  background: #1d1d1f;
 }
 
 .wrapped-card-agents {
-  background: linear-gradient(142deg, rgba(10, 45, 85, 0.8), rgba(8, 80, 105, 0.72), rgba(56, 189, 248, 0.34));
+  background: #1d1d1f;
 }
 
 .wrapped-card-activity {
-  background: linear-gradient(145deg, rgba(4, 32, 62, 0.85), rgba(2, 75, 82, 0.72), rgba(45, 212, 191, 0.35));
+  background: #1d1d1f;
 }
 
 .wrapped-card-cost {
-  background: linear-gradient(145deg, rgba(12, 37, 89, 0.82), rgba(7, 75, 121, 0.7), rgba(56, 189, 248, 0.32));
+  background: #1d1d1f;
 }
 
 .wrapped-card-repos {
-  background: linear-gradient(145deg, rgba(10, 45, 77, 0.84), rgba(11, 81, 110, 0.72), rgba(20, 184, 166, 0.34));
+  background: #1d1d1f;
 }
 
 .wrapped-card-hours {
-  background: linear-gradient(145deg, rgba(30, 20, 80, 0.84), rgba(50, 25, 110, 0.72), rgba(139, 92, 246, 0.34));
+  background: #1d1d1f;
 }
 
 .wrapped-card-loading {
-  background: linear-gradient(145deg, rgba(2, 6, 23, 0.88), rgba(13, 30, 60, 0.78));
+  background: #1d1d1f;
   align-items: center;
   text-align: center;
 }
@@ -150,7 +148,7 @@ body {
   font-size: 0.72rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(186, 230, 253, 0.92);
+  color: #2a97ff;
 }
 
 .wrapped-title {
@@ -165,7 +163,7 @@ body {
 .wrapped-tile {
   border-radius: 1.2rem;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(2, 6, 23, 0.37);
+  background: #000000;
   padding: 1rem;
   backdrop-filter: blur(8px);
 }
@@ -233,7 +231,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #22d3ee;
+  background: #777BF8;
   animation: scanningPulse 1.2s ease-in-out infinite;
 }
 

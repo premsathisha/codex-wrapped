@@ -1,70 +1,112 @@
-<p align="center">
-  <img src="assets/icons/icon.png" width="128" height="128" alt="AI Wrapped icon" />
-</p>
+# AI Wrapped
 
-<h1 align="center">AI Wrapped</h1>
+AI Wrapped is a local dashboard that summarizes your coding activity across AI coding tools in a Spotify Wrapped-style view.
 
-<p align="center">
-  Local web dashboard for AI coding agent activity
-</p>
+It scans local session files, builds daily aggregates, and serves a local web app.
 
-Owner: **premsathisha**  
-Forked from: [https://github.com/gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped)
+## What It Tracks
 
-Built on top of [agent-sessions](https://github.com/jazzyalex/agent-sessions) session format discovery — reads JSONL/JSON session logs that AI coding agents write to disk.
+- Sessions
+- Messages and tool calls
+- Token usage
+- Cost estimates
+- Model and agent breakdowns
+- Daily/hourly activity trends
+- Top repositories
 
-## Supported Agents
+Supported source currently: Codex.
 
-- **Claude Code** — `~/.claude/projects/` JSONL sessions + subagent logs
-- **OpenAI Codex** — Codex CLI session files
-- **Google Gemini CLI** — Gemini session logs
-- **OpenCode** — OpenCode session data
-- **Droid** — Droid session files
-- **GitHub Copilot** — Copilot session logs
+## Requirements
 
-## What It Shows
+- Bun (latest stable)
+- macOS, Linux, or Windows
+- Local Codex history files in your home directory (`~/.codex`)
 
-- Total sessions, messages, tool calls, tokens, and estimated cost
-- Daily activity timeline with per-agent and per-model breakdown
-- Cost breakdown by model (Claude Opus, Sonnet, GPT-4o, Gemini Pro, etc.)
-- Agent usage distribution (pie chart)
-- Time spent — total hours, average session duration, longest session, current streak, active day coverage ring
-- Top repositories with sessions, tokens, cost, and duration
-- Coding hours — 24-hour activity breakdown by agent
+## Quick Start
 
-## Quick start
+1. Install dependencies:
 
 ```bash
 bun install
+```
+
+2. Build the frontend:
+
+```bash
 bun run build
+```
+
+3. Start the app:
+
+```bash
 bun ./bin/cli.ts
 ```
 
-Open: `http://127.0.0.1:3210`
+4. Open:
 
-## Stack
+`http://127.0.0.1:3210`
 
-- **Runtime**: [Bun](https://bun.sh)
-- **Backend**: Bun HTTP server
-- **Frontend**: React + Tailwind CSS + Recharts
-- **Build**: Vite
-- **Storage**: JSON files in `~/.ai-wrapped/`
+## Development
 
-## Getting Started
-
-```bash
-bun install
-```
-
-### Development
+Run backend + built frontend:
 
 ```bash
 bun run dev
 ```
 
-## How It Works
+Run frontend HMR + backend together:
 
-1. On launch (and every 5 minutes by default), the app scans known session directories for each agent
-2. New or changed session files are parsed into a normalized format with token counts, tool calls, and cost estimates
-3. Aggregated daily stats are written to `~/.ai-wrapped/daily.json`
-4. The frontend fetches summaries over HTTP and renders the Wrapped-style dashboard
+```bash
+bun run dev:hmr
+```
+
+Typecheck:
+
+```bash
+bun run typecheck
+```
+
+Run tests:
+
+```bash
+bun test
+```
+
+Clean build artifacts:
+
+```bash
+bun run clean
+```
+
+## CLI Options
+
+```bash
+bun ./bin/cli.ts --help
+```
+
+Common options:
+
+- `--version` or `-v`: show app version
+- `--rebuild`: rebuild frontend before launch
+- `--uninstall`: remove local AI Wrapped data at `~/.ai-wrapped`
+
+## Data and Privacy
+
+- The app is local-first.
+- It reads local session files from supported tools.
+- Aggregated output is stored in `~/.ai-wrapped`.
+- No hosted API is required for core functionality.
+
+## Troubleshooting
+
+- If the UI looks stale, run `bun ./bin/cli.ts --rebuild`.
+- If data seems outdated, trigger a refresh/scan from the app and ensure your source directories exist.
+- If port `3210` is busy, set `PORT` before launch:
+
+```bash
+PORT=4321 bun ./bin/cli.ts
+```
+
+## Release Notes
+
+This repository uses Conventional Commits with automated releases on `main` via semantic-release.

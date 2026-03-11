@@ -1,6 +1,6 @@
 export type SessionSource = "claude" | "codex" | "gemini" | "opencode" | "droid" | "copilot";
 
-export const SESSION_SOURCES: SessionSource[] = ["claude", "codex", "gemini", "opencode", "droid", "copilot"];
+export const SESSION_SOURCES: SessionSource[] = ["codex"];
 
 export interface TokenUsage {
   inputTokens: number;

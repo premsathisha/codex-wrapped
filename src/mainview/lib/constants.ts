@@ -10,23 +10,23 @@ export const SOURCE_LABELS: Record<SessionSource, string> = {
 };
 
 export const SOURCE_COLORS: Record<SessionSource, string> = {
-  claude: "#f59e0b",
-  codex: "#14b8a6",
-  gemini: "#60a5fa",
-  opencode: "#f97316",
-  droid: "#34d399",
-  copilot: "#f43f5e",
+  claude: "#30368F",
+  codex: "#777BF8",
+  gemini: "#4B4FD1",
+  opencode: "#1F245E",
+  droid: "#30368F",
+  copilot: "#4B4FD1",
 };
 
 export const CHART_COLORS = [
-  "#7dd3fc",
-  "#86efac",
-  "#fca5a5",
-  "#fcd34d",
-  "#c4b5fd",
-  "#fdba74",
-  "#67e8f9",
-  "#f9a8d4",
+  "#1F245E",
+  "#30368F",
+  "#4B4FD1",
+  "#777BF8",
+  "#D8DDFF",
+  "#4B4FD1",
+  "#30368F",
+  "#777BF8",
 ];
 
 export const DEFAULT_PAGE_SIZE = 20;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from "react";
-import { SESSION_SOURCES, type SessionSource } from "@shared/schema";
+import { SESSION_SOURCES, type SessionSource, type TokenUsage } from "@shared/schema";
 import {
   Area,
   AreaChart,
@@ -19,12 +19,14 @@ import { AnimatedNumber } from "./StatsCards";
 import { formatDate, formatDuration, formatNumber, formatTokens, formatUsd } from "../lib/formatters";
 import { formatHourLabel, hasHourlyActivity } from "../lib/hourly";
 import { HEATMAP_GAP_PX, computeHeatmapCellSizePx } from "../lib/heatmap";
-import { SOURCE_COLORS, SOURCE_LABELS } from "../lib/constants";
+import { SOURCE_LABELS } from "../lib/constants";
+import type { ThemePalette } from "../lib/themePalettes";
 import type {
   AgentBreakdown,
   BusiestSingleDay,
   DailyAgentCostsByDate,
   DailyModelCostsByDate,
+  DailyModelTokensByDate,
   DailyAgentTokensByDate,
   HourlyDataPoint,
   ModelBreakdown,
@@ -43,6 +45,11 @@ interface DashboardChartsProps {
   dailyAgentTokensByDate: DailyAgentTokensByDate;
   dailyAgentCostsByDate: DailyAgentCostsByDate;
   dailyModelCostsByDate: DailyModelCostsByDate;
+  dailyModelTokensByDate: DailyModelTokensByDate;
+  totalTokenUsage: TokenUsage | null;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  themePalette: ThemePalette;
   topRepos: TopRepoRow[];
   totalCostUsd: number;
   dailyAverageCostUsd: number;
@@ -112,8 +119,6 @@ interface TopRepoRow {
   costUsd: number;
   durationMs: number;
 }
-
-const MODEL_COLORS = ["#22d3ee", "#3b82f6", "#14b8a6", "#0ea5e9", "#06b6d4", "#38bdf8", "#34d399", "#67e8f9"];
 
 interface CodingPersonality {
   label: string;
@@ -265,7 +270,7 @@ const HourlyBarTooltip = ({ active, payload }: { active?: boolean; payload?: Arr
         <div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
           {row.byAgent.map((a) => (
             <p key={a.source} className="flex items-center justify-between gap-3 text-xs text-slate-300">
-              <span style={{ color: SOURCE_COLORS[a.source] ?? "#94a3b8" }}>{a.label}</span>
+              <span className="text-slate-300">{a.label}</span>
               <span className="text-slate-400">{formatTokens(a.tokens)} · {formatUsd(a.costUsd)} · {formatNumber(a.sessions)}s</span>
             </p>
           ))}
@@ -307,6 +312,7 @@ const buildActivityTooltip = (cell: HeatmapCell, dailyAgentTokensByDate: DailyAg
 const buildHeatmapAgentTokenRows = (
   cell: HeatmapCell,
   dailyAgentTokensByDate: DailyAgentTokensByDate,
+  sourceColorMap: Record<SessionSource, string>,
 ): HeatmapAgentTokenRow[] => {
   const agentTotals = dailyAgentTokensByDate[cell.date];
 
@@ -314,7 +320,7 @@ const buildHeatmapAgentTokenRows = (
     .map((source) => ({
       label: SOURCE_LABELS[source],
       tokens: agentTotals?.[source] ?? 0,
-      color: SOURCE_COLORS[source] ?? "#94a3b8",
+      color: sourceColorMap[source] ?? "#94a3b8",
     }))
     .filter((entry) => entry.tokens > 0)
     .sort((left, right) => right.tokens - left.tokens);
@@ -392,6 +398,11 @@ const DashboardCharts = ({
   dailyAgentTokensByDate,
   dailyAgentCostsByDate,
   dailyModelCostsByDate,
+  dailyModelTokensByDate,
+  totalTokenUsage,
+  currentStreakDays,
+  longestStreakDays,
+  themePalette,
   topRepos,
   totalCostUsd,
   dailyAverageCostUsd,
@@ -410,6 +421,32 @@ const DashboardCharts = ({
   const animateCard6 = Boolean(cardAnimations[6]);
   const animateCard7 = Boolean(cardAnimations[7]);
   const animateCard8 = Boolean(cardAnimations[8]);
+  const modelColors = [
+    themePalette.veryHigh,
+    themePalette.high,
+    themePalette.medium,
+    themePalette.slightlyLess,
+    themePalette.less,
+    themePalette.slightlyLess,
+    themePalette.medium,
+    themePalette.high,
+  ];
+  const topRepoBarColors = [
+    themePalette.veryHigh,
+    themePalette.high,
+    themePalette.medium,
+    themePalette.slightlyLess,
+    themePalette.less,
+    themePalette.none,
+  ];
+  const sourceColorMap: Record<SessionSource, string> = {
+    claude: themePalette.slightlyLess,
+    codex: themePalette.high,
+    gemini: themePalette.medium,
+    opencode: themePalette.less,
+    droid: themePalette.slightlyLess,
+    copilot: themePalette.medium,
+  };
   const hasHourlyData = hasHourlyActivity(hourlyBreakdown);
   const heatmapViewportRef = useRef<HTMLDivElement | null>(null);
   const heatmapTooltipHostRef = useRef<HTMLDivElement | null>(null);
@@ -459,7 +496,7 @@ const DashboardCharts = ({
   const totalModelTokens = modelBreakdown.reduce((sum, row) => sum + row.tokens, 0);
   const modelRows = modelBreakdown.map((row, index) => ({
     ...row,
-    color: MODEL_COLORS[index % MODEL_COLORS.length],
+    color: modelColors[index % modelColors.length],
     percentage: totalModelTokens > 0 ? (row.tokens / totalModelTokens) * 100 : 0,
   }));
   const chartModelRows = modelRows.slice(0, 8);
@@ -472,7 +509,7 @@ const DashboardCharts = ({
       sessions: row.sessions,
       tokens: row.tokens,
       costUsd: row.costUsd,
-      color: SOURCE_COLORS[row.source] ?? "#94a3b8",
+      color: sourceColorMap[row.source] ?? themePalette.medium,
       percentage: totalAgentTokens > 0 ? (row.tokens / totalAgentTokens) * 100 : 0,
       icon: AGENT_ICONS[row.source] ?? ("🤝" as ReactNode),
     }));
@@ -523,8 +560,35 @@ const DashboardCharts = ({
         );
   const heatmapTooltipTopPx = heatmapHoverState === null ? 0 : Math.max(12, heatmapHoverState.topPx - 8);
   const heatmapTooltipAgentRows =
-    heatmapHoverState === null ? [] : buildHeatmapAgentTokenRows(heatmapHoverState.cell, dailyAgentTokensByDate);
+    heatmapHoverState === null ? [] : buildHeatmapAgentTokenRows(heatmapHoverState.cell, dailyAgentTokensByDate, sourceColorMap);
   const dateSpanDays = rangeLengthDays(dateFrom, dateTo);
+  const inputTokens = totalTokenUsage?.inputTokens ?? 0;
+  const outputTokens = totalTokenUsage?.outputTokens ?? 0;
+  const totalTokens =
+    (totalTokenUsage?.inputTokens ?? 0) +
+    (totalTokenUsage?.outputTokens ?? 0) +
+    (totalTokenUsage?.cacheReadTokens ?? 0) +
+    (totalTokenUsage?.cacheWriteTokens ?? 0) +
+    (totalTokenUsage?.reasoningTokens ?? 0);
+  const mostUsedModel = modelBreakdown[0] ?? null;
+  const recentModelUsage = useMemo(() => {
+    const end = Date.parse(`${dateTo}T00:00:00Z`);
+    if (Number.isNaN(end)) return null;
+    const start = end - 29 * ONE_DAY_MS;
+    const byModel = new Map<string, number>();
+
+    for (const [date, modelTokenMap] of Object.entries(dailyModelTokensByDate)) {
+      const parsed = Date.parse(`${date}T00:00:00Z`);
+      if (Number.isNaN(parsed) || parsed < start || parsed > end) continue;
+      for (const [model, tokens] of Object.entries(modelTokenMap)) {
+        byModel.set(model, (byModel.get(model) ?? 0) + tokens);
+      }
+    }
+
+    if (byModel.size === 0) return null;
+    const sorted = [...byModel.entries()].sort((a, b) => b[1] - a[1]);
+    return { model: sorted[0]?.[0] ?? "-", tokens: sorted[0]?.[1] ?? 0 };
+  }, [dailyModelTokensByDate, dateTo]);
 
   const costTimeline = useMemo<TimelinePoint[]>(() => {
     if (costAgentFilter === "all") return timeline;
@@ -562,10 +626,10 @@ const DashboardCharts = ({
       return sources.map((source) => ({
         key: source,
         label: SOURCE_LABELS[source],
-        color: SOURCE_COLORS[source] ?? "#94a3b8",
+        color: sourceColorMap[source] ?? themePalette.medium,
       }));
     },
-    [costAgentFilter],
+    [costAgentFilter, sourceColorMap, themePalette.medium],
   );
 
   const groupedAgentTimeline = useMemo<CostSeriesPoint[]>(
@@ -589,7 +653,7 @@ const DashboardCharts = ({
     const topSeries = sorted.slice(0, 6).map((row, index) => ({
       key: row.model,
       label: row.model,
-      color: MODEL_COLORS[index % MODEL_COLORS.length],
+      color: modelColors[index % modelColors.length],
     }));
 
     if (sorted.length <= 6) return topSeries;
@@ -602,7 +666,7 @@ const DashboardCharts = ({
         color: "#94a3b8",
       },
     ];
-  }, [modelBreakdown]);
+  }, [modelBreakdown, modelColors]);
 
   const groupedModelTimeline = useMemo<CostSeriesPoint[]>(
     () =>
@@ -646,7 +710,7 @@ const DashboardCharts = ({
           <p className="text-sm text-slate-300">No model activity found in this range.</p>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          <div className={`${chartWrapperClass} ${animateCard3 ? chartRevealClass : ""}`}>
+          <div className={`${chartWrapperClass} ${animateCard3 ? chartRevealClass : ""} self-center lg:-translate-x-[35px]`}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartModelRows} layout="vertical" margin={{ left: 18, right: 16 }}>
                   <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
@@ -713,179 +777,166 @@ const DashboardCharts = ({
         )}
       </section>
 
-      <section data-card-index="4" className="wrapped-card wrapped-card-agents">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="wrapped-title">Your Agents</h2>
-          </div>
-          <p className="text-sm text-slate-300">Token distribution by agent</p>
-        </header>
-
-        {agentRows.length === 0 ? (
-          <p className="text-sm text-slate-300">No agent data found for this period.</p>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[1fr_1.1fr]">
-            <div className={`${chartWrapperClass} ${animateCard4 ? chartRevealClass : ""}`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={agentRows}
-                    dataKey="tokens"
-                    nameKey="label"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={105}
-                    paddingAngle={agentRows.length > 1 ? 3 : 0}
-                    isAnimationActive={animateCard4}
-                    animationDuration={CHART_ANIMATION_MS}
-                    animationBegin={0}
-                    animationEasing="ease-in-out"
-                  >
-                    {agentRows.map((row) => (
-                      <Cell key={row.source} fill={row.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    content={<AgentPieTooltip />}
-                    allowEscapeViewBox={{ x: true, y: true }}
-                    wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2">
-              {agentRows.map((row) => (
-                <article key={row.source} className="wrapped-tile">
-                  <p className="text-xs uppercase tracking-[0.2em]" style={{ color: row.color }}>{row.icon} {row.label}</p>
-                  <AnimatedNumber
-                    value={row.tokens}
-                    animate={animateCard4}
-                    durationMs={CHART_ANIMATION_MS}
-                    format={formatTokens}
-                    className="mt-2 block text-2xl font-semibold text-white"
-                  />
-                  <p className="mt-1 text-xs text-slate-300">{row.percentage.toFixed(1)}% of total</p>
-                  <p className="text-xs text-slate-400">
-                    <AnimatedNumber
-                      value={row.sessions}
-                      animate={animateCard4}
-                      durationMs={CHART_ANIMATION_MS}
-                      format={(value) => formatNumber(Math.max(0, Math.round(value)))}
-                    />{" "}
-                    sessions
-                  </p>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
       <section data-card-index="5" className="wrapped-card wrapped-card-activity">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="wrapped-title">Daily Activity</h2>
+        <div className={`rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7 ${animateCard5 ? chartRevealClass : ""}`}>
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+            <h2 className="text-[1.9rem] font-semibold tracking-tight text-white">Codex</h2>
+            <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 sm:gap-10">
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Input Tokens</p>
+                <p className="text-2xl font-semibold text-white">{formatTokens(inputTokens)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Output Tokens</p>
+                <p className="text-2xl font-semibold text-white">{formatTokens(outputTokens)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Total Tokens</p>
+                <p className="text-2xl font-semibold text-white">{formatTokens(totalTokens)}</p>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-slate-300">Heatmap of daily token usage</p>
-        </header>
 
-        {heatmap.length === 0 ? (
-          <p className="text-sm text-slate-300">No activity timeline available.</p>
-        ) : (
-          <div>
-            <div
-              ref={heatmapTooltipHostRef}
-              className={`relative rounded-2xl border border-white/12 bg-slate-950/45 p-4 ${animateCard5 ? chartRevealClass : ""}`}
-            >
-              <div ref={heatmapViewportRef} className="overflow-x-auto pb-1" onMouseLeave={clearHeatmapHover}>
-                <div className="inline-grid grid-cols-[auto_auto] gap-x-2 gap-y-2">
-                  <div style={{ width: HEATMAP_LEFT_GUTTER_PX }} />
-                  <div className="relative" style={{ width: heatmapGridWidthPx, height: HEATMAP_MONTH_ROW_HEIGHT_PX }}>
-                    {heatmapMonthLabels.map((month) => (
-                      <span
-                        key={`month-${month.weekIndex}-${month.label}`}
-                        className="absolute top-0 text-[11px] leading-none text-slate-400"
-                        style={{ left: month.weekIndex * (heatmapCellSizePx + HEATMAP_GAP_PX) }}
-                      >
-                        {month.label}
-                      </span>
-                    ))}
-                  </div>
+          {heatmap.length === 0 ? (
+            <p className="text-sm text-slate-300">No activity timeline available.</p>
+          ) : (
+            <>
+              <div ref={heatmapTooltipHostRef} className="relative">
+                <div ref={heatmapViewportRef} className="overflow-x-auto pb-1" onMouseLeave={clearHeatmapHover}>
+                  <div className="inline-grid grid-cols-[auto_auto] gap-x-2 gap-y-2">
+                    <div style={{ width: HEATMAP_LEFT_GUTTER_PX }} />
+                    <div className="relative" style={{ width: heatmapGridWidthPx, height: HEATMAP_MONTH_ROW_HEIGHT_PX }}>
+                      {heatmapMonthLabels.map((month) => (
+                        <span
+                          key={`month-${month.weekIndex}-${month.label}`}
+                          className="absolute top-0 text-[11px] leading-none text-slate-400"
+                          style={{ left: month.weekIndex * (heatmapCellSizePx + HEATMAP_GAP_PX) }}
+                        >
+                          {month.label}
+                        </span>
+                      ))}
+                    </div>
 
-                  <div
-                    className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-slate-400"
-                    style={{ width: HEATMAP_LEFT_GUTTER_PX }}
-                  >
-                    {HEATMAP_WEEKDAY_LABELS.map((label, dayIndex) => (
-                      <div key={`day-label-${dayIndex}`} className="flex items-center justify-end" style={{ height: heatmapCellSizePx }}>
-                        {label}
-                      </div>
-                    ))}
-                  </div>
+                    <div
+                      className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-slate-400"
+                      style={{ width: HEATMAP_LEFT_GUTTER_PX }}
+                    >
+                      {HEATMAP_WEEKDAY_LABELS.map((label, dayIndex) => (
+                        <div key={`day-label-${dayIndex}`} className="flex items-center justify-end" style={{ height: heatmapCellSizePx }}>
+                          {label}
+                        </div>
+                      ))}
+                    </div>
 
-                  <div className="inline-grid gap-1" style={heatmapGridStyle}>
-                    {heatmapWeeks.map((week, weekIndex) => (
-                      <div key={`week-${weekIndex}`} className="grid grid-rows-7 gap-1">
-                        {week.map((cell, dayIndex) => {
-                          if (!cell) {
+                    <div className="inline-grid gap-1" style={heatmapGridStyle}>
+                      {heatmapWeeks.map((week, weekIndex) => (
+                        <div key={`week-${weekIndex}`} className="grid grid-rows-7 gap-1">
+                          {week.map((cell, dayIndex) => {
+                            if (!cell) {
+                              return (
+                                <div
+                                  key={`empty-${weekIndex}-${dayIndex}`}
+                                  className="rounded-[4px] opacity-0"
+                                  style={{ width: heatmapCellSizePx, height: heatmapCellSizePx }}
+                                  onMouseEnter={clearHeatmapHover}
+                                />
+                              );
+                            }
+
+                            const background =
+                              cell.sessions > 0
+                                ? cell.intensity >= 0.95
+                                  ? themePalette.veryHigh
+                                  : cell.intensity >= 0.75
+                                    ? themePalette.high
+                                    : cell.intensity >= 0.5
+                                      ? themePalette.medium
+                                      : cell.intensity >= 0.25
+                                        ? themePalette.slightlyLess
+                                        : themePalette.less
+                                : themePalette.none;
+
                             return (
                               <div
-                                key={`empty-${weekIndex}-${dayIndex}`}
-                                className="rounded-[4px] opacity-0"
-                                style={{ width: heatmapCellSizePx, height: heatmapCellSizePx }}
-                                onMouseEnter={clearHeatmapHover}
+                                key={cell.date}
+                                className="rounded-[4px]"
+                                style={{ width: heatmapCellSizePx, height: heatmapCellSizePx, background }}
+                                aria-label={buildActivityTooltip(cell, dailyAgentTokensByDate)}
+                                onMouseEnter={(event) => updateHeatmapHover(event, cell)}
+                                onMouseMove={(event) => updateHeatmapHover(event, cell)}
                               />
                             );
-                          }
-
-                          const alpha = 0.12 + cell.intensity * 0.88;
-                          const background =
-                            cell.sessions > 0 ? `rgba(45,212,191,${alpha.toFixed(3)})` : "rgba(71,85,105,0.20)";
-
-                          return (
-                            <div
-                              key={cell.date}
-                              className="rounded-[4px]"
-                              style={{ width: heatmapCellSizePx, height: heatmapCellSizePx, background }}
-                              aria-label={buildActivityTooltip(cell, dailyAgentTokensByDate)}
-                              onMouseEnter={(event) => updateHeatmapHover(event, cell)}
-                              onMouseMove={(event) => updateHeatmapHover(event, cell)}
-                            />
-                          );
-                        })}
-                      </div>
-                    ))}
+                          })}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
+
+                {heatmapHoverState !== null && (
+                  <div
+                    className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-xl"
+                    style={{ left: heatmapTooltipLeftPx, top: heatmapTooltipTopPx, transform: "translate(-50%, -100%)" }}
+                  >
+                    <p className="text-sm font-semibold text-white">{formatDate(heatmapHoverState.cell.date)}</p>
+                    <p className="mt-1 text-xs text-slate-200">
+                      Tokens: {formatTokens(heatmapHoverState.cell.tokens)} ({formatNumber(heatmapHoverState.cell.tokens)})
+                    </p>
+                    <p className="text-xs text-slate-300">Sessions: {formatNumber(heatmapHoverState.cell.sessions)}</p>
+                    <p className="text-xs text-slate-300">Spend: {formatUsd(heatmapHoverState.cell.costUsd)}</p>
+                    <div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
+                      {heatmapTooltipAgentRows.map((entry) => (
+                        <p key={entry.label} className="flex items-center justify-between gap-2 text-xs text-slate-300">
+                          <span style={{ color: entry.color }}>{entry.label}</span>
+                          <span>{formatTokens(entry.tokens)}</span>
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {heatmapHoverState !== null && (
-                <div
-                  className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-xl"
-                  style={{ left: heatmapTooltipLeftPx, top: heatmapTooltipTopPx, transform: "translate(-50%, -100%)" }}
-                >
-                  <p className="text-sm font-semibold text-white">{formatDate(heatmapHoverState.cell.date)}</p>
-                  <p className="mt-1 text-xs text-slate-200">
-                    Tokens: {formatTokens(heatmapHoverState.cell.tokens)} ({formatNumber(heatmapHoverState.cell.tokens)})
+              <div className="mt-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                <span>Less</span>
+                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.less }} />
+                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.slightlyLess }} />
+                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.medium }} />
+                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.high }} />
+                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.veryHigh }} />
+                <span>More</span>
+              </div>
+
+              <div className="mt-6 grid grid-cols-1 gap-y-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-8">
+                <article className="min-w-0 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Most Used Model</p>
+                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                    {mostUsedModel ? mostUsedModel.model : "-"}
+                    {mostUsedModel ? ` (${formatTokens(mostUsedModel.tokens)})` : ""}
                   </p>
-                  <p className="text-xs text-slate-300">Sessions: {formatNumber(heatmapHoverState.cell.sessions)}</p>
-                  <p className="text-xs text-slate-300">Spend: {formatUsd(heatmapHoverState.cell.costUsd)}</p>
-                  <div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
-                    {heatmapTooltipAgentRows.map((entry) => (
-                      <p key={entry.label} className="flex items-center justify-between gap-2 text-xs text-slate-300">
-                        <span style={{ color: entry.color }}>{entry.label}</span>
-                        <span>{formatTokens(entry.tokens)}</span>
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-            <p className="mt-3 text-xs text-slate-400">{formatShortDate(dateFrom)} - {formatShortDate(dateTo)}</p>
-          </div>
-        )}
+                </article>
+                <article className="min-w-0 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recent Use (Last 30 Days)</p>
+                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                    {recentModelUsage ? recentModelUsage.model : "-"}
+                    {recentModelUsage ? ` (${formatTokens(recentModelUsage.tokens)})` : ""}
+                  </p>
+                </article>
+                <article className="min-w-0 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Longest Streak</p>
+                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                    {formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
+                  </p>
+                </article>
+                <article className="min-w-0 w-full">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current Streak</p>
+                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                    {formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
+                  </p>
+                </article>
+              </div>
+            </>
+          )}
+        </div>
       </section>
 
       <section data-card-index="6" className="wrapped-card wrapped-card-cost">
@@ -942,8 +993,8 @@ const DashboardCharts = ({
               <AreaChart data={costTimeline}>
                 <defs>
                   <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.55} />
-                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.08} />
+                    <stop offset="0%" stopColor={themePalette.high} stopOpacity={0.55} />
+                    <stop offset="100%" stopColor={themePalette.high} stopOpacity={0.08} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
@@ -962,7 +1013,7 @@ const DashboardCharts = ({
                   type="monotone"
                   dataKey="costUsd"
                   name="Cost"
-                  stroke="#38bdf8"
+                  stroke={themePalette.medium}
                   fill="url(#costFill)"
                   strokeWidth={2.5}
                   isAnimationActive={animateCard6}
@@ -1052,7 +1103,7 @@ const DashboardCharts = ({
               ))}
             </div>
 
-            <div className={`${chartWrapperClass} ${animateCard7 ? chartRevealClass : ""}`}>
+            <div className={`${chartWrapperClass} ${animateCard7 ? chartRevealClass : ""} self-center lg:-translate-x-[4px]`}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topRepos} layout="vertical" margin={{ left: 12, right: 16 }}>
                   <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
@@ -1075,13 +1126,16 @@ const DashboardCharts = ({
                   />
                   <Bar
                     dataKey="sessions"
-                    fill="#14b8a6"
                     radius={[0, 10, 10, 0]}
                     isAnimationActive={animateCard7}
                     animationDuration={CHART_ANIMATION_MS}
                     animationBegin={0}
                     animationEasing="ease-in-out"
-                  />
+                  >
+                    {topRepos.map((repo, index) => (
+                      <Cell key={repo.repo} fill={topRepoBarColors[Math.min(index, topRepoBarColors.length - 1)]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -1113,7 +1167,7 @@ const DashboardCharts = ({
 
           return (
             <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-              <div className={`${chartWrapperClass} ${animateCard8 ? chartRevealClass : ""}`}>
+              <div className={`${chartWrapperClass} ${animateCard8 ? chartRevealClass : ""} self-center`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={hourlyBreakdown}>
                     <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
@@ -1142,7 +1196,7 @@ const DashboardCharts = ({
                       {hourlyBreakdown.map((row) => (
                         <Cell
                           key={row.hour}
-                          fill={row.hour === peakHour ? "#22d3ee" : "rgba(56,189,248,0.45)"}
+                          fill={row.hour === peakHour ? themePalette.veryHigh : themePalette.slightlyLess}
                         />
                       ))}
                     </Bar>

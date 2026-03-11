@@ -6,10 +6,12 @@ import Sidebar from "./Sidebar";
 import StatsCards, { AnimatedNumber } from "./StatsCards";
 import { useDashboardData, type DashboardDateRange } from "../hooks/useDashboardData";
 import { SOURCE_LABELS } from "../lib/constants";
+import { THEME_OPTIONS, THEME_PALETTES, type ThemeName } from "../lib/themePalettes";
 import { formatDate, formatDuration, formatNumber } from "../lib/formatters";
 
 const clampPercentage = (value: number): number => Math.max(0, Math.min(100, value));
 const CARD_ANIMATION_MS = 2000;
+const THEME_STORAGE_KEY = "ai-wrapped-theme";
 type CostAgentFilter = "all" | SessionSource;
 type CostGroupBy = "none" | "by-agent" | "by-model";
 
@@ -18,6 +20,15 @@ const isCostGroupBy = (value: string): value is CostGroupBy =>
 
 const isCostAgentFilter = (value: string): value is CostAgentFilter =>
   value === "all" || SESSION_SOURCES.includes(value as SessionSource);
+const isThemeName = (value: string): value is ThemeName =>
+  value === "blue" ||
+  value === "green" ||
+  value === "gray" ||
+  value === "red" ||
+  value === "orange" ||
+  value === "teal" ||
+  value === "pink" ||
+  value === "purple";
 
 const Dashboard = () => {
   const {
@@ -39,6 +50,7 @@ const Dashboard = () => {
     dailyAgentTokensByDate,
     dailyAgentCostsByDate,
     dailyModelCostsByDate,
+    dailyModelTokensByDate,
     hourlyBreakdown,
     weekendSessionPercent,
     busiestDayOfWeek,
@@ -46,6 +58,11 @@ const Dashboard = () => {
   } = useDashboardData();
   const [costAgentFilter, setCostAgentFilter] = useState<CostAgentFilter>("all");
   const [costGroupBy, setCostGroupBy] = useState<CostGroupBy>("none");
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>(() => {
+    if (typeof window === "undefined") return "purple";
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return stored && isThemeName(stored) ? stored : "purple";
+  });
   const [activeCardIndex, setActiveCardIndex] = useState<number>(1);
   const [animatingCardIndices, setAnimatingCardIndices] = useState<Record<number, boolean>>({});
   const activeCardRef = useRef<number>(1);
@@ -112,6 +129,13 @@ const Dashboard = () => {
     }
   };
 
+  const handleThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const next = event.target.value;
+    if (!isThemeName(next)) return;
+    setSelectedTheme(next);
+  };
+  const themePalette = THEME_PALETTES[selectedTheme];
+
   useEffect(() => {
     prefersReducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     return () => {
@@ -120,6 +144,10 @@ const Dashboard = () => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(THEME_STORAGE_KEY, selectedTheme);
+  }, [selectedTheme]);
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -185,17 +213,13 @@ const Dashboard = () => {
 
   const sidebar = (
     <Sidebar
+      selectedTheme={selectedTheme}
+      themeOptions={THEME_OPTIONS}
+      onThemeChange={handleThemeChange}
+      themePalette={themePalette}
       selectedRange={selectedRange}
       rangeOptions={rangeOptions}
       onRangeChange={handleRangeChange}
-      showCostControls={activeCardIndex === 6}
-      costAgentFilter={costAgentFilter}
-      onCostAgentChange={handleCostAgentChange}
-      costAgentOptions={costAgentOptions}
-      costGroupBy={costGroupBy}
-      onCostGroupByChange={handleCostGroupByChange}
-      costGroupOptions={costGroupOptions}
-      costAgentDisabled={costGroupBy === "by-model"}
       isScanning={isScanning}
     />
   );
@@ -277,7 +301,7 @@ const Dashboard = () => {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-12 sm:px-6">
           <section data-card-index="1" className="wrapped-card wrapped-card-hero">
             <header className="mb-6">
-              <p className="wrapped-kicker">{heroCopy.kicker}</p>
+              <p className="wrapped-kicker" style={{ color: themePalette.medium }}>{heroCopy.kicker}</p>
               <h1 className="text-4xl font-semibold tracking-[-0.03em] text-white sm:text-6xl">{heroCopy.title}</h1>
               <p className="mt-3 text-sm text-slate-200/90">
                 {formatDate(dateFrom)} - {formatDate(dateTo)}
@@ -386,8 +410,8 @@ const Dashboard = () => {
                   />
                   <defs>
                     <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#22d3ee" />
-                      <stop offset="100%" stopColor="#0ea5e9" />
+                      <stop offset="0%" stopColor={themePalette.veryHigh} />
+                      <stop offset="100%" stopColor={themePalette.high} />
                     </linearGradient>
                   </defs>
                 </svg>
@@ -413,10 +437,15 @@ const Dashboard = () => {
             dailyAgentTokensByDate={dailyAgentTokensByDate}
             dailyAgentCostsByDate={dailyAgentCostsByDate}
             dailyModelCostsByDate={dailyModelCostsByDate}
+            dailyModelTokensByDate={dailyModelTokensByDate}
+            totalTokenUsage={summary?.totals.tokens ?? null}
+            currentStreakDays={totals.currentStreakDays}
+            longestStreakDays={totals.longestStreakDays}
             topRepos={topRepos}
             totalCostUsd={totals.totalCostUsd}
             dailyAverageCostUsd={totals.dailyAverageCostUsd}
             mostExpensiveDay={totals.mostExpensiveDay}
+            themePalette={themePalette}
             costAgentFilter={costAgentFilter}
             costGroupBy={costGroupBy}
             cardAnimations={animatingCardIndices}
