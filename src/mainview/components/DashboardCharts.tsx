@@ -239,7 +239,7 @@ const AgentPieTooltip = ({ active, payload }: AgentPieTooltipProps) => {
   const averageTokensPerSession = row.sessions > 0 ? row.tokens / row.sessions : 0;
 
   return (
-    <div className="rounded-xl border border-slate-400/45 bg-slate-950/95 px-3 py-2 shadow-2xl">
+    <div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
       <p className="flex items-center gap-2 text-sm font-semibold text-slate-100">
         <span className="text-base leading-none" style={{ color: row.color }}>
           {row.icon}
@@ -261,7 +261,7 @@ const HourlyBarTooltip = ({ active, payload }: { active?: boolean; payload?: Arr
   if (!active || !row) return null;
 
   return (
-    <div className="rounded-xl border border-slate-400/45 bg-slate-950/95 px-3 py-2 shadow-2xl">
+    <div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
       <p className="text-sm font-semibold text-slate-100">{row.label}</p>
       <p className="mt-1 text-xs text-slate-200">Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
       <p className="text-xs text-slate-300">Cost: {formatUsd(row.costUsd)}</p>
@@ -379,7 +379,7 @@ const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<n
   if (!active || !row) return null;
 
   return (
-    <div className="rounded-xl border border-white/20 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-xl">
+    <div className="rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl">
       <p className="mb-1 text-sm font-semibold text-white">{typeof label === "string" ? label : "Repository"}</p>
       <p>Sessions: {formatNumber(row.sessions)}</p>
       <p>Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
@@ -740,7 +740,7 @@ const DashboardCharts = ({
                   <Tooltip
                     cursor={{ fill: "rgba(59,130,246,0.15)" }}
                     contentStyle={{
-                      background: "rgba(2,6,23,0.95)",
+                      background: "#000000",
                       border: "1px solid rgba(148,163,184,0.35)",
                       borderRadius: "12px",
                       color: "#ffffff",
@@ -889,7 +889,7 @@ const DashboardCharts = ({
 
                 {heatmapHoverState !== null && (
                   <div
-                    className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-xl"
+                    className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl"
                     style={{ left: heatmapTooltipLeftPx, top: heatmapTooltipTopPx, transform: "translate(-50%, -100%)" }}
                   >
                     <p className="text-sm font-semibold text-white">{formatDate(heatmapHoverState.cell.date)}</p>
@@ -1016,7 +1016,7 @@ const DashboardCharts = ({
                 <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    background: "rgba(2,6,23,0.95)",
+                    background: "#000000",
                     border: "1px solid rgba(148,163,184,0.35)",
                     borderRadius: "12px",
                   }}
@@ -1045,7 +1045,7 @@ const DashboardCharts = ({
                 <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                 <Tooltip
                   contentStyle={{
-                    background: "rgba(2,6,23,0.95)",
+                    background: "#000000",
                     border: "1px solid rgba(148,163,184,0.35)",
                     borderRadius: "12px",
                   }}
@@ -1132,7 +1132,7 @@ const DashboardCharts = ({
                   />
                   <Tooltip
                     contentStyle={{
-                      background: "rgba(2,6,23,0.95)",
+                      background: "#000000",
                       border: "1px solid rgba(148,163,184,0.35)",
                       borderRadius: "12px",
                     }}
@@ -1219,7 +1219,7 @@ const DashboardCharts = ({
               </div>
 
               <div className="flex flex-col gap-3">
-                <article className="wrapped-tile py-6 text-center">
+                <article className="wrapped-tile py-6 text-left">
                   <p className="text-5xl">{personality.emoji}</p>
                   <p className="mt-3 text-2xl font-semibold text-white">{personality.label}</p>
                   <p className="mt-2 text-sm text-slate-300">{personality.description}</p>

@@ -43,12 +43,12 @@ export const THEME_PALETTES: Record<ThemeName, ThemePalette> = {
     veryHigh: "#FFDCE3",
   },
   orange: {
-    none: "#2A170F",
-    less: "#5E301B",
-    slightlyLess: "#944E27",
-    medium: "#D97A3E",
-    high: "#FFAE73",
-    veryHigh: "#FFE7D6",
+    none: "#2A1109",
+    less: "#5A2412",
+    slightlyLess: "#973715",
+    medium: "#C14215",
+    high: "#F87215",
+    veryHigh: "#FFB971",
   },
   teal: {
     none: "#0F2224",

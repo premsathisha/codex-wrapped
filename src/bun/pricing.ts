@@ -28,21 +28,14 @@ const PRICING_REFRESH_MS = 6 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 2_500;
 
 export const PRICING: Record<string, ModelPricing> = {
-  "claude-opus-4-6": { inputPer1M: 15, outputPer1M: 75, cacheReadPer1M: 1.5, cacheWritePer1M: 18.75 },
-  "claude-opus-4-5-20251101": { inputPer1M: 15, outputPer1M: 75, cacheReadPer1M: 1.5, cacheWritePer1M: 18.75 },
-  "claude-sonnet-4-20250514": { inputPer1M: 3, outputPer1M: 15, cacheReadPer1M: 0.3, cacheWritePer1M: 3.75 },
-  "claude-3-5-sonnet-20241022": { inputPer1M: 3, outputPer1M: 15, cacheReadPer1M: 0.3, cacheWritePer1M: 3.75 },
-  "claude-3-5-haiku-20241022": { inputPer1M: 0.8, outputPer1M: 4, cacheReadPer1M: 0.08, cacheWritePer1M: 1 },
-
   "gpt-5": { inputPer1M: 1.25, outputPer1M: 10, cacheReadPer1M: 0.125, cacheWritePer1M: 0 },
-  "gpt-5.2-codex": { inputPer1M: 1.25, outputPer1M: 10, cacheReadPer1M: 0.125, cacheWritePer1M: 0 },
+  "gpt-5.2-codex": { inputPer1M: 1.75, outputPer1M: 14, cacheReadPer1M: 0.175, cacheWritePer1M: 0 },
+  "gpt-5.3-codex": { inputPer1M: 1.75, outputPer1M: 14, cacheReadPer1M: 0.175, cacheWritePer1M: 0 },
+  "gpt-5.4": { inputPer1M: 2.5, outputPer1M: 15, cacheReadPer1M: 0.25, cacheWritePer1M: 0 },
   "gpt-5-codex": { inputPer1M: 1.25, outputPer1M: 10, cacheReadPer1M: 0.125, cacheWritePer1M: 0 },
   "gpt-4o": { inputPer1M: 2.5, outputPer1M: 10, cacheReadPer1M: 1.25, cacheWritePer1M: 0 },
   o1: { inputPer1M: 15, outputPer1M: 60, cacheReadPer1M: 7.5, cacheWritePer1M: 0 },
-  o3: { inputPer1M: 10, outputPer1M: 40, cacheReadPer1M: 2.5, cacheWritePer1M: 0 },
-
-  "gemini-2.5-pro": { inputPer1M: 1.25, outputPer1M: 10, cacheReadPer1M: 0.315, cacheWritePer1M: 4.5 },
-  "gemini-2.5-flash": { inputPer1M: 0.15, outputPer1M: 0.6, cacheReadPer1M: 0.0375, cacheWritePer1M: 1 },
+  o3: { inputPer1M: 2, outputPer1M: 8, cacheReadPer1M: 0.5, cacheWritePer1M: 0 },
 };
 
 const FREE_MODEL_PRICING: ModelPricing = {
@@ -381,10 +374,9 @@ const resolveModelPricing = (model: string): ModelPricing | null => {
   const cached = modelPricingCache.get(normalizedModel) ?? modelPricingCache.get(aliasedModel);
   if (cached) return cached;
 
-  const modelsDevMatch = findModelsDevPricing(normalizedModel);
-  const resolved = modelsDevMatch
-    ? modelsDevMatch
-    : PRICING[aliasedModel] ?? findPricingByPrefix(aliasedModel) ?? PRICING[normalizedModel] ?? findPricingByPrefix(normalizedModel);
+  const localMatch =
+    PRICING[aliasedModel] ?? findPricingByPrefix(aliasedModel) ?? PRICING[normalizedModel] ?? findPricingByPrefix(normalizedModel);
+  const resolved = localMatch ?? findModelsDevPricing(normalizedModel);
 
   if (resolved) {
     modelPricingCache.set(normalizedModel, resolved);

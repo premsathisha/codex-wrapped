@@ -51,23 +51,31 @@ Core entry points:
 # Key Files
 
 1. `bin/cli.ts`: app CLI (`--help`, `--version`, `--rebuild`, `--uninstall`) and server bootstrap.
-2. `src/bun/index.ts`: API routes, server startup, and scan orchestration.
-3. `src/bun/scan.ts`: discovery + parse + aggregate scan pipeline.
-4. `src/shared/schema.ts`: shared source/session/dashboard schemas.
-5. `src/mainview/components/Dashboard.tsx`: main dashboard flow.
-6. `src/mainview/components/DashboardCharts.tsx`: chart-heavy wrapped cards.
-7. `src/mainview/index.css`: global visual and layout rules.
+2. `bin/launch-macos.sh`: macOS launcher script that starts the local app and opens the local URL.
+3. `src/bun/index.ts`: API routes, server startup, and scan orchestration.
+4. `src/bun/scan.ts`: discovery + parse + aggregate scan pipeline.
+5. `src/shared/schema.ts`: shared source/session/dashboard schemas.
+6. `src/mainview/components/Dashboard.tsx`: main dashboard flow.
+7. `src/mainview/components/DashboardCharts.tsx`: chart-heavy wrapped cards.
+8. `src/mainview/index.css`: global visual and layout rules.
 
 # Runtime Reference
 
 1. Install: `bun install`
 2. Run app: `bun ./bin/cli.ts`
-3. Dev mode: `bun run dev`
-4. HMR mode: `bun run dev:hmr`
-5. Build: `bun run build`
-6. Typecheck: `bun run typecheck`
-7. Tests: `bun test`
-8. Clean: `bun run clean`
+3. macOS launcher: double-click `AI Wrapped Launcher.app`
+4. Dev mode: `bun run dev`
+5. HMR mode: `bun run dev:hmr`
+6. Build: `bun run build`
+7. Typecheck: `bun run typecheck`
+8. Tests: `bun test`
+9. Clean: `bun run clean`
+
+## Frontend Build Requirement
+
+1. `bun ./bin/cli.ts` serves static assets from `dist` unless `VITE_DEV_SERVER_URL` is set.
+2. After any frontend change (`src/mainview/*`, `index.html`, styles, charts/components), rebuild before validating in the app: `bun run build`.
+3. For launcher/normal CLI flows, use `bun ./bin/cli.ts --rebuild` when you need the latest frontend changes included at startup.
 
 Default local URL: `http://127.0.0.1:3210`
 

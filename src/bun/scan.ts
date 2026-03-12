@@ -1,7 +1,6 @@
 import type { SessionSource } from "../shared/schema";
 import {
   aggregateSessionsByDate,
-  mergeDailyAggregates,
   resolveAggregationTimeZone,
 } from "./aggregator";
 import { discoverAll } from "./discovery";
@@ -10,7 +9,7 @@ import { parseFile } from "./parsers";
 import type { Session } from "./session-schema";
 import {
   dailyStoreNeedsTimeZoneBackfill,
-  readDailyStore,
+  getSettings,
   readScanState,
   writeAggregationMeta,
   writeDailyStore,
@@ -35,38 +34,46 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
   const aggregationTimeZone = resolveAggregationTimeZone(options.timeZone);
   const shouldFullScan =
     Boolean(options.fullScan) || (await dailyStoreNeedsTimeZoneBackfill(aggregationTimeZone));
-  const candidates = await discoverAll(options.sources);
+  const settings = await getSettings();
+  const candidates = await discoverAll(options.sources, { customPaths: settings.customPaths });
   const scanState = await readScanState();
+  const selectedSources = options.sources && options.sources.length > 0 ? new Set(options.sources) : null;
+  const isSelectedSource = (source: SessionSource): boolean =>
+    selectedSources === null || selectedSources.has(source);
+  const candidatePaths = new Set(candidates.map((candidate) => candidate.path));
+  const deletedPaths = Object.entries(scanState)
+    .filter(([, state]) => isSelectedSource(state.source))
+    .filter(([path]) => !candidatePaths.has(path))
+    .map(([path]) => path);
 
-  const changed = shouldFullScan
-    ? candidates
-    : candidates.filter((candidate) => {
-        const state = scanState[candidate.path];
-        return !state || state.mtimeMs !== candidate.mtime || state.fileSize !== candidate.size;
-      });
+  const changed = candidates.filter((candidate) => {
+    const state = scanState[candidate.path];
+    return !state || state.mtimeMs !== candidate.mtime || state.fileSize !== candidate.size;
+  });
+  const needsConsistencyRebuild = shouldFullScan || deletedPaths.length > 0 || changed.length > 0;
+  const toProcess = needsConsistencyRebuild ? candidates : [];
+  const nextScanState = structuredClone(scanState);
 
   let scanned = 0;
   let errors = 0;
   const sessions: Session[] = [];
 
-  for (const candidate of changed) {
+  for (const path of deletedPaths) {
+    delete nextScanState[path];
+  }
+
+  for (const candidate of toProcess) {
     const parsed = await parseFile(candidate);
 
     if (!parsed) {
       errors += 1;
-      scanState[candidate.path] = {
-        source: candidate.source,
-        fileSize: candidate.size,
-        mtimeMs: candidate.mtime,
-        parsedAt: new Date().toISOString(),
-      };
       continue;
     }
 
     const { session } = normalizeSession(parsed);
     sessions.push(session);
 
-    scanState[candidate.path] = {
+    nextScanState[candidate.path] = {
       source: candidate.source,
       fileSize: candidate.size,
       mtimeMs: candidate.mtime,
@@ -76,19 +83,10 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
     scanned += 1;
   }
 
-  await writeScanState(scanState);
-
-  if (shouldFullScan) {
+  if (needsConsistencyRebuild && errors === 0) {
     await writeDailyStore(aggregateSessionsByDate(sessions, { timeZone: aggregationTimeZone }));
     await writeAggregationMeta(aggregationTimeZone);
-  } else if (sessions.length > 0) {
-    const existingDaily = await readDailyStore();
-    const nextDaily = mergeDailyAggregates(
-      existingDaily,
-      aggregateSessionsByDate(sessions, { timeZone: aggregationTimeZone }),
-    );
-    await writeDailyStore(nextDaily);
-    await writeAggregationMeta(aggregationTimeZone);
+    await writeScanState(nextScanState);
   }
 
   return {

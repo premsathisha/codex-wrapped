@@ -45,7 +45,7 @@ describe("computeCost", () => {
     expect(cost).toBe(0);
   });
 
-  test("does not remap gpt-5.3-codex to gpt-5.2-codex pricing", async () => {
+  test("prefers local pricing over remote pricing for known models", async () => {
     globalThis.fetch = ((async () =>
       new Response(
         JSON.stringify({
@@ -80,11 +80,13 @@ describe("computeCost", () => {
       reasoningTokens: 30,
     };
 
-    const cost53 = computeCost(usage, "gpt-5.3-codex");
-    const cost52 = computeCost(usage, "gpt-5.2-codex");
+    const expectedLocal =
+      (usage.inputTokens * 1.75) / 1_000_000 +
+      ((usage.outputTokens + usage.reasoningTokens) * 14) / 1_000_000 +
+      (usage.cacheReadTokens * 0.175) / 1_000_000;
 
-    expect(cost53).toBeNull();
-    expect(cost52).not.toBeNull();
+    expect(computeCost(usage, "gpt-5.3-codex") ?? 0).toBeCloseTo(expectedLocal, 12);
+    expect(computeCost(usage, "gpt-5.2-codex") ?? 0).toBeCloseTo(expectedLocal, 12);
   });
 
   test("does not match unknown model names via remote substring", async () => {
@@ -188,7 +190,7 @@ describe("computeCost", () => {
       reasoningTokens: 0,
     };
 
-    expect(computeCost(usage, "gpt-5") ?? 0).toBeCloseTo(1, 12);
+    expect(computeCost(usage, "gpt-5") ?? 0).toBeCloseTo(1.25, 12);
     expect(computeCost(usage, "openrouter/openai/gpt-5") ?? 0).toBeCloseTo(9, 12);
   });
 });

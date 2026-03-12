@@ -7,7 +7,11 @@ export interface FileCandidate {
   size: number;
 }
 
+export interface DiscoverOptions {
+  customPaths?: Partial<Record<SessionSource, string>>;
+}
+
 export interface AgentDiscoverer {
   source: SessionSource;
-  discover(): Promise<FileCandidate[]>;
+  discover(options?: DiscoverOptions): Promise<FileCandidate[]>;
 }
