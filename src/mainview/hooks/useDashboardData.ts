@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DashboardSummary, DailyAggregate, SessionSource, TokenUsage } from "@shared/schema";
 import { SESSION_SOURCES } from "@shared/schema";
+import {
+  calculateCurrentStreakFromDates,
+  calculateLongestStreakFromDates,
+  daysAgoLocalISO,
+  toLocalISODate,
+} from "@shared/localDate";
 import { SOURCE_LABELS } from "../lib/constants";
 import { formatHourLabel } from "../lib/hourly";
 import { collectModelKeys } from "./modelKeys";
@@ -15,14 +21,9 @@ const LOOKBACK_DAYS_BY_RANGE = {
   last365: 365,
 } as const;
 
-const daysAgoISO = (daysAgo: number): string => {
-  const date = new Date();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() - daysAgo);
-  return date.toISOString().slice(0, 10);
-};
+const daysAgoISO = (daysAgo: number): string => daysAgoLocalISO(daysAgo);
 
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => toLocalISODate(new Date());
 
 const tokenTotal = (tokens: TokenUsage): number =>
   tokens.inputTokens +
@@ -36,47 +37,6 @@ const rangeLengthDays = (dateFrom: string, dateTo: string): number => {
   const to = Date.parse(`${dateTo}T00:00:00Z`);
   if (Number.isNaN(from) || Number.isNaN(to) || to < from) return 0;
   return Math.floor((to - from) / ONE_DAY_MS) + 1;
-};
-
-const calculateCurrentStreak = (
-  activeDates: Set<string>,
-  dateFrom: string,
-  dateTo: string,
-): { days: number; startDate: string | null } => {
-  const from = Date.parse(`${dateFrom}T00:00:00Z`);
-  const to = Date.parse(`${dateTo}T00:00:00Z`);
-  if (Number.isNaN(from) || Number.isNaN(to) || to < from) return { days: 0, startDate: null };
-
-  let streak = 0;
-  let streakStartDate: string | null = null;
-  for (let day = to; day >= from; day -= ONE_DAY_MS) {
-    const key = new Date(day).toISOString().slice(0, 10);
-    if (!activeDates.has(key)) break;
-    streak += 1;
-    streakStartDate = key;
-  }
-
-  return { days: streak, startDate: streakStartDate };
-};
-
-const calculateLongestStreak = (activeDates: Set<string>, dateFrom: string, dateTo: string): number => {
-  const from = Date.parse(`${dateFrom}T00:00:00Z`);
-  const to = Date.parse(`${dateTo}T00:00:00Z`);
-  if (Number.isNaN(from) || Number.isNaN(to) || to < from) return 0;
-
-  let best = 0;
-  let current = 0;
-  for (let day = from; day <= to; day += ONE_DAY_MS) {
-    const key = new Date(day).toISOString().slice(0, 10);
-    if (activeDates.has(key)) {
-      current += 1;
-      if (current > best) best = current;
-    } else {
-      current = 0;
-    }
-  }
-
-  return best;
 };
 
 const currentYear = (): number => new Date().getFullYear();
@@ -429,8 +389,8 @@ export const useDashboardData = () => {
       timelinePoints.filter((entry) => entry.sessions > 0).map((entry) => entry.date),
     );
     const activeDays = activeDates.size;
-    const currentStreak = calculateCurrentStreak(activeDates, dateFrom, dateTo);
-    const longestStreak = calculateLongestStreak(activeDates, dateFrom, dateTo);
+    const currentStreak = calculateCurrentStreakFromDates(activeDates, dateFrom, dateTo);
+    const longestStreak = calculateLongestStreakFromDates(activeDates, dateFrom, dateTo);
     const mostExpensiveDay =
       timelinePoints.length === 0
         ? null

@@ -493,8 +493,9 @@ const DashboardCharts = ({
     });
   }, []);
 
-  const totalModelTokens = modelBreakdown.reduce((sum, row) => sum + row.tokens, 0);
-  const modelRows = modelBreakdown.map((row, index) => ({
+  const visibleModelBreakdown = modelBreakdown.filter((row) => row.model !== "<synthetic>");
+  const totalModelTokens = visibleModelBreakdown.reduce((sum, row) => sum + row.tokens, 0);
+  const modelRows = visibleModelBreakdown.map((row, index) => ({
     ...row,
     color: modelColors[index % modelColors.length],
     percentage: totalModelTokens > 0 ? (row.tokens / totalModelTokens) * 100 : 0,
@@ -570,7 +571,7 @@ const DashboardCharts = ({
     (totalTokenUsage?.cacheReadTokens ?? 0) +
     (totalTokenUsage?.cacheWriteTokens ?? 0) +
     (totalTokenUsage?.reasoningTokens ?? 0);
-  const mostUsedModel = modelBreakdown[0] ?? null;
+  const mostUsedModel = visibleModelBreakdown[0] ?? null;
   const recentModelUsage = useMemo(() => {
     const end = Date.parse(`${dateTo}T00:00:00Z`);
     if (Number.isNaN(end)) return null;

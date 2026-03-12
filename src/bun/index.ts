@@ -12,6 +12,7 @@ import {
   type TokenUsage,
   type TrayStats,
 } from "../shared/schema";
+import { toLocalISODate } from "../shared/localDate";
 import type { AppSettings } from "../shared/types";
 import { resolveAggregationTimeZone } from "./aggregator";
 import { buildTopRepos } from "./dashboardSummary";
@@ -299,7 +300,7 @@ const getSessionCountFromStore = async (): Promise<number> => {
 };
 
 const getTrayStatsFromStore = async (): Promise<TrayStats> => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = toLocalISODate(new Date());
   const daily = await readDailyStore();
   const todayStats = daily[today]?.totals ?? createEmptyDayStats();
 
