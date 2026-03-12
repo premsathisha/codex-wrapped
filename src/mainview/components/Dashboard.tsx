@@ -196,6 +196,17 @@ const Dashboard = () => {
   }, [summary, error, startCardAnimation]);
 
   useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) return;
+    document.documentElement.style.setProperty("--wrapped-scroll-y", "0px");
+    document.documentElement.style.setProperty("--wrapped-scroll-progress", "0");
+    return () => {
+      document.documentElement.style.setProperty("--wrapped-scroll-y", "0px");
+      document.documentElement.style.setProperty("--wrapped-scroll-progress", "0");
+    };
+  }, [summary, error]);
+
+  useEffect(() => {
     animatedCardIndicesRef.current.clear();
 
     for (const timeoutId of Object.values(animationTimeoutByCardRef.current)) {
@@ -227,8 +238,8 @@ const Dashboard = () => {
   if (loading && !summary) {
     return (
       <>
-        {sidebar}
         <div ref={scrollRef} className="wrapped-scroll">
+          {sidebar}
           <section data-card-index="1" className="wrapped-card wrapped-card-loading">
             <EmptyState title="Building your coding story" description="Loading annual summary and timeline." />
           </section>
@@ -240,8 +251,8 @@ const Dashboard = () => {
   if (error && !summary) {
     return (
       <>
-        {sidebar}
         <div ref={scrollRef} className="wrapped-scroll">
+          {sidebar}
           <section data-card-index="1" className="wrapped-card wrapped-card-loading">
             <EmptyState title="Unable to build wrapped view" description={error} />
             <button type="button" onClick={() => void refresh()} className="wrapped-button mt-4">
@@ -296,8 +307,8 @@ const Dashboard = () => {
 
   return (
     <>
-      {sidebar}
       <div ref={scrollRef} className="wrapped-scroll">
+        {sidebar}
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-12 sm:px-6">
           <section data-card-index="1" className="wrapped-card wrapped-card-hero">
             <header className="mb-6">

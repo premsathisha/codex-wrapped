@@ -476,6 +476,19 @@ const DashboardCharts = ({
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const viewport = heatmapViewportRef.current;
+    if (!viewport) return;
+
+    const syncToLatestWeek = () => {
+      const maxScrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      viewport.scrollLeft = maxScrollLeft;
+    };
+
+    const frameId = window.requestAnimationFrame(syncToLatestWeek);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [dateFrom, dateTo, heatmapTargetWidthPx, timeline.length]);
+
   const clearHeatmapHover = useCallback(() => {
     setHeatmapHoverState((current) => (current === null ? current : null));
   }, []);
@@ -897,7 +910,7 @@ const DashboardCharts = ({
                 )}
               </div>
 
-              <div className="mt-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+              <div className="mt-4 mr-auto flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
                 <span>Less</span>
                 <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.less }} />
                 <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.slightlyLess }} />
@@ -907,28 +920,28 @@ const DashboardCharts = ({
                 <span>More</span>
               </div>
 
-              <div className="mt-6 grid grid-cols-1 gap-y-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-8">
-                <article className="min-w-0 w-full">
+              <div className="mt-6 flex flex-col gap-y-6 sm:grid sm:grid-cols-2 sm:gap-y-6 lg:flex lg:flex-row lg:items-start lg:justify-between lg:gap-y-0">
+                <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-start">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Most Used Model</p>
                   <p className="mt-1 text-2xl font-semibold leading-tight text-white">
                     {mostUsedModel ? mostUsedModel.model : "-"}
                     {mostUsedModel ? ` (${formatTokens(mostUsedModel.tokens)})` : ""}
                   </p>
                 </article>
-                <article className="min-w-0 w-full">
+                <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recent Use (Last 30 Days)</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                  <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
                     {recentModelUsage ? recentModelUsage.model : "-"}
                     {recentModelUsage ? ` (${formatTokens(recentModelUsage.tokens)})` : ""}
                   </p>
                 </article>
-                <article className="min-w-0 w-full">
+                <article className="min-w-0 flex flex-col items-center text-center">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Longest Streak</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                  <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
                     {formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
                   </p>
                 </article>
-                <article className="min-w-0 w-full">
+                <article className="min-w-0 flex flex-col items-end">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current Streak</p>
                   <p className="mt-1 text-2xl font-semibold leading-tight text-white">
                     {formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
@@ -1228,16 +1241,16 @@ const DashboardCharts = ({
 
                 <article className="wrapped-tile">
                   <p className="wrapped-label">Fun Stats</p>
-                  <div className="mt-2 space-y-1 text-sm text-slate-200">
-                    <p>{formatNumber(nightSessions)} sessions after midnight</p>
-                    <p>{weekendSessionPercent}% of coding on weekends</p>
-                    {busiestDayOfWeek && <p>{busiestDayOfWeek}s are your power day</p>}
+                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-200">
+                    <li>{formatNumber(nightSessions)} sessions after midnight</li>
+                    <li>{weekendSessionPercent}% of coding on weekends</li>
+                    {busiestDayOfWeek && <li>{busiestDayOfWeek}s are your power day</li>}
                     {busiestSingleDay && (
-                      <p>
+                      <li>
                         Busiest day: {formatDate(busiestSingleDay.date)} ({formatTokens(busiestSingleDay.tokens)})
-                      </p>
+                      </li>
                     )}
-                  </div>
+                  </ol>
                 </article>
               </div>
             </div>
