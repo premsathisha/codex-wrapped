@@ -1,6 +1,7 @@
 # AI Wrapped
 
 AI Wrapped is a local dashboard that summarizes your coding activity across AI coding tools in a Spotify Wrapped-style view.
+This repository is forked from [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped).
 
 It scans local session files, builds daily aggregates, and serves a local web app.
 
@@ -46,6 +47,8 @@ bun ./bin/cli.ts
 
 `http://127.0.0.1:3210`
 
+On macOS you can also double-click `AI Wrapped Launcher.app` in the repo root to start the local server and open the app without using Terminal.
+
 ## Development
 
 Run backend + built frontend:
@@ -89,6 +92,11 @@ Common options:
 - `--version` or `-v`: show app version
 - `--rebuild`: rebuild frontend before launch
 - `--uninstall`: remove local AI Wrapped data at `~/.ai-wrapped`
+
+## macOS Launcher
+
+- `AI Wrapped Launcher.app`: double-clickable macOS launcher for this repo
+- `bin/launch-macos.sh`: starts `bun ./bin/cli.ts` in the background if needed and opens `http://127.0.0.1:3210`
 
 ## Data and Privacy
 
