@@ -66,6 +66,7 @@ AI Wrapped is a local-first Bun web app that scans local AI coding session logs 
 
 ## Agent Workflow Notes
 1. Do not validate frontend fixes against stale bundles.
-2. After edits affecting runtime behavior, verify with live local API/UI where possible.
-3. If scan/persistence logic changes, sanity-check `scan` completion and dashboard totals from local endpoints.
-4. Prefer non-destructive operations; do not remove user data or rewrite source logs unless explicitly requested.
+2. After any frontend tweak, rebuild `dist` (`bun run build`) before checking the UI.
+3. After edits affecting runtime behavior, verify with live local API/UI where possible.
+4. If scan/persistence logic changes, sanity-check `scan` completion and dashboard totals from local endpoints.
+5. Prefer non-destructive operations; do not remove user data or rewrite source logs unless explicitly requested.

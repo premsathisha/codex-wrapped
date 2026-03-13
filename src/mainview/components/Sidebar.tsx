@@ -27,7 +27,7 @@ const Sidebar = ({
   return (
     <header className="w-full">
       <div className="wrapped-nav-solid w-full px-4 py-3 sm:px-6">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
+        <div className="mx-auto flex w-full max-w-[68rem] items-center justify-between gap-3">
           <div className="wrapped-nav-content flex items-center gap-2">
             <p className="text-xs uppercase tracking-[0.22em] text-[#E4E4E6]">AI Wrapped</p>
             {isScanning && (

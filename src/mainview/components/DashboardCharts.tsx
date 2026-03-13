@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { AnimatedNumber } from "./StatsCards";
+import DownloadableCard from "./DownloadableCard";
 import { formatDate, formatDuration, formatNumber, formatTokens, formatUsd } from "../lib/formatters";
 import { getHeatmapColor } from "../lib/heatmapColors";
 import { formatHourLabel, hasHourlyActivity } from "../lib/hourly";
@@ -713,538 +714,553 @@ const DashboardCharts = ({
 
   return (
     <>
-      <section data-card-index="3" className="wrapped-card wrapped-card-models">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="wrapped-title">Your Top Models</h2>
-          </div>
-          <p className="text-sm text-slate-300">Ranked by token usage</p>
-        </header>
-
-        {modelRows.length === 0 ? (
-          <p className="text-sm text-slate-300">No model activity found in this range.</p>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          <div className={`${chartWrapperClass} ${animateCard3 ? chartRevealClass : ""} self-center lg:-translate-x-[35px]`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartModelRows} layout="vertical" margin={{ left: 18, right: 16 }}>
-                  <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
-                  <XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis
-                    dataKey="model"
-                    type="category"
-                    tick={{ fill: "#e2e8f0", fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={188}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "rgba(59,130,246,0.15)" }}
-                    contentStyle={{
-                      background: "#000000",
-                      border: "1px solid rgba(148,163,184,0.35)",
-                      borderRadius: "12px",
-                      color: "#ffffff",
-                    }}
-                    labelStyle={{ color: "#ffffff" }}
-                    itemStyle={{ color: "#ffffff" }}
-                    formatter={formatTokensTooltipWithValue}
-                  />
-                  <Bar
-                    dataKey="tokens"
-                    name="Tokens"
-                    radius={[0, 10, 10, 0]}
-                    isAnimationActive={animateCard3}
-                    animationDuration={CHART_ANIMATION_MS}
-                    animationBegin={0}
-                    animationEasing="ease-in-out"
-                  >
-                    {chartModelRows.map((row) => (
-                      <Cell key={row.model} fill={row.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+      <DownloadableCard title="Your Top Models">
+        <section data-card-index="3" className="wrapped-card wrapped-card-models">
+          <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="wrapped-title">Your Top Models</h2>
             </div>
+            <p className="text-sm text-slate-300">Ranked by token usage</p>
+          </header>
 
-            <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
-              {modelRows.map((row) => (
-                <article
-                  key={row.model}
-                  className="wrapped-tile"
-                  title={`${row.model}: ${formatNumber(row.tokens)} tokens (${row.percentage.toFixed(1)}%)`}
-                >
-                  <div className="flex items-center justify-between text-sm text-slate-200">
-                    <span className="truncate pr-3">{row.model}</span>
-                    <span>{row.percentage.toFixed(1)}%</span>
-                  </div>
-                  <div className="mt-2 h-2 rounded-full bg-slate-700/45">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${row.percentage}%`, backgroundColor: row.color }}
-                    />
-                  </div>
-                  <p className="mt-2 text-xs text-slate-300">{formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section data-card-index="5" className="wrapped-card wrapped-card-activity">
-        <div className={`rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7 ${animateCard5 ? chartRevealClass : ""}`}>
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-            <h2 className="text-[1.9rem] font-semibold tracking-tight text-white">Codex</h2>
-            <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 sm:gap-10">
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Input Tokens</p>
-                <p className="text-2xl font-semibold text-white">{formatTokens(inputTokens)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Output Tokens</p>
-                <p className="text-2xl font-semibold text-white">{formatTokens(outputTokens)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Total Tokens</p>
-                <p className="text-2xl font-semibold text-white">{formatTokens(totalTokens)}</p>
-              </div>
-            </div>
-          </div>
-
-          {heatmap.length === 0 ? (
-            <p className="text-sm text-slate-300">No activity timeline available.</p>
+          {modelRows.length === 0 ? (
+            <p className="text-sm text-slate-300">No model activity found in this range.</p>
           ) : (
-            <>
-              <div ref={heatmapTooltipHostRef} className="relative">
-                <div ref={heatmapViewportRef} className="overflow-x-auto pb-1" onMouseLeave={clearHeatmapHover}>
-                  <div className="inline-grid grid-cols-[auto_auto] gap-x-2 gap-y-2">
-                    <div style={{ width: HEATMAP_LEFT_GUTTER_PX }} />
-                    <div className="relative" style={{ width: heatmapGridWidthPx, height: HEATMAP_MONTH_ROW_HEIGHT_PX }}>
-                      {heatmapMonthLabels.map((month) => (
-                        <span
-                          key={`month-${month.weekIndex}-${month.label}`}
-                          className="absolute top-0 text-[11px] leading-none text-slate-400"
-                          style={{ left: month.weekIndex * (heatmapCellSizePx + HEATMAP_GAP_PX) }}
-                        >
-                          {month.label}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div
-                      className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-slate-400"
-                      style={{ width: HEATMAP_LEFT_GUTTER_PX }}
-                    >
-                      {HEATMAP_WEEKDAY_LABELS.map((label, dayIndex) => (
-                        <div key={`day-label-${dayIndex}`} className="flex items-center justify-end" style={{ height: heatmapCellSizePx }}>
-                          {label}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="inline-grid gap-1" style={heatmapGridStyle}>
-                      {heatmapWeeks.map((week, weekIndex) => (
-                        <div key={`week-${weekIndex}`} className="grid grid-rows-7 gap-1">
-                          {week.map((cell, dayIndex) => {
-                            if (!cell) {
-                              return (
-                                <div
-                                  key={`empty-${weekIndex}-${dayIndex}`}
-                                  className="rounded-[4px] opacity-0"
-                                  style={{ width: heatmapCellSizePx, height: heatmapCellSizePx }}
-                                  onMouseEnter={clearHeatmapHover}
-                                />
-                              );
-                            }
-
-                            const background = getHeatmapColor(themePalette, cell.intensity, cell.tokens > 0);
-
-                            return (
-                              <div
-                                key={cell.date}
-                                className="rounded-[4px]"
-                                style={{ width: heatmapCellSizePx, height: heatmapCellSizePx, background }}
-                                aria-label={buildActivityTooltip(cell, dailyAgentTokensByDate)}
-                                onMouseEnter={(event) => updateHeatmapHover(event, cell)}
-                                onMouseMove={(event) => updateHeatmapHover(event, cell)}
-                              />
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {heatmapHoverState !== null && (
-                  <div
-                    className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl"
-                    style={{ left: heatmapTooltipLeftPx, top: heatmapTooltipTopPx, transform: "translate(-50%, -100%)" }}
-                  >
-                    <p className="text-sm font-semibold text-white">{formatDate(heatmapHoverState.cell.date)}</p>
-                    <p className="mt-1 text-xs text-slate-200">
-                      Tokens: {formatTokens(heatmapHoverState.cell.tokens)} ({formatNumber(heatmapHoverState.cell.tokens)})
-                    </p>
-                    <p className="text-xs text-slate-300">Sessions: {formatNumber(heatmapHoverState.cell.sessions)}</p>
-                    <p className="text-xs text-slate-300">Spend: {formatUsd(heatmapHoverState.cell.costUsd)}</p>
-                    <div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
-                      {heatmapTooltipAgentRows.map((entry) => (
-                        <p key={entry.label} className="flex items-center justify-between gap-2 text-xs text-slate-300">
-                          <span style={{ color: entry.color }}>{entry.label}</span>
-                          <span>{formatTokens(entry.tokens)}</span>
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 mr-auto flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                <span>Less</span>
-                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.less }} />
-                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.slightlyLess }} />
-                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.medium }} />
-                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.high }} />
-                <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.veryHigh }} />
-                <span>More</span>
-              </div>
-
-              <div className="mt-6 flex flex-col gap-y-6 sm:grid sm:grid-cols-2 sm:gap-y-6 lg:flex lg:flex-row lg:items-start lg:justify-between lg:gap-y-0">
-                <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-start">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Most Used Model</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
-                    {mostUsedModel ? mostUsedModel.model : "-"}
-                  </p>
-                </article>
-                <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recent Use (Last 30 Days)</p>
-                  <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
-                    {recentModelUsage ? recentModelUsage.model : "-"}
-                  </p>
-                </article>
-                <article className="min-w-0 flex flex-col items-center text-center">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Longest Streak</p>
-                  <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
-                    {formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
-                  </p>
-                </article>
-                <article className="min-w-0 flex flex-col items-end">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current Streak</p>
-                  <p className="mt-1 text-2xl font-semibold leading-tight text-white">
-                    {formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
-                  </p>
-                </article>
-              </div>
-            </>
-          )}
-        </div>
-      </section>
-
-      <section data-card-index="6" className="wrapped-card wrapped-card-cost">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="wrapped-title">Cost Breakdown</h2>
-          </div>
-        </header>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          <article className="wrapped-tile">
-            <p className="wrapped-label">Total Spend</p>
-            <AnimatedNumber
-              value={selectedTotalCostUsd}
-              animate={animateCard6}
-              durationMs={CHART_ANIMATION_MS}
-              format={formatUsd}
-              className="mt-2 block text-4xl font-semibold text-white"
-            />
-          </article>
-          <article className="wrapped-tile">
-            <p className="wrapped-label">Daily Average</p>
-            <AnimatedNumber
-              value={selectedDailyAverageCostUsd}
-              animate={animateCard6}
-              durationMs={CHART_ANIMATION_MS}
-              format={formatUsd}
-              className="mt-2 block text-3xl font-semibold text-white"
-            />
-          </article>
-          <article className="wrapped-tile">
-            <p className="wrapped-label">Most Expensive Day</p>
-            <p className="mt-2 text-xl font-semibold text-white">
-              {selectedMostExpensiveDay ? formatShortDate(selectedMostExpensiveDay.date) : "-"}
-            </p>
-            <p className="mt-1 text-sm text-slate-300">
-              {selectedMostExpensiveDay ? (
-                <AnimatedNumber
-                  value={selectedMostExpensiveDay.costUsd}
-                  animate={animateCard6}
-                  durationMs={CHART_ANIMATION_MS}
-                  format={formatUsd}
-                />
-              ) : (
-                "No cost data"
-              )}
-            </p>
-          </article>
-        </div>
-
-        <div className={`mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}>
-          {effectiveCostGroupBy === "none" ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={costTimeline}>
-                <defs>
-                  <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={themePalette.high} stopOpacity={0.55} />
-                    <stop offset="100%" stopColor={themePalette.high} stopOpacity={0.08} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
-                <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#000000",
-                    border: "1px solid rgba(148,163,184,0.35)",
-                    borderRadius: "12px",
-                  }}
-                  formatter={formatUsdTooltip}
-                  labelFormatter={(value) => formatDate(String(value))}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="costUsd"
-                  name="Cost"
-                  stroke={themePalette.medium}
-                  fill="url(#costFill)"
-                  strokeWidth={2.5}
-                  isAnimationActive={animateCard6}
-                  animationDuration={CHART_ANIMATION_MS}
-                  animationBegin={0}
-                  animationEasing="ease-in-out"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={groupedCostTimeline}>
-                <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
-                <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    background: "#000000",
-                    border: "1px solid rgba(148,163,184,0.35)",
-                    borderRadius: "12px",
-                  }}
-                  formatter={(value: number | string | undefined, name?: string) => [
-                    formatUsd(typeof value === "number" ? value : Number(value ?? 0)),
-                    name ?? "Cost",
-                  ]}
-                  labelFormatter={(value) => formatDate(String(value))}
-                />
-                {groupedCostSeries.map((series) => (
-                  <Area
-                    key={series.key}
-                    type="monotone"
-                    dataKey={series.key}
-                    name={series.label}
-                    stackId="cost"
-                    stroke={series.color}
-                    fill={series.color}
-                    fillOpacity={0.22}
-                    strokeWidth={2}
-                    isAnimationActive={animateCard6}
-                    animationDuration={CHART_ANIMATION_MS}
-                    animationBegin={0}
-                    animationEasing="ease-in-out"
-                  />
-                ))}
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </section>
-
-      <section data-card-index="7" className="wrapped-card wrapped-card-repos">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="wrapped-title">Your Top Repos</h2>
-          </div>
-          <p className="text-sm text-slate-300">By session volume and cost</p>
-        </header>
-
-        {topRepos.length === 0 ? (
-          <p className="text-sm text-slate-300">No repository usage found.</p>
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-            <div className="space-y-2">
-              {topRepos.map((repo) => (
-                <article key={repo.repo} className="wrapped-tile" title={buildRepoHoverDetails(repo)}>
-                  <p className="truncate text-sm font-semibold text-white">{repo.repo}</p>
-                  <div className="mt-2 flex items-center justify-between text-xs text-slate-300">
-                    <span>
-                      <AnimatedNumber
-                        value={repo.sessions}
-                        animate={animateCard7}
-                        durationMs={CHART_ANIMATION_MS}
-                        format={(value) => formatNumber(Math.max(0, Math.round(value)))}
-                      />{" "}
-                      sessions
-                    </span>
-                    <span>
-                      <AnimatedNumber
-                        value={repo.costUsd}
-                        animate={animateCard7}
-                        durationMs={CHART_ANIMATION_MS}
-                        format={formatUsd}
-                      />
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-
-            <div className={`${chartWrapperClass} ${animateCard7 ? chartRevealClass : ""} self-center lg:-translate-x-[4px]`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topRepos} layout="vertical" margin={{ left: 12, right: 16 }}>
-                  <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
-                  <XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis
-                    dataKey="repo"
-                    type="category"
-                    tick={{ fill: "#e2e8f0", fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={140}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "#000000",
-                      border: "1px solid rgba(148,163,184,0.35)",
-                      borderRadius: "12px",
-                    }}
-                    content={renderTopReposTooltip}
-                  />
-                  <Bar
-                    dataKey="sessions"
-                    radius={[0, 10, 10, 0]}
-                    isAnimationActive={animateCard7}
-                    animationDuration={CHART_ANIMATION_MS}
-                    animationBegin={0}
-                    animationEasing="ease-in-out"
-                  >
-                    {topRepos.map((repo, index) => (
-                      <Cell key={repo.repo} fill={topRepoBarColors[Math.min(index, topRepoBarColors.length - 1)]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section data-card-index="8" className="wrapped-card wrapped-card-hours">
-        <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="wrapped-title">Your Coding Hours</h2>
-          </div>
-          <p className="text-sm text-slate-300">When you code the most</p>
-        </header>
-
-        {!hasHourlyData ? (
-          <p className="text-sm text-slate-300">No hourly activity found in this range.</p>
-        ) : (() => {
-          const peakEntry = hourlyBreakdown.reduce(
-            (max, entry) => (entry.tokens > max.tokens ? entry : max),
-            hourlyBreakdown[0] as HourlyDataPoint,
-          );
-          const peakHour = peakEntry.hour;
-          const peakTokens = peakEntry.tokens;
-          const personality = classifyCodingPersonality(peakHour);
-          const nightSessions = hourlyBreakdown
-            .filter((h) => h.hour >= 0 && h.hour < 6)
-            .reduce((sum, h) => sum + h.sessions, 0);
-
-          return (
-            <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-              <div className={`${chartWrapperClass} ${animateCard8 ? chartRevealClass : ""} self-center`}>
+            <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
+              <div className={`${chartWrapperClass} ${animateCard3 ? chartRevealClass : ""} self-center lg:-translate-x-[43px]`}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={hourlyBreakdown}>
+                  <BarChart data={chartModelRows} layout="vertical" margin={{ left: 18, right: 16 }}>
                     <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
-                    <XAxis
-                      dataKey="label"
-                      tick={{ fill: "#cbd5e1", fontSize: 10 }}
+                    <XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis
+                      dataKey="model"
+                      type="category"
+                      tick={{ fill: "#e2e8f0", fontSize: 12 }}
                       tickLine={false}
                       axisLine={false}
-                      interval={2}
+                      width={188}
                     />
-                    <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                     <Tooltip
-                      content={<HourlyBarTooltip />}
-                      allowEscapeViewBox={{ x: true, y: true }}
-                      wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+                      cursor={{ fill: "rgba(59,130,246,0.15)" }}
+                      contentStyle={{
+                        background: "#000000",
+                        border: "1px solid rgba(148,163,184,0.35)",
+                        borderRadius: "12px",
+                        color: "#ffffff",
+                      }}
+                      labelStyle={{ color: "#ffffff" }}
+                      itemStyle={{ color: "#ffffff" }}
+                      formatter={formatTokensTooltipWithValue}
                     />
                     <Bar
                       dataKey="tokens"
                       name="Tokens"
-                      radius={[6, 6, 0, 0]}
-                      isAnimationActive={animateCard8}
+                      radius={[0, 10, 10, 0]}
+                      isAnimationActive={animateCard3}
                       animationDuration={CHART_ANIMATION_MS}
                       animationBegin={0}
                       animationEasing="ease-in-out"
                     >
-                      {hourlyBreakdown.map((row) => (
-                        <Cell
-                          key={row.hour}
-                          fill={row.hour === peakHour ? themePalette.veryHigh : themePalette.slightlyLess}
-                        />
+                      {chartModelRows.map((row) => (
+                        <Cell key={row.model} fill={row.color} />
                       ))}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <article className="wrapped-tile py-6 text-left">
-                  <p className="text-5xl">{personality.emoji}</p>
-                  <p className="mt-3 text-2xl font-semibold text-white">{personality.label}</p>
-                  <p className="mt-2 text-sm text-slate-300">{personality.description}</p>
-                </article>
-
-                <article className="wrapped-tile">
-                  <p className="wrapped-label">Peak Hour</p>
-                  <AnimatedNumber
-                    value={peakHour}
-                    animate={animateCard8}
-                    durationMs={CHART_ANIMATION_MS}
-                    format={(v) => formatHourLabel(Math.round(v))}
-                    className="mt-2 block text-3xl font-semibold text-white"
-                  />
-                  <p className="mt-1 text-xs text-slate-300">
-                    {formatTokens(peakTokens)} tokens in your busiest hour
-                  </p>
-                </article>
-
-                <article className="wrapped-tile">
-                  <p className="wrapped-label">Fun Stats</p>
-                  <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-200">
-                    <li>{formatNumber(nightSessions)} sessions after midnight</li>
-                    <li>{weekendSessionPercent}% of coding on weekends</li>
-                    {busiestDayOfWeek && <li>{busiestDayOfWeek}s are your power day</li>}
-                    {busiestSingleDay && (
-                      <li>
-                        Busiest day: {formatDate(busiestSingleDay.date)} ({formatTokens(busiestSingleDay.tokens)})
-                      </li>
-                    )}
-                  </ol>
-                </article>
+              <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+                {modelRows.map((row) => (
+                  <article
+                    key={row.model}
+                    className="wrapped-tile"
+                    title={`${row.model}: ${formatNumber(row.tokens)} tokens (${row.percentage.toFixed(1)}%)`}
+                  >
+                    <div className="flex items-center justify-between text-sm text-slate-200">
+                      <span className="truncate pr-3">{row.model}</span>
+                      <span>{row.percentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="mt-2 h-2 rounded-full bg-slate-700/45">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${row.percentage}%`, backgroundColor: row.color }}
+                      />
+                    </div>
+                    <p className="mt-2 text-xs text-slate-300">{formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
+                  </article>
+                ))}
               </div>
             </div>
-          );
-        })()}
-      </section>
+          )}
+        </section>
+      </DownloadableCard>
+
+      <DownloadableCard title="Codex">
+        <section data-card-index="5" className="wrapped-card wrapped-card-activity">
+          <div className={`rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7 ${animateCard5 ? chartRevealClass : ""}`}>
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+              <h2 className="text-[1.9rem] font-semibold tracking-tight text-white">Codex</h2>
+              <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 sm:gap-10">
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Input Tokens</p>
+                  <p className="text-2xl font-semibold text-white">{formatTokens(inputTokens)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Output Tokens</p>
+                  <p className="text-2xl font-semibold text-white">{formatTokens(outputTokens)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Total Tokens</p>
+                  <p className="text-2xl font-semibold text-white">{formatTokens(totalTokens)}</p>
+                </div>
+              </div>
+            </div>
+
+            {heatmap.length === 0 ? (
+              <p className="text-sm text-slate-300">No activity timeline available.</p>
+            ) : (
+              <>
+                <div ref={heatmapTooltipHostRef} className="relative">
+                  <div
+                    ref={heatmapViewportRef}
+                    className="overflow-x-auto pb-1"
+                    data-export-scroll-anchor="end"
+                    onMouseLeave={clearHeatmapHover}
+                  >
+                    <div className="inline-grid grid-cols-[auto_auto] gap-x-2 gap-y-2">
+                      <div style={{ width: HEATMAP_LEFT_GUTTER_PX }} />
+                      <div className="relative" style={{ width: heatmapGridWidthPx, height: HEATMAP_MONTH_ROW_HEIGHT_PX }}>
+                        {heatmapMonthLabels.map((month) => (
+                          <span
+                            key={`month-${month.weekIndex}-${month.label}`}
+                            className="absolute top-0 text-[11px] leading-none text-slate-400"
+                            style={{ left: month.weekIndex * (heatmapCellSizePx + HEATMAP_GAP_PX) }}
+                          >
+                            {month.label}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div
+                        className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-slate-400"
+                        style={{ width: HEATMAP_LEFT_GUTTER_PX }}
+                      >
+                        {HEATMAP_WEEKDAY_LABELS.map((label, dayIndex) => (
+                          <div key={`day-label-${dayIndex}`} className="flex items-center justify-end" style={{ height: heatmapCellSizePx }}>
+                            {label}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="inline-grid gap-1" style={heatmapGridStyle}>
+                        {heatmapWeeks.map((week, weekIndex) => (
+                          <div key={`week-${weekIndex}`} className="grid grid-rows-7 gap-1">
+                            {week.map((cell, dayIndex) => {
+                              if (!cell) {
+                                return (
+                                  <div
+                                    key={`empty-${weekIndex}-${dayIndex}`}
+                                    className="rounded-[4px] opacity-0"
+                                    style={{ width: heatmapCellSizePx, height: heatmapCellSizePx }}
+                                    onMouseEnter={clearHeatmapHover}
+                                  />
+                                );
+                              }
+
+                              const background = getHeatmapColor(themePalette, cell.intensity, cell.tokens > 0);
+
+                              return (
+                                <div
+                                  key={cell.date}
+                                  className="rounded-[4px]"
+                                  style={{ width: heatmapCellSizePx, height: heatmapCellSizePx, background }}
+                                  aria-label={buildActivityTooltip(cell, dailyAgentTokensByDate)}
+                                  onMouseEnter={(event) => updateHeatmapHover(event, cell)}
+                                  onMouseMove={(event) => updateHeatmapHover(event, cell)}
+                                />
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {heatmapHoverState !== null && (
+                    <div
+                      className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl"
+                      style={{ left: heatmapTooltipLeftPx, top: heatmapTooltipTopPx, transform: "translate(-50%, -100%)" }}
+                    >
+                      <p className="text-sm font-semibold text-white">{formatDate(heatmapHoverState.cell.date)}</p>
+                      <p className="mt-1 text-xs text-slate-200">
+                        Tokens: {formatTokens(heatmapHoverState.cell.tokens)} ({formatNumber(heatmapHoverState.cell.tokens)})
+                      </p>
+                      <p className="text-xs text-slate-300">Sessions: {formatNumber(heatmapHoverState.cell.sessions)}</p>
+                      <p className="text-xs text-slate-300">Spend: {formatUsd(heatmapHoverState.cell.costUsd)}</p>
+                      <div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
+                        {heatmapTooltipAgentRows.map((entry) => (
+                          <p key={entry.label} className="flex items-center justify-between gap-2 text-xs text-slate-300">
+                            <span style={{ color: entry.color }}>{entry.label}</span>
+                            <span>{formatTokens(entry.tokens)}</span>
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 mr-auto flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                  <span>Less</span>
+                  <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.less }} />
+                  <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.slightlyLess }} />
+                  <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.medium }} />
+                  <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.high }} />
+                  <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.veryHigh }} />
+                  <span>More</span>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-y-6 sm:grid sm:grid-cols-2 sm:gap-y-6 lg:flex lg:flex-row lg:items-start lg:justify-between lg:gap-y-0">
+                  <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-start">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Most Used Model</p>
+                    <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                      {mostUsedModel ? mostUsedModel.model : "-"}
+                    </p>
+                  </article>
+                  <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recent Use (Last 30 Days)</p>
+                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
+                      {recentModelUsage ? recentModelUsage.model : "-"}
+                    </p>
+                  </article>
+                  <article className="min-w-0 flex flex-col items-center text-center">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Longest Streak</p>
+                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
+                      {formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
+                    </p>
+                  </article>
+                  <article className="min-w-0 flex flex-col items-end">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current Streak</p>
+                    <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                      {formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
+                    </p>
+                  </article>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      </DownloadableCard>
+
+      <DownloadableCard title="Cost Breakdown">
+        <section data-card-index="6" className="wrapped-card wrapped-card-cost">
+          <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="wrapped-title">Cost Breakdown</h2>
+            </div>
+          </header>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <article className="wrapped-tile">
+              <p className="wrapped-label">Total Spend</p>
+              <AnimatedNumber
+                value={selectedTotalCostUsd}
+                animate={animateCard6}
+                durationMs={CHART_ANIMATION_MS}
+                format={formatUsd}
+                className="mt-2 block text-4xl font-semibold text-white"
+              />
+            </article>
+            <article className="wrapped-tile">
+              <p className="wrapped-label">Daily Average</p>
+              <AnimatedNumber
+                value={selectedDailyAverageCostUsd}
+                animate={animateCard6}
+                durationMs={CHART_ANIMATION_MS}
+                format={formatUsd}
+                className="mt-2 block text-3xl font-semibold text-white"
+              />
+            </article>
+            <article className="wrapped-tile">
+              <p className="wrapped-label">Most Expensive Day</p>
+              <p className="mt-2 text-xl font-semibold text-white">
+                {selectedMostExpensiveDay ? formatShortDate(selectedMostExpensiveDay.date) : "-"}
+              </p>
+              <p className="mt-1 text-sm text-slate-300">
+                {selectedMostExpensiveDay ? (
+                  <AnimatedNumber
+                    value={selectedMostExpensiveDay.costUsd}
+                    animate={animateCard6}
+                    durationMs={CHART_ANIMATION_MS}
+                    format={formatUsd}
+                  />
+                ) : (
+                  "No cost data"
+                )}
+              </p>
+            </article>
+          </div>
+
+          <div className={`mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}>
+            {effectiveCostGroupBy === "none" ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={costTimeline}>
+                  <defs>
+                    <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={themePalette.high} stopOpacity={0.55} />
+                      <stop offset="100%" stopColor={themePalette.high} stopOpacity={0.08} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
+                  <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#000000",
+                      border: "1px solid rgba(148,163,184,0.35)",
+                      borderRadius: "12px",
+                    }}
+                    formatter={formatUsdTooltip}
+                    labelFormatter={(value) => formatDate(String(value))}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="costUsd"
+                    name="Cost"
+                    stroke={themePalette.medium}
+                    fill="url(#costFill)"
+                    strokeWidth={2.5}
+                    isAnimationActive={animateCard6}
+                    animationDuration={CHART_ANIMATION_MS}
+                    animationBegin={0}
+                    animationEasing="ease-in-out"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={groupedCostTimeline}>
+                  <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
+                  <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#000000",
+                      border: "1px solid rgba(148,163,184,0.35)",
+                      borderRadius: "12px",
+                    }}
+                    formatter={(value: number | string | undefined, name?: string) => [
+                      formatUsd(typeof value === "number" ? value : Number(value ?? 0)),
+                      name ?? "Cost",
+                    ]}
+                    labelFormatter={(value) => formatDate(String(value))}
+                  />
+                  {groupedCostSeries.map((series) => (
+                    <Area
+                      key={series.key}
+                      type="monotone"
+                      dataKey={series.key}
+                      name={series.label}
+                      stackId="cost"
+                      stroke={series.color}
+                      fill={series.color}
+                      fillOpacity={0.22}
+                      strokeWidth={2}
+                      isAnimationActive={animateCard6}
+                      animationDuration={CHART_ANIMATION_MS}
+                      animationBegin={0}
+                      animationEasing="ease-in-out"
+                    />
+                  ))}
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </section>
+      </DownloadableCard>
+
+      <DownloadableCard title="Your Top Repos">
+        <section data-card-index="7" className="wrapped-card wrapped-card-repos">
+          <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="wrapped-title">Your Top Repos</h2>
+            </div>
+            <p className="text-sm text-slate-300">By tokens</p>
+          </header>
+
+          {topRepos.length === 0 ? (
+            <p className="text-sm text-slate-300">No repository usage found.</p>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+              <div className="space-y-2">
+                {topRepos.map((repo) => (
+                  <article key={repo.repo} className="wrapped-tile" title={buildRepoHoverDetails(repo)}>
+                    <p className="truncate text-sm font-semibold text-white">{repo.repo}</p>
+                    <div className="mt-2 flex items-center justify-between text-xs text-slate-300">
+                      <span>
+                        <AnimatedNumber
+                          value={repo.tokens}
+                          animate={animateCard7}
+                          durationMs={CHART_ANIMATION_MS}
+                          format={(value) => formatTokens(Math.max(0, Math.round(value)))}
+                        />{" "}
+                        tokens
+                      </span>
+                      <span>
+                        <AnimatedNumber
+                          value={repo.costUsd}
+                          animate={animateCard7}
+                          durationMs={CHART_ANIMATION_MS}
+                          format={formatUsd}
+                        />
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              <div className={`${chartWrapperClass} ${animateCard7 ? chartRevealClass : ""} self-center lg:-translate-x-[15px]`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={topRepos} layout="vertical" margin={{ left: 12, right: 16 }}>
+                    <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
+                    <XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <YAxis
+                      dataKey="repo"
+                      type="category"
+                      tick={{ fill: "#e2e8f0", fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      width={140}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "#000000",
+                        border: "1px solid rgba(148,163,184,0.35)",
+                        borderRadius: "12px",
+                      }}
+                      content={renderTopReposTooltip}
+                    />
+                    <Bar
+                      dataKey="tokens"
+                      radius={[0, 10, 10, 0]}
+                      isAnimationActive={animateCard7}
+                      animationDuration={CHART_ANIMATION_MS}
+                      animationBegin={0}
+                      animationEasing="ease-in-out"
+                    >
+                      {topRepos.map((repo, index) => (
+                        <Cell key={repo.repo} fill={topRepoBarColors[Math.min(index, topRepoBarColors.length - 1)]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </section>
+      </DownloadableCard>
+
+      <DownloadableCard title="Your Coding Hours">
+        <section data-card-index="8" className="wrapped-card wrapped-card-hours">
+          <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="wrapped-title">Your Coding Hours</h2>
+            </div>
+            <p className="text-sm text-slate-300">When you code the most</p>
+          </header>
+
+          {!hasHourlyData ? (
+            <p className="text-sm text-slate-300">No hourly activity found in this range.</p>
+          ) : (() => {
+            const peakEntry = hourlyBreakdown.reduce(
+              (max, entry) => (entry.tokens > max.tokens ? entry : max),
+              hourlyBreakdown[0] as HourlyDataPoint,
+            );
+            const peakHour = peakEntry.hour;
+            const peakTokens = peakEntry.tokens;
+            const personality = classifyCodingPersonality(peakHour);
+            const nightSessions = hourlyBreakdown
+              .filter((h) => h.hour >= 0 && h.hour < 6)
+              .reduce((sum, h) => sum + h.sessions, 0);
+
+            return (
+              <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+                <div className={`${chartWrapperClass} ${animateCard8 ? chartRevealClass : ""} self-center`}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={hourlyBreakdown}>
+                      <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fill: "#cbd5e1", fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval={2}
+                      />
+                      <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        content={<HourlyBarTooltip />}
+                        allowEscapeViewBox={{ x: true, y: true }}
+                        wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+                      />
+                      <Bar
+                        dataKey="tokens"
+                        name="Tokens"
+                        radius={[6, 6, 0, 0]}
+                        isAnimationActive={animateCard8}
+                        animationDuration={CHART_ANIMATION_MS}
+                        animationBegin={0}
+                        animationEasing="ease-in-out"
+                      >
+                        {hourlyBreakdown.map((row) => (
+                          <Cell
+                            key={row.hour}
+                            fill={row.hour === peakHour ? themePalette.veryHigh : themePalette.slightlyLess}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <article className="wrapped-tile py-6 text-left">
+                    <p className="text-5xl">{personality.emoji}</p>
+                    <p className="mt-3 text-2xl font-semibold text-white">{personality.label}</p>
+                    <p className="mt-2 text-sm text-slate-300">{personality.description}</p>
+                  </article>
+
+                  <article className="wrapped-tile">
+                    <p className="wrapped-label">Peak Hour</p>
+                    <AnimatedNumber
+                      value={peakHour}
+                      animate={animateCard8}
+                      durationMs={CHART_ANIMATION_MS}
+                      format={(v) => formatHourLabel(Math.round(v))}
+                      className="mt-2 block text-3xl font-semibold text-white"
+                    />
+                    <p className="mt-1 text-xs text-slate-300">
+                      {formatTokens(peakTokens)} tokens in your busiest hour
+                    </p>
+                  </article>
+
+                  <article className="wrapped-tile">
+                    <p className="wrapped-label">Fun Stats</p>
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-200">
+                      <li>{formatNumber(nightSessions)} sessions after midnight</li>
+                      <li>{weekendSessionPercent}% of coding on weekends</li>
+                      {busiestDayOfWeek && <li>{busiestDayOfWeek}s are your power day</li>}
+                      {busiestSingleDay && (
+                        <li>
+                          Busiest day: {formatDate(busiestSingleDay.date)} ({formatTokens(busiestSingleDay.tokens)})
+                        </li>
+                      )}
+                    </ol>
+                  </article>
+                </div>
+              </div>
+            );
+          })()}
+        </section>
+      </DownloadableCard>
     </>
   );
 };

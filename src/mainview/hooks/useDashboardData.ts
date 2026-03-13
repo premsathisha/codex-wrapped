@@ -457,6 +457,11 @@ export const useDashboardData = () => {
           costUsd: entry.costUsd,
           durationMs: entry.durationMs,
         }))
+        .sort((left, right) => {
+          if (right.tokens !== left.tokens) return right.tokens - left.tokens;
+          if (right.sessions !== left.sessions) return right.sessions - left.sessions;
+          return right.costUsd - left.costUsd;
+        })
         .slice(0, 8),
     [summary],
   );

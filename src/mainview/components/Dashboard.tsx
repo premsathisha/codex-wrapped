@@ -4,6 +4,7 @@ import DashboardCharts from "./DashboardCharts";
 import EmptyState from "./EmptyState";
 import Sidebar from "./Sidebar";
 import StatsCards, { AnimatedNumber } from "./StatsCards";
+import DownloadableCard from "./DownloadableCard";
 import { useDashboardData, type DashboardDateRange } from "../hooks/useDashboardData";
 import { SOURCE_LABELS } from "../lib/constants";
 import { THEME_OPTIONS, THEME_PALETTES, type ThemeName } from "../lib/themePalettes";
@@ -240,9 +241,11 @@ const Dashboard = () => {
       <>
         <div ref={scrollRef} className="wrapped-scroll">
           {sidebar}
-          <section data-card-index="1" className="wrapped-card wrapped-card-loading">
-            <EmptyState title="Building your coding story" description="Loading annual summary and timeline." />
-          </section>
+          <DownloadableCard title="Building your coding story">
+            <section data-card-index="1" className="wrapped-card wrapped-card-loading">
+              <EmptyState title="Building your coding story" description="Loading annual summary and timeline." />
+            </section>
+          </DownloadableCard>
         </div>
       </>
     );
@@ -253,12 +256,14 @@ const Dashboard = () => {
       <>
         <div ref={scrollRef} className="wrapped-scroll">
           {sidebar}
-          <section data-card-index="1" className="wrapped-card wrapped-card-loading">
-            <EmptyState title="Unable to build wrapped view" description={error} />
-            <button type="button" onClick={() => void refresh()} className="wrapped-button mt-4">
-              Retry
-            </button>
-          </section>
+          <DownloadableCard title="Unable to build wrapped view">
+            <section data-card-index="1" className="wrapped-card wrapped-card-loading">
+              <EmptyState title="Unable to build wrapped view" description={error} />
+              <button type="button" onClick={() => void refresh()} className="wrapped-button mt-4">
+                Retry
+              </button>
+            </section>
+          </DownloadableCard>
         </div>
       </>
     );
@@ -310,134 +315,138 @@ const Dashboard = () => {
       <div ref={scrollRef} className="wrapped-scroll">
         {sidebar}
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-12 sm:px-6">
-          <section data-card-index="1" className="wrapped-card wrapped-card-hero">
-            <header className="mb-6">
-              <p className="wrapped-kicker" style={{ color: themePalette.medium }}>{heroCopy.kicker}</p>
-              <h1 className="text-4xl font-semibold tracking-[-0.03em] text-white sm:text-6xl">{heroCopy.title}</h1>
-              <p className="mt-3 text-sm text-slate-200/90">
-                {formatDate(dateFrom)} - {formatDate(dateTo)}
-              </p>
-            </header>
+          <DownloadableCard title={heroCopy.title}>
+            <section data-card-index="1" className="wrapped-card wrapped-card-hero">
+              <header className="mb-6">
+                <p className="wrapped-kicker" style={{ color: themePalette.medium }}>{heroCopy.kicker}</p>
+                <h1 className="text-4xl font-semibold tracking-[-0.03em] text-white sm:text-6xl">{heroCopy.title}</h1>
+                <p className="mt-3 text-sm text-slate-200/90">
+                  {formatDate(dateFrom)} - {formatDate(dateTo)}
+                </p>
+              </header>
 
-            <StatsCards
-              totalSessions={totals.totalSessions}
-              totalCostUsd={totals.totalCostUsd}
-              totalTokens={totals.totalTokens}
-              totalToolCalls={summary?.totals.toolCalls ?? 0}
-              animateOnMount={animateCard1}
-            />
-          </section>
+              <StatsCards
+                totalSessions={totals.totalSessions}
+                totalCostUsd={totals.totalCostUsd}
+                totalTokens={totals.totalTokens}
+                totalToolCalls={summary?.totals.toolCalls ?? 0}
+                animateOnMount={animateCard1}
+              />
+            </section>
+          </DownloadableCard>
 
-          <section data-card-index="2" className="wrapped-card wrapped-card-time">
-            <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="wrapped-title">Time Spent Coding with AI</h2>
-              </div>
-              <p className="text-sm text-slate-300">Active on {formatNumber(totals.activeDays)} days</p>
-            </header>
+          <DownloadableCard title="Time Spent Coding with AI">
+            <section data-card-index="2" className="wrapped-card wrapped-card-time">
+              <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="wrapped-title">Time Spent Coding with AI</h2>
+                </div>
+                <p className="text-sm text-slate-300">Active on {formatNumber(totals.activeDays)} days</p>
+              </header>
 
-            <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <article className="wrapped-tile">
-                  <p className="wrapped-label">Total Hours</p>
-                  <AnimatedNumber
-                    value={totalHours}
-                    animate={animateCard2}
-                    durationMs={CARD_ANIMATION_MS}
-                    format={(value) => `${value.toFixed(1)}h`}
-                    className="mt-2 block text-4xl font-semibold text-white"
-                  />
-                  <p className="mt-2 text-xs text-slate-300">{totalDays.toFixed(1)} total days of coding time</p>
-                </article>
-
-                <article className="wrapped-tile">
-                  <p className="wrapped-label">Average Session</p>
-                  <AnimatedNumber
-                    value={totals.averageSessionDurationMs}
-                    animate={animateCard2}
-                    durationMs={CARD_ANIMATION_MS}
-                    format={(value) => formatDuration(Math.max(0, Math.round(value)))}
-                    className="mt-2 block text-3xl font-semibold text-white"
-                  />
-                  <p className="mt-2 text-xs text-slate-300">Per session across the full range</p>
-                </article>
-
-                <article className="wrapped-tile sm:col-span-2">
-                  <p className="wrapped-label">Longest Session Highlight</p>
-                  <AnimatedNumber
-                    value={totals.longestSessionEstimateMs}
-                    animate={animateCard2}
-                    durationMs={CARD_ANIMATION_MS}
-                    format={(value) => formatDuration(Math.max(0, Math.round(value)))}
-                    className="mt-2 block text-3xl font-semibold text-white"
-                  />
-                  <p className="mt-2 text-xs text-slate-300">Estimated from daily totals and session counts</p>
-                </article>
-
-                <article className="wrapped-tile sm:col-span-2">
-                  <p className="wrapped-label">Current Streak 🔥</p>
-                  <p className="mt-2 text-3xl font-semibold text-white">
+              <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <article className="wrapped-tile">
+                    <p className="wrapped-label">Total Hours</p>
                     <AnimatedNumber
-                      value={totals.currentStreakDays}
+                      value={totalHours}
                       animate={animateCard2}
                       durationMs={CARD_ANIMATION_MS}
-                      format={(value) => formatNumber(Math.max(0, Math.round(value)))}
-                    />{" "}
-                    {totals.currentStreakDays === 1 ? "day" : "days"}
-                  </p>
-                  <p className="mt-2 text-xs text-slate-300">
-                    {totals.currentStreakStartDate
-                      ? `Started ${formatDate(totals.currentStreakStartDate)}`
-                      : "No active streak in this range"}
-                  </p>
+                      format={(value) => `${value.toFixed(1)}h`}
+                      className="mt-2 block text-4xl font-semibold text-white"
+                    />
+                    <p className="mt-2 text-xs text-slate-300">{totalDays.toFixed(1)} total days of coding time</p>
+                  </article>
+
+                  <article className="wrapped-tile">
+                    <p className="wrapped-label">Average Session</p>
+                    <AnimatedNumber
+                      value={totals.averageSessionDurationMs}
+                      animate={animateCard2}
+                      durationMs={CARD_ANIMATION_MS}
+                      format={(value) => formatDuration(Math.max(0, Math.round(value)))}
+                      className="mt-2 block text-3xl font-semibold text-white"
+                    />
+                    <p className="mt-2 text-xs text-slate-300">Per session across the full range</p>
+                  </article>
+
+                  <article className="wrapped-tile sm:col-span-2">
+                    <p className="wrapped-label">Longest Session Highlight</p>
+                    <AnimatedNumber
+                      value={totals.longestSessionEstimateMs}
+                      animate={animateCard2}
+                      durationMs={CARD_ANIMATION_MS}
+                      format={(value) => formatDuration(Math.max(0, Math.round(value)))}
+                      className="mt-2 block text-3xl font-semibold text-white"
+                    />
+                    <p className="mt-2 text-xs text-slate-300">Estimated from daily totals and session counts</p>
+                  </article>
+
+                  <article className="wrapped-tile sm:col-span-2">
+                    <p className="wrapped-label">Current Streak 🔥</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">
+                      <AnimatedNumber
+                        value={totals.currentStreakDays}
+                        animate={animateCard2}
+                        durationMs={CARD_ANIMATION_MS}
+                        format={(value) => formatNumber(Math.max(0, Math.round(value)))}
+                      />{" "}
+                      {totals.currentStreakDays === 1 ? "day" : "days"}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-300">
+                      {totals.currentStreakStartDate
+                        ? `Started ${formatDate(totals.currentStreakStartDate)}`
+                        : "No active streak in this range"}
+                    </p>
+                  </article>
+                </div>
+
+                <article className="wrapped-tile flex flex-col items-center justify-center text-center">
+                  <svg width="152" height="152" viewBox="0 0 152 152" className="overflow-visible">
+                    <circle
+                      cx="76"
+                      cy="76"
+                      r={ringRadius}
+                      fill="none"
+                      stroke="rgba(148,163,184,0.25)"
+                      strokeWidth="12"
+                    />
+                    <circle
+                      cx="76"
+                      cy="76"
+                      r={ringRadius}
+                      fill="none"
+                      stroke="url(#ringGradient)"
+                      strokeWidth="12"
+                      strokeLinecap="round"
+                      strokeDasharray={ringCircumference}
+                      strokeDashoffset={ringOffset}
+                      style={{
+                        transition: "stroke-dashoffset 1000ms cubic-bezier(0.22, 1, 0.36, 1)",
+                        transformOrigin: "50% 50%",
+                        transform: "rotate(-90deg)",
+                      }}
+                    />
+                    <defs>
+                      <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor={themePalette.veryHigh} />
+                        <stop offset="100%" stopColor={themePalette.high} />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+
+                  <AnimatedNumber
+                    value={activeDayCoverage}
+                    animate={animateCard2}
+                    durationMs={CARD_ANIMATION_MS}
+                    format={(value) => `${value.toFixed(1)}%`}
+                    className="mt-4 block text-4xl font-semibold text-white"
+                  />
+                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-300">Days with activity</p>
                 </article>
               </div>
-
-              <article className="wrapped-tile flex flex-col items-center justify-center text-center">
-                <svg width="152" height="152" viewBox="0 0 152 152" className="overflow-visible">
-                  <circle
-                    cx="76"
-                    cy="76"
-                    r={ringRadius}
-                    fill="none"
-                    stroke="rgba(148,163,184,0.25)"
-                    strokeWidth="12"
-                  />
-                  <circle
-                    cx="76"
-                    cy="76"
-                    r={ringRadius}
-                    fill="none"
-                    stroke="url(#ringGradient)"
-                    strokeWidth="12"
-                    strokeLinecap="round"
-                    strokeDasharray={ringCircumference}
-                    strokeDashoffset={ringOffset}
-                    style={{
-                      transition: "stroke-dashoffset 1000ms cubic-bezier(0.22, 1, 0.36, 1)",
-                      transformOrigin: "50% 50%",
-                      transform: "rotate(-90deg)",
-                    }}
-                  />
-                  <defs>
-                    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor={themePalette.veryHigh} />
-                      <stop offset="100%" stopColor={themePalette.high} />
-                    </linearGradient>
-                  </defs>
-                </svg>
-
-                <AnimatedNumber
-                  value={activeDayCoverage}
-                  animate={animateCard2}
-                  durationMs={CARD_ANIMATION_MS}
-                  format={(value) => `${value.toFixed(1)}%`}
-                  className="mt-4 block text-4xl font-semibold text-white"
-                />
-                <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-300">Days with activity</p>
-              </article>
-            </div>
-          </section>
+            </section>
+          </DownloadableCard>
 
           <DashboardCharts
             dateFrom={dateFrom}
