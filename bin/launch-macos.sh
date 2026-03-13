@@ -41,6 +41,47 @@ wait_for_server() {
   return 1
 }
 
+matching_server_pid() {
+  local pid
+  for pid in $(pgrep -f 'bun .*bin/cli.ts' 2>/dev/null); do
+    local cwd
+    cwd="$(pid_cwd "${pid}")"
+    if [[ "${cwd}" == "${ROOT_DIR}" ]]; then
+      printf '%s\n' "${pid}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+pid_cwd() {
+  local pid="$1"
+  lsof -a -p "${pid}" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | head -n 1
+}
+
+restart_local_server_if_needed() {
+  local pid
+  pid="$(matching_server_pid || true)"
+  if [[ -z "${pid}" ]]; then
+    return 0
+  fi
+
+  kill "${pid}" >/dev/null 2>&1 || true
+  local attempt
+  for attempt in {1..40}; do
+    if ! lsof -nP -iTCP:"${PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 0.25
+  done
+
+  osascript -e 'display alert "AI Wrapped Launcher" message "An older AI Wrapped server is still running and could not be restarted automatically." as critical'
+  exit 1
+}
+
+restart_local_server_if_needed
+
 if ! lsof -nP -iTCP:"${PORT}" -sTCP:LISTEN >/dev/null 2>&1; then
   BUN_PATH="$(find_bun)" || {
     osascript -e 'display alert "AI Wrapped Launcher" message "Bun was not found. Install Bun or set BUN_BIN before launching." as critical'

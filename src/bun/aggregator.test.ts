@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { EMPTY_TOKEN_USAGE } from "../shared/schema";
-import { aggregateSessionsByDate } from "./aggregator";
-import type { Session } from "./session-schema";
+import { aggregateNormalizedSessionsByDate, aggregateSessionsByDate } from "./aggregator";
+import type { Session, SessionEvent } from "./session-schema";
 
 const makeSession = (overrides: Partial<Session>): Session => ({
   id: "session-1",
@@ -24,6 +24,25 @@ const makeSession = (overrides: Partial<Session>): Session => ({
   toolCallCount: 1,
   isHousekeeping: false,
   parsedAt: "2026-02-21T10:02:00.000Z",
+  ...overrides,
+});
+
+const makeEvent = (overrides: Partial<SessionEvent>): SessionEvent => ({
+  id: "session-1:event-1",
+  sessionId: "session-1",
+  kind: "meta",
+  timestamp: "2026-02-21T10:00:10.000Z",
+  role: "meta",
+  text: null,
+  toolName: null,
+  toolInput: null,
+  toolOutput: null,
+  model: "gpt-5",
+  parentId: null,
+  messageId: null,
+  isDelta: false,
+  tokens: null,
+  costUsd: null,
   ...overrides,
 });
 
@@ -96,5 +115,110 @@ describe("aggregateSessionsByDate", () => {
     const entry = daily["2026-02-21"];
     expect(entry).toBeDefined();
     expect(entry?.byHour["10"]?.sessions).toBe(1);
+  });
+
+  test("attributes event token usage and spend to the event day instead of session start day", () => {
+    const session = makeSession({
+      id: "cross-midnight",
+      startTime: "2026-02-21T23:55:00.000Z",
+      endTime: "2026-02-22T00:10:00.000Z",
+      parsedAt: "2026-02-22T00:11:00.000Z",
+      totalTokens: {
+        inputTokens: 500,
+        outputTokens: 200,
+        cacheReadTokens: 100,
+        cacheWriteTokens: 0,
+        reasoningTokens: 50,
+      },
+      totalCostUsd: 1.23,
+      messageCount: 2,
+      toolCallCount: 1,
+    });
+
+    const daily = aggregateNormalizedSessionsByDate([
+      {
+        session,
+        events: [
+          makeEvent({
+            id: "cross-midnight:event-1",
+            timestamp: "2026-02-22T00:05:00.000Z",
+            model: "gpt-5.3-codex",
+            tokens: {
+              inputTokens: 500,
+              outputTokens: 200,
+              cacheReadTokens: 100,
+              cacheWriteTokens: 0,
+              reasoningTokens: 50,
+            },
+            costUsd: 1.23,
+          }),
+        ],
+      },
+    ], { timeZone: "UTC" });
+
+    expect(daily["2026-02-21"]?.totals.sessions).toBe(1);
+    expect(daily["2026-02-21"]?.totals.costUsd).toBe(0);
+    expect(daily["2026-02-22"]?.totals.sessions).toBe(0);
+    expect(daily["2026-02-22"]?.totals.costUsd).toBeCloseTo(1.23, 10);
+    expect(daily["2026-02-22"]?.totals.reasoningTokens).toBe(50);
+    expect(daily["2026-02-22"]?.byHour["00"]?.costUsd).toBeCloseTo(1.23, 10);
+  });
+
+  test("attributes mixed-model token usage to the model that produced it", () => {
+    const session = makeSession({
+      id: "mixed-model",
+      model: "gpt-5.3-codex",
+      totalTokens: {
+        inputTokens: 300,
+        outputTokens: 120,
+        cacheReadTokens: 80,
+        cacheWriteTokens: 0,
+        reasoningTokens: 20,
+      },
+      totalCostUsd: 0.84,
+    });
+
+    const daily = aggregateNormalizedSessionsByDate([
+      {
+        session,
+        events: [
+          makeEvent({
+            id: "mixed-model:event-1",
+            timestamp: "2026-02-21T10:02:00.000Z",
+            model: "gpt-5.3-codex",
+            tokens: {
+              inputTokens: 200,
+              outputTokens: 70,
+              cacheReadTokens: 50,
+              cacheWriteTokens: 0,
+              reasoningTokens: 10,
+            },
+            costUsd: 0.5,
+          }),
+          makeEvent({
+            id: "mixed-model:event-2",
+            timestamp: "2026-02-21T10:05:00.000Z",
+            model: "gpt-5.4",
+            tokens: {
+              inputTokens: 100,
+              outputTokens: 50,
+              cacheReadTokens: 30,
+              cacheWriteTokens: 0,
+              reasoningTokens: 10,
+            },
+            costUsd: 0.34,
+          }),
+        ],
+      },
+    ], { timeZone: "UTC" });
+
+    const entry = daily["2026-02-21"];
+    expect(entry?.byModel["gpt-5.3-codex"]?.costUsd).toBeCloseTo(0.5, 10);
+    expect(entry?.byModel["gpt-5.3-codex"]?.inputTokens).toBe(200);
+    expect(entry?.byModel["gpt-5.3-codex"]?.sessions).toBe(1);
+    expect(entry?.byModel["gpt-5.4"]?.costUsd).toBeCloseTo(0.34, 10);
+    expect(entry?.byModel["gpt-5.4"]?.inputTokens).toBe(100);
+    expect(entry?.byModel["gpt-5.4"]?.sessions).toBe(0);
+    expect(entry?.totals.costUsd).toBeCloseTo(0.84, 10);
   });
 });

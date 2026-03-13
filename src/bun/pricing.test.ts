@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 describe("computeCost", () => {
-  test("matches ccusage codex billing for cached input and reasoning output", () => {
+  test("matches codexbar-style codex billing for cached input without billing reasoning separately", () => {
     const cost = computeCost(
       {
         // Codex parser stores non-cached input and non-reasoning output separately.
@@ -27,7 +27,7 @@ describe("computeCost", () => {
     );
 
     expect(cost).not.toBeNull();
-    expect(cost ?? 0).toBeCloseTo(0.00165625, 12);
+    expect(cost ?? 0).toBeCloseTo(0.00155625, 12);
   });
 
   test("returns zero for openrouter free models", () => {
@@ -82,7 +82,7 @@ describe("computeCost", () => {
 
     const expectedLocal =
       (usage.inputTokens * 1.75) / 1_000_000 +
-      ((usage.outputTokens + usage.reasoningTokens) * 14) / 1_000_000 +
+      (usage.outputTokens * 14) / 1_000_000 +
       (usage.cacheReadTokens * 0.175) / 1_000_000;
 
     expect(computeCost(usage, "gpt-5.3-codex") ?? 0).toBeCloseTo(expectedLocal, 12);
@@ -126,6 +126,50 @@ describe("computeCost", () => {
 
     expect(computeCost(usage, "gpt-5")).not.toBeNull();
     expect(computeCost(usage, "foo-gpt-5")).toBeNull();
+  });
+
+  test("uses models.dev pricing when model is not in local table", async () => {
+    globalThis.fetch = ((async () =>
+      new Response(
+        JSON.stringify({
+          acme: {
+            id: "acme",
+            models: {
+              "acme-1": {
+                id: "acme-1",
+                cost: {
+                  input: 3,
+                  output: 12,
+                  cache_read: 0.5,
+                  cache_write: 0.25,
+                },
+              },
+            },
+          },
+        }),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      )) as unknown) as typeof fetch;
+
+    await prefetchPricing();
+
+    const usage = {
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheReadTokens: 100_000,
+      cacheWriteTokens: 20_000,
+      reasoningTokens: 50_000,
+    };
+
+    const expected =
+      3 + // input
+      (500_000 * 12) / 1_000_000 + // output
+      (100_000 * 0.5) / 1_000_000 + // cache read
+      (20_000 * 0.25) / 1_000_000; // cache write
+
+    expect(computeCost(usage, "acme-1") ?? 0).toBeCloseTo(expected, 12);
   });
 
   test("does not retry remote pricing fetch during cooldown after failure", async () => {

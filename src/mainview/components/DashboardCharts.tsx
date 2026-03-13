@@ -17,6 +17,7 @@ import {
 import type { TooltipContentProps } from "recharts";
 import { AnimatedNumber } from "./StatsCards";
 import { formatDate, formatDuration, formatNumber, formatTokens, formatUsd } from "../lib/formatters";
+import { getHeatmapColor } from "../lib/heatmapColors";
 import { formatHourLabel, hasHourlyActivity } from "../lib/hourly";
 import { HEATMAP_GAP_PX, computeHeatmapCellSizePx } from "../lib/heatmap";
 import { SOURCE_LABELS } from "../lib/constants";
@@ -163,7 +164,7 @@ const AGENT_ICONS: Record<string, ReactNode> = {
 const formatShortDate = (value: string): string => {
   const parsed = Date.parse(`${value}T00:00:00Z`);
   if (Number.isNaN(parsed)) return value;
-  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(parsed));
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(parsed));
 };
 
 const buildHeatmap = (timeline: TimelinePoint[], dateFrom: string, dateTo: string): HeatmapCell[] => {
@@ -857,18 +858,7 @@ const DashboardCharts = ({
                               );
                             }
 
-                            const background =
-                              cell.sessions > 0
-                                ? cell.intensity >= 0.95
-                                  ? themePalette.veryHigh
-                                  : cell.intensity >= 0.75
-                                    ? themePalette.high
-                                    : cell.intensity >= 0.5
-                                      ? themePalette.medium
-                                      : cell.intensity >= 0.25
-                                        ? themePalette.slightlyLess
-                                        : themePalette.less
-                                : themePalette.none;
+                            const background = getHeatmapColor(themePalette, cell.intensity, cell.tokens > 0);
 
                             return (
                               <div

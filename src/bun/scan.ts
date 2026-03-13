@@ -1,6 +1,6 @@
 import type { SessionSource } from "../shared/schema";
 import {
-  aggregateSessionsByDate,
+  aggregateNormalizedSessionsByDate,
   resolveAggregationTimeZone,
 } from "./aggregator";
 import { discoverAll } from "./discovery";
@@ -56,7 +56,7 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
 
   let scanned = 0;
   let errors = 0;
-  const sessions: Session[] = [];
+  const normalizedSessions: Array<{ session: Session; events: ReturnType<typeof normalizeSession>["events"] }> = [];
 
   for (const path of deletedPaths) {
     delete nextScanState[path];
@@ -70,8 +70,9 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
       continue;
     }
 
-    const { session } = normalizeSession(parsed);
-    sessions.push(session);
+    const normalized = normalizeSession(parsed);
+    const { session } = normalized;
+    normalizedSessions.push(normalized);
 
     nextScanState[candidate.path] = {
       source: candidate.source,
@@ -83,8 +84,19 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
     scanned += 1;
   }
 
-  if (needsConsistencyRebuild && errors === 0) {
-    await writeDailyStore(aggregateSessionsByDate(sessions, { timeZone: aggregationTimeZone }));
+  const shouldPersistRebuild =
+    needsConsistencyRebuild &&
+    (
+      // Exact rebuild (no parse failures).
+      errors === 0 ||
+      // Partial rebuild when at least one session parsed.
+      scanned > 0 ||
+      // Accurate empty state when no candidates exist.
+      candidates.length === 0
+    );
+
+  if (shouldPersistRebuild) {
+    await writeDailyStore(aggregateNormalizedSessionsByDate(normalizedSessions, { timeZone: aggregationTimeZone }));
     await writeAggregationMeta(aggregationTimeZone);
     await writeScanState(nextScanState);
   }

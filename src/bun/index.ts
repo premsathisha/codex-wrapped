@@ -561,8 +561,17 @@ const updateSettings = async (patch: Partial<AppSettings>): Promise<AppSettings>
 };
 
 const emitEvent = (event: EventName, payload: unknown): void => {
-  for (const client of sseClients) {
-    client.send(event, payload);
+  for (const client of [...sseClients]) {
+    try {
+      client.send(event, payload);
+    } catch (error) {
+      console.warn(`[sse] Failed to send ${event}`, error);
+      try {
+        client.close();
+      } catch {
+        sseClients.delete(client);
+      }
+    }
   }
 };
 
@@ -572,9 +581,9 @@ const runScanWithNotifications = async (fullScan = false) => {
   }
 
   isScanning = true;
-  emitEvent("scanStarted", {});
 
   try {
+    emitEvent("scanStarted", {});
     const aggregationTimeZone = resolveAggregationTimeZone();
     const effectiveFullScan =
       fullScan || (await dailyStoreNeedsRepoBackfill()) || (await dailyStoreMissingHourDimension());

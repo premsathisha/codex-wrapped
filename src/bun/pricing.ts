@@ -407,12 +407,9 @@ export const computeCost = (tokens: TokenUsage | null, model: string | null): nu
   const pricing = resolveModelPricing(model);
   if (!pricing) return null;
 
-  // Codex reports reasoning tokens separately, but they're billed as output tokens.
-  const billableOutputTokens = Math.max(0, tokens.outputTokens + tokens.reasoningTokens);
-
   return (
     calculateTieredCost(tokens.inputTokens, pricing.inputPer1M, pricing.inputPer1MAbove200k) +
-    calculateTieredCost(billableOutputTokens, pricing.outputPer1M, pricing.outputPer1MAbove200k) +
+    calculateTieredCost(tokens.outputTokens, pricing.outputPer1M, pricing.outputPer1MAbove200k) +
     calculateTieredCost(tokens.cacheReadTokens, pricing.cacheReadPer1M, pricing.cacheReadPer1MAbove200k) +
     calculateTieredCost(tokens.cacheWriteTokens, pricing.cacheWritePer1M, pricing.cacheWritePer1MAbove200k)
   );

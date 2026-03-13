@@ -2,7 +2,7 @@
 
 AI Wrapped is a local dashboard that summarizes your coding activity across AI coding tools in a Spotify Wrapped-style view.
 This repository is forked from [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped).
-Codex card inspired by JeanMeijer/slopmeter
+Codex card inspired by [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter)
 
 It scans local session files, builds daily aggregates, and serves a local web app.
 

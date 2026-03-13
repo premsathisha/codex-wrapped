@@ -1,3 +1,16 @@
+const ISO_DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const parseInstant = (value: string): Date | null => {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return null;
+  return new Date(parsed);
+};
+
+const parseDateOnly = (value: string): Date | null => {
+  if (!ISO_DATE_ONLY_RE.test(value)) return null;
+  return new Date(`${value}T00:00:00Z`);
+};
+
 export const formatNumber = (value: number): string =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
 
@@ -18,13 +31,23 @@ export const formatUsd = (value: number | null | undefined): string =>
 
 export const formatDate = (value: string | null): string => {
   if (!value) return "-";
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) return value;
+  const dateOnly = parseDateOnly(value);
+  if (dateOnly) {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(dateOnly);
+  }
+
+  const parsed = parseInstant(value);
+  if (!parsed) return value;
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(parsed));
+  }).format(parsed);
 };
 
 export const formatTime = (value: string | null): string => {
