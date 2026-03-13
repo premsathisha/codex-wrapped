@@ -915,14 +915,12 @@ const DashboardCharts = ({
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Most Used Model</p>
                   <p className="mt-1 text-2xl font-semibold leading-tight text-white">
                     {mostUsedModel ? mostUsedModel.model : "-"}
-                    {mostUsedModel ? ` (${formatTokens(mostUsedModel.tokens)})` : ""}
                   </p>
                 </article>
                 <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recent Use (Last 30 Days)</p>
                   <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
                     {recentModelUsage ? recentModelUsage.model : "-"}
-                    {recentModelUsage ? ` (${formatTokens(recentModelUsage.tokens)})` : ""}
                   </p>
                 </article>
                 <article className="min-w-0 flex flex-col items-center text-center">

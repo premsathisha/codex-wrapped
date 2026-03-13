@@ -1,103 +1,71 @@
-# Project Overview
+# Repository Guidelines
 
+## Project Overview
 AI Wrapped is a local-first Bun web app that scans local AI coding session logs and renders a Wrapped-style dashboard with stats, trends, and breakdowns.
 
-# Must Read
-
-1. Use Bun for all runtime and tooling commands.
-2. Keep this app local-first; do not introduce hosted API dependencies for core behavior.
-3. Preserve the current frontend visual system and component structure unless a redesign is explicitly requested.
-4. Preserve desktop and mobile behavior.
+## Non-Negotiables
+1. Use Bun for all runtime, scripts, tests, and tooling commands.
+2. Keep the app local-first; do not add hosted API dependencies for core behavior.
+3. Preserve desktop and mobile behavior.
+4. Preserve the current frontend visual system/component structure unless a redesign is explicitly requested.
 5. Keep `README.md` and `AGENTS.md` aligned with actual scripts and runtime behavior.
 
-# Current Technical Structure
+## Project Structure
+- `bin/cli.ts`: CLI launcher (`--help`, `--version`, `--rebuild`, `--uninstall`) and server bootstrap.
+- `bin/launch-macos.sh`: macOS launcher that starts the local app and opens the local URL.
+- `src/bun/*`: Bun server routes, session discovery/parsing, aggregation, local store persistence.
+- `src/mainview/*`: React UI (dashboard/cards/charts/hooks/styles).
+- `src/shared/*`: shared schemas/types used by backend and frontend.
+- `index.html`: Vite entry HTML for the frontend bundle.
 
-This project is a Bun + Vite + React TypeScript app.
+## Build, Test, Run
+- Install dependencies: `bun install`
+- Run app (normal flow): `bun ./bin/cli.ts`
+- Run app with fresh frontend at startup: `bun ./bin/cli.ts --rebuild`
+- Dev mode: `bun run dev`
+- HMR mode: `bun run dev:hmr`
+- Build frontend bundle: `bun run build`
+- Typecheck: `bun run typecheck`
+- Tests: `bun test`
+- Clean artifacts: `bun run clean`
+- Default local URL: `http://127.0.0.1:3210`
 
-Core entry points:
-
-1. `bin/cli.ts` (CLI launcher)
-2. `src/bun/index.ts` (local Bun server)
-3. `index.html` + `src/mainview/*` (frontend)
-4. `src/shared/*` (shared schemas/types)
-
-# App Structure
-
-## Backend
-
-`src/bun/*` currently includes:
-
-1. Local server routes via `Bun.serve()` in `src/bun/index.ts`.
-2. Session discovery and parsing.
-3. Aggregation and normalization.
-4. Local store read/write for aggregated output.
-
-## Frontend
-
-`src/mainview/*` currently includes:
-
-1. Dashboard pages/cards and chart components.
-2. Data hooks and RPC client logic.
-3. Styling in `src/mainview/index.css`.
-
-# Stack
-
-1. Bun (runtime, scripts, tests)
-2. React + TypeScript (UI)
-3. Vite (build/dev tooling)
-4. Tailwind CSS (via Vite plugin) plus custom CSS
-5. Recharts (dashboard visualizations)
-
-# Key Files
-
-1. `bin/cli.ts`: app CLI (`--help`, `--version`, `--rebuild`, `--uninstall`) and server bootstrap.
-2. `bin/launch-macos.sh`: macOS launcher script that starts the local app and opens the local URL.
-3. `src/bun/index.ts`: API routes, server startup, and scan orchestration.
-4. `src/bun/scan.ts`: discovery + parse + aggregate scan pipeline.
-5. `src/shared/schema.ts`: shared source/session/dashboard schemas.
-6. `src/mainview/components/Dashboard.tsx`: main dashboard flow.
-7. `src/mainview/components/DashboardCharts.tsx`: chart-heavy wrapped cards.
-8. `src/mainview/index.css`: global visual and layout rules.
-
-# Runtime Reference
-
-1. Install: `bun install`
-2. Run app: `bun ./bin/cli.ts`
-3. macOS launcher: double-click `AI Wrapped Launcher.app`
-4. Dev mode: `bun run dev`
-5. HMR mode: `bun run dev:hmr`
-6. Build: `bun run build`
-7. Typecheck: `bun run typecheck`
-8. Tests: `bun test`
-9. Clean: `bun run clean`
-
-## Frontend Build Requirement
-
+## Frontend Build & Validation Rules
 1. `bun ./bin/cli.ts` serves static assets from `dist` unless `VITE_DEV_SERVER_URL` is set.
-2. After any frontend change (`src/mainview/*`, `index.html`, styles, charts/components), rebuild before validating in the app: `bun run build`.
-3. For launcher/normal CLI flows, use `bun ./bin/cli.ts --rebuild` when you need the latest frontend changes included at startup.
+2. After any frontend change (`src/mainview/*`, `index.html`, shared styling), always run `bun run build` before validating in the app.
+3. For launcher/normal CLI validation, prefer `bun ./bin/cli.ts --rebuild` so the running app cannot use stale assets.
+4. If a server is already running on `127.0.0.1:3210`, restart it before validating changes.
+5. For user-facing fixes, validate against the live local endpoint, not only tests.
 
-Default local URL: `http://127.0.0.1:3210`
-
-# Data and Source Notes
-
-1. Aggregated data is stored locally at `~/.ai-wrapped`.
+## Data & Runtime Notes
+1. Aggregated app data is stored locally in `~/.ai-wrapped`.
 2. Current enabled source is Codex (`~/.codex`).
-3. This repository should continue to operate without requiring cloud-hosted APIs.
+3. Scans and summaries must remain deterministic and local-only.
+4. Never mutate or delete source session logs in `~/.codex` as part of normal feature/fix work.
 
-# Development Principles
+## Coding Principles
+1. Prefer small, targeted changes over broad rewrites.
+2. Reuse existing utilities/components before adding new abstractions.
+3. Preserve accessibility and responsive behavior when touching UI.
+4. Treat usage/pricing/date logic as data-integrity-sensitive code; add/adjust tests for regressions.
+5. Keep naming and file organization consistent with existing patterns.
 
-1. Keep behavior deterministic and local-first.
-2. Prefer small, targeted changes over broad rewrites.
-3. Reuse existing components and utilities where possible.
-4. Maintain accessibility and responsive behavior when touching UI.
-5. Validate changes with build/tests when practical.
+## Testing Expectations
+1. Run `bun run typecheck` and relevant tests after code edits; run full `bun test` for cross-cutting changes.
+2. For parsing/pricing/aggregation changes, include or update focused tests in `src/bun/*`.
+3. For frontend formatting/visual logic changes, include or update tests in `src/mainview/*` where practical.
+4. If you cannot run a required check, explicitly call it out in handoff.
 
-# Commits and Releases
-
+## Commit & Release Notes
 1. Use Conventional Commits.
 2. `fix:` triggers patch releases.
 3. `feat:` triggers minor releases.
 4. `feat!:` or `BREAKING CHANGE:` triggers major releases.
 5. `chore:`, `docs:`, `refactor:`, `test:`, `ci:` do not trigger releases.
 6. Releases are automated via semantic-release on pushes to `main`.
+
+## Agent Workflow Notes
+1. Do not validate frontend fixes against stale bundles.
+2. After edits affecting runtime behavior, verify with live local API/UI where possible.
+3. If scan/persistence logic changes, sanity-check `scan` completion and dashboard totals from local endpoints.
+4. Prefer non-destructive operations; do not remove user data or rewrite source logs unless explicitly requested.
