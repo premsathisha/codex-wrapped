@@ -1,5 +1,24 @@
 # AI Wrapped
 
+AI Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard.
+
+This project is a fork of [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped) with a visual redesign of the interface, theme support, and the ability to save/share dashboard cards as PNG images.
+
+Codex card inspiration from [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter).
+
+## Improvements in This Fork
+
+- Visual redesign and UI polish across the dashboard
+- Theme switching with multiple palette options
+- Ability to save/share individual cards as PNG images
+- Shift from the original app + multi-agent scope to a local website focused on Codex-only support
+- Simplified agent support to focus specifically on Codex activity
+- Improved pricing accuracy and handling of edge-case scenarios in cost calculations
+
+## Screenshot
+
+![AI Wrapped dashboard screenshot](assets/screenshot.png)
+
 Quick start:
 
 ```bash
@@ -7,12 +26,6 @@ bun install
 bun run build
 bun ./bin/cli.ts
 ```
-
-AI Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard. This repository is forked from [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped). Codex card inspired by [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter).
-
-## Screenshot
-
-![AI Wrapped dashboard screenshot](assets/screenshot.png)
 
 ## Key Features
 
