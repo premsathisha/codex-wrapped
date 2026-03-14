@@ -6,7 +6,7 @@ import { normalizeSession } from "../normalizer";
 import { parseGeneric } from "./generic";
 
 describe("parseGeneric token extraction", () => {
-  test("parses top-level usage objects (droid completion style)", async () => {
+  test("parses top-level usage objects", async () => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "ai-stats-generic-"));
 
     try {
@@ -25,11 +25,11 @@ describe("parseGeneric token extraction", () => {
       const parsed = await parseGeneric(
         {
           path: filePath,
-          source: "droid",
+          source: "codex",
           mtime: fileStat.mtimeMs,
           size: fileStat.size,
         },
-        "droid",
+        "codex",
       );
 
       expect(parsed).not.toBeNull();

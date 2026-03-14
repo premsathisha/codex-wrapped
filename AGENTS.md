@@ -15,6 +15,7 @@ AI Wrapped is a local-first Bun web app that scans local AI coding session logs 
 - `bin/launch-macos.sh`: macOS launcher that starts the local app and opens the local URL.
 - `src/bun/*`: Bun server routes, session discovery/parsing, aggregation, local store persistence.
 - `src/mainview/*`: React UI (dashboard/cards/charts/hooks/styles).
+- `src/mainview/components/DownloadableCard.tsx`: shared card wrapper for saving/sharing wrapped cards as PNG.
 - `src/shared/*`: shared schemas/types used by backend and frontend.
 - `index.html`: Vite entry HTML for the frontend bundle.
 
@@ -70,3 +71,4 @@ AI Wrapped is a local-first Bun web app that scans local AI coding session logs 
 3. After edits affecting runtime behavior, verify with live local API/UI where possible.
 4. If scan/persistence logic changes, sanity-check `scan` completion and dashboard totals from local endpoints.
 5. Prefer non-destructive operations; do not remove user data or rewrite source logs unless explicitly requested.
+6. For card export changes, validate save/share behavior from the card download button against the live local UI.

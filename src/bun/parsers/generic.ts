@@ -449,7 +449,7 @@ export const parseGeneric = async (
       cwd = cwd ?? getFirstString(record.cwd, payload?.cwd);
       gitBranch = gitBranch ?? getFirstString(record.gitBranch, payload?.gitBranch, asRecord(payload?.git)?.branch);
       model = model ?? getFirstString(record.model, payload?.model);
-      cliVersion = cliVersion ?? getFirstString(record.version, payload?.cli_version, payload?.copilotVersion);
+      cliVersion = cliVersion ?? getFirstString(record.version, payload?.cli_version);
       title = title ?? getFirstString(record.title, record.summary);
 
       const { event, nextTokenCountTotals, nextTokenCountTotalCostUsd } = buildEventFromRecord(

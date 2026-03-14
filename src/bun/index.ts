@@ -87,12 +87,7 @@ const toTokenUsage = (stats: DayStats): TokenUsage => ({
 });
 
 const createEmptyByAgent = (): DashboardSummary["byAgent"] => ({
-  claude: { sessions: 0, events: 0, tokens: { ...EMPTY_TOKEN_USAGE }, costUsd: 0 },
   codex: { sessions: 0, events: 0, tokens: { ...EMPTY_TOKEN_USAGE }, costUsd: 0 },
-  gemini: { sessions: 0, events: 0, tokens: { ...EMPTY_TOKEN_USAGE }, costUsd: 0 },
-  opencode: { sessions: 0, events: 0, tokens: { ...EMPTY_TOKEN_USAGE }, costUsd: 0 },
-  droid: { sessions: 0, events: 0, tokens: { ...EMPTY_TOKEN_USAGE }, costUsd: 0 },
-  copilot: { sessions: 0, events: 0, tokens: { ...EMPTY_TOKEN_USAGE }, costUsd: 0 },
 });
 
 const isInDateRange = (date: string, dateFrom?: string, dateTo?: string): boolean => {

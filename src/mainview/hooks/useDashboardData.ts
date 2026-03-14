@@ -180,21 +180,11 @@ const emptyTotals: DashboardTotals = {
 };
 
 const createEmptySourceTokenMap = (): Record<SessionSource, number> => ({
-  claude: 0,
   codex: 0,
-  gemini: 0,
-  opencode: 0,
-  droid: 0,
-  copilot: 0,
 });
 
 const createEmptySourceCostMap = (): Record<SessionSource, number> => ({
-  claude: 0,
   codex: 0,
-  gemini: 0,
-  opencode: 0,
-  droid: 0,
-  copilot: 0,
 });
 
 const buildDailyAgentTokensByDate = (

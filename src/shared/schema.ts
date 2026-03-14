@@ -1,4 +1,4 @@
-export type SessionSource = "claude" | "codex" | "gemini" | "opencode" | "droid" | "copilot";
+export type SessionSource = "codex";
 
 export const SESSION_SOURCES: SessionSource[] = ["codex"];
 

@@ -17,6 +17,19 @@ const nextFrame = () =>
     window.requestAnimationFrame(() => resolve());
   });
 
+const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
+  const response = await fetch(dataUrl);
+  return response.blob();
+};
+
+const triggerFileDownload = (href: string, fileName: string) => {
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = fileName;
+  anchor.rel = "noopener";
+  anchor.click();
+};
+
 const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
   const cardTargetRef = useRef<HTMLDivElement | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -61,11 +74,30 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
         pixelRatio: Math.max(2, window.devicePixelRatio || 1),
       });
 
-      const anchor = document.createElement("a");
       const datePart = new Date().toISOString().slice(0, 10);
-      anchor.href = imageDataUrl;
-      anchor.download = `ai-wrapped-${sanitizeFilenamePart(title)}-${datePart}.png`;
-      anchor.click();
+      const fileName = `ai-wrapped-${sanitizeFilenamePart(title)}-${datePart}.png`;
+      const imageBlob = await dataUrlToBlob(imageDataUrl);
+      const imageFile = new File([imageBlob], fileName, { type: "image/png" });
+      const nav = navigator as Navigator & {
+        canShare?: (data?: ShareData) => boolean;
+      };
+
+      if (nav.canShare?.({ files: [imageFile] })) {
+        try {
+          await nav.share({
+            files: [imageFile],
+            title: `${title} card`,
+            text: "Shared from AI Wrapped",
+          });
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return;
+          }
+        }
+      }
+
+      triggerFileDownload(imageDataUrl, fileName);
     } finally {
       for (const { element, content, scrollLeft, overflowX, contentTransform, contentTransition } of previousExportState) {
         element.style.overflowX = overflowX;
@@ -86,8 +118,9 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
       <button
         type="button"
         className="wrapped-card-download"
-        aria-label={`Download ${title} card`}
-        title={`Download ${title}`}
+        aria-label={`Save ${title} card`}
+        title={`Save ${title}`}
+        disabled={isDownloading}
         onClick={() => void handleDownload()}
       >
         <svg

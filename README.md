@@ -1,56 +1,71 @@
 # AI Wrapped
 
-AI Wrapped is a local dashboard that summarizes your coding activity across AI coding tools in a Spotify Wrapped-style view.
-This repository is forked from [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped).
-Codex card inspired by [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter)
-
-It scans local session files, builds daily aggregates, and serves a local web app.
-
-## What It Tracks
-
-- Sessions
-- Messages and tool calls
-- Token usage
-- Cost estimates
-- Model and agent breakdowns
-- Daily/hourly activity trends
-- Top repositories
-
-Supported source currently: Codex.
-
-## Requirements
-
-- Bun (latest stable)
-- macOS, Linux, or Windows
-- Local Codex history files in your home directory (`~/.codex`)
-
-## Quick Start
-
-1. Install dependencies:
+Quick start:
 
 ```bash
 bun install
-```
-
-2. Build the frontend:
-
-```bash
 bun run build
+bun ./bin/cli.ts
 ```
 
-3. Start the app:
+AI Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard. This repository is forked from [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped). Codex card inspired by [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter).
+
+## Screenshot
+
+![AI Wrapped dashboard screenshot](assets/screenshot.png)
+
+## Key Features
+
+- Theme switching (palette options in the sidebar)
+- Date range selection (Last 7/30/90/365 days and yearly views)
+- Wrapped-style cards and charts for sessions, tokens, cost, models, repos, and coding hours
+- Save/share each card as PNG directly to your device
+
+## For Users
+
+### Who this is for
+
+AI Wrapped is for developers who use Codex regularly and want a clear, visual summary of how they code over time.
+
+### Run The App
+
+1. Start the app:
 
 ```bash
 bun ./bin/cli.ts
 ```
 
-4. Open:
+2. Open:
 
 `http://127.0.0.1:3210`
 
-On macOS you can also double-click `AI Wrapped Launcher.app` in the repo root to start the local server and open the app without using Terminal.
+On macOS, you can also double-click `AI Wrapped Launcher.app` in the repo root to start the local server and open the app.
 
-## Development
+## How It Works
+
+1. **Local session discovery**: the scanner reads Codex session logs from `~/.codex/sessions` (or `CODEX_HOME/sessions`, or a configured custom Codex path).
+2. **Parsing + normalization**: each session file is parsed into a consistent internal schema (events, tokens, costs, tools, model, timestamps, repo context).
+3. **Aggregation**: normalized sessions are aggregated by day/hour/model/repo for fast dashboard queries.
+4. **Local persistence**: aggregated artifacts and scan metadata are stored in `~/.ai-wrapped`.
+5. **Pricing enrichment**: pricing is resolved locally from built-in mappings, and if a model is missing there, pricing data is fetched from [models.dev](https://models.dev) and cached for later lookups.
+6. **UI rendering**: the local Bun server serves the dashboard, and the frontend queries local RPC endpoints to render cards/charts.
+
+## Build & Development
+
+### Prerequisites
+
+- Bun (latest stable)
+- macOS, Linux, or Windows
+- Local Codex history files in your home directory (`~/.codex`)
+
+### Quick Start (Source Build)
+
+```bash
+bun run build
+bun ./bin/cli.ts
+```
+
+### Development
 
 Run backend + built frontend:
 
@@ -84,38 +99,40 @@ bun run clean
 
 ## CLI Options
 
+These flags control local runtime behavior only (not provider selection).
+
 ```bash
 bun ./bin/cli.ts --help
 ```
 
-Common options:
-
 - `--version` or `-v`: show app version
-- `--rebuild`: rebuild frontend before launch
+- `--rebuild`: rebuild frontend assets before launch
 - `--uninstall`: remove local AI Wrapped data at `~/.ai-wrapped`
 
-## macOS Launcher
+## Architecture
 
-- `AI Wrapped Launcher.app`: double-clickable macOS launcher for this repo
-- `bin/launch-macos.sh`: starts `bun ./bin/cli.ts` in the background if needed and opens `http://127.0.0.1:3210`
+- `bin/cli.ts` — CLI entrypoint and Bun server bootstrap
+- `src/bun` — scanning, parsing, aggregation, persistence
+- `src/mainview` — React dashboard UI
+- `src/shared` — shared schemas/types
+- `~/.codex` — source Codex session logs
+- `~/.ai-wrapped` — aggregated local data store
 
-## Data and Privacy
+## Privacy
 
-- The app is local-first.
-- It reads local session files from supported tools.
-- Aggregated output is stored in `~/.ai-wrapped`.
-- No hosted API is required for core functionality.
+AI Wrapped is local-first.
+
+- Codex session logs are read locally from `~/.codex`
+- Aggregated summaries are stored in `~/.ai-wrapped`
+- No external telemetry is required for core functionality
 
 ## Troubleshooting
 
 - If the UI looks stale, run `bun ./bin/cli.ts --rebuild`.
-- If data seems outdated, trigger a refresh/scan from the app and ensure your source directories exist.
+- If data seems outdated, trigger a refresh/scan from the app and ensure your Codex directory exists.
+- To save a card image, use the save icon on the top-right edge of each card; desktop browsers download PNG, and supported mobile browsers open native share/save.
 - If port `3210` is busy, set `PORT` before launch:
 
 ```bash
 PORT=4321 bun ./bin/cli.ts
 ```
-
-## Release Notes
-
-This repository uses Conventional Commits with automated releases on `main` via semantic-release.

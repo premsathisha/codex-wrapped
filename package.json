@@ -8,7 +8,7 @@
     "url": "git+https://github.com/premsathisha/ai-wrapped.git"
   },
   "homepage": "https://github.com/premsathisha/ai-wrapped",
-  "keywords": ["ai", "wrapped", "claude", "codex", "gemini", "copilot", "stats", "dashboard"],
+  "keywords": ["ai", "wrapped", "codex", "stats", "dashboard"],
   "bin": {
     "ai-wrapped": "bin/cli.ts"
   },

@@ -16,20 +16,20 @@ describe("collectModelKeys", () => {
       makeModelEntry(" gpt-5 "),
       makeModelEntry(""),
       makeModelEntry("   "),
-      makeModelEntry("claude-sonnet"),
+      makeModelEntry("custom-model"),
     ]);
 
-    expect(result).toEqual(["gpt-5", " gpt-5 ", "claude-sonnet"]);
+    expect(result).toEqual(["gpt-5", " gpt-5 ", "custom-model"]);
   });
 
   test("deduplicates exact duplicate keys in insertion order", () => {
     const result = collectModelKeys([
       makeModelEntry("gpt-5"),
       makeModelEntry("gpt-5"),
-      makeModelEntry("claude-sonnet"),
-      makeModelEntry("claude-sonnet"),
+      makeModelEntry("custom-model"),
+      makeModelEntry("custom-model"),
     ]);
 
-    expect(result).toEqual(["gpt-5", "claude-sonnet"]);
+    expect(result).toEqual(["gpt-5", "custom-model"]);
   });
 });
