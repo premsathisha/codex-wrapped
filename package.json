@@ -17,7 +17,6 @@
     "src/bun/",
     "src/shared/",
     "dist/",
-    "public/",
     "assets/icons/icon.iconset/",
     "assets/icons/icon.png",
     "assets/icons/icon.ico",
