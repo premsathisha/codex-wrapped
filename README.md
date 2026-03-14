@@ -1,6 +1,6 @@
 # Codex Wrapped
 
-Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard. This project is a fork of [gulivan/codex-wrapped](https://github.com/gulivan/codex-wrapped) with a few improvements. Codex card inspiration from [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter).
+Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard. This project is a fork of [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped) with a few improvements. Codex card inspiration from [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter).
 
 ## Improvements in This Fork
 
