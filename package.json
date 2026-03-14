@@ -1,16 +1,16 @@
 {
-  "name": "ai-wrapped",
+  "name": "codex-wrapped",
   "version": "0.0.1",
   "description": "Your year in AI — a Spotify Wrapped-style dashboard for AI coding agents",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/premsathisha/ai-wrapped.git"
+    "url": "git+https://github.com/premsathisha/codex-wrapped.git"
   },
-  "homepage": "https://github.com/premsathisha/ai-wrapped",
+  "homepage": "https://github.com/premsathisha/codex-wrapped",
   "keywords": ["ai", "wrapped", "codex", "stats", "dashboard"],
   "bin": {
-    "ai-wrapped": "bin/cli.ts"
+    "codex-wrapped": "bin/cli.ts"
   },
   "files": [
     "bin/",

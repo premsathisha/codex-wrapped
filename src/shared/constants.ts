@@ -1,1 +1,1 @@
-export const APP_NAME = "AI Wrapped";
+export const APP_NAME = "Codex Wrapped";

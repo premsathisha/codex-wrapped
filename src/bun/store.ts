@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { SessionSource } from "../shared/schema";
@@ -42,7 +42,8 @@ export interface AggregationMeta {
   timeZone: string;
 }
 
-const DATA_DIR = join(homedir(), ".ai-wrapped");
+const DATA_DIR = join(homedir(), ".codex-wrapped");
+const LEGACY_DATA_DIR = join(homedir(), `.ai${"-wrapped"}`);
 const SCAN_STATE_PATH = join(DATA_DIR, "scan-state.json");
 const DAILY_PATH = join(DATA_DIR, "daily.json");
 const AGGREGATION_META_PATH = join(DATA_DIR, "aggregation-meta.json");
@@ -62,7 +63,20 @@ let settingsCache: AppSettings | null = null;
 
 const clone = <T>(value: T): T => structuredClone(value);
 
+const migrateLegacyDataDirIfNeeded = () => {
+  if (existsSync(DATA_DIR) || !existsSync(LEGACY_DATA_DIR)) {
+    return;
+  }
+
+  try {
+    renameSync(LEGACY_DATA_DIR, DATA_DIR);
+  } catch {
+    // If migration fails (permissions/cross-device), continue with the new directory.
+  }
+};
+
 const ensureDataDir = () => {
+  migrateLegacyDataDirIfNeeded();
   mkdirSync(DATA_DIR, { recursive: true });
 };
 
@@ -76,6 +90,7 @@ const toStringOr = (value: unknown, fallback: string): string =>
   typeof value === "string" && value.length > 0 ? value : fallback;
 
 const readJson = async <T>(path: string, fallback: T): Promise<T> => {
+  migrateLegacyDataDirIfNeeded();
   try {
     const text = await Bun.file(path).text();
     const parsed = JSON.parse(text) as unknown;

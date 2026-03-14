@@ -21,7 +21,7 @@ const runIsolatedScan = (homeDir: string, codexHome: string): IsolatedScanResult
   const script = `
 const { runScan } = await import("./src/bun/scan.ts");
 const result = await runScan({ fullScan: true, sources: ["codex"] });
-const dailyPath = process.env.HOME + "/.ai-wrapped/daily.json";
+const dailyPath = process.env.HOME + "/.codex-wrapped/daily.json";
 const dailyFile = Bun.file(dailyPath);
 const dailyExists = await dailyFile.exists();
 let totalSessions = 0;
@@ -76,8 +76,8 @@ describe("runScan parse error resilience", () => {
   });
 
   test("persists partial rebuild when at least one session parses", () => {
-    const homeDir = makeTempDir("aiwrapped-home-");
-    const codexHome = makeTempDir("aiwrapped-codex-");
+    const homeDir = makeTempDir("codexwrapped-home-");
+    const codexHome = makeTempDir("codexwrapped-codex-");
 
     const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
     mkdirSync(sessionsDir, { recursive: true });
@@ -93,8 +93,8 @@ describe("runScan parse error resilience", () => {
   });
 
   test("keeps previous aggregates when all parses fail", () => {
-    const homeDir = makeTempDir("aiwrapped-home-");
-    const codexHome = makeTempDir("aiwrapped-codex-");
+    const homeDir = makeTempDir("codexwrapped-home-");
+    const codexHome = makeTempDir("codexwrapped-codex-");
 
     const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
     mkdirSync(sessionsDir, { recursive: true });

@@ -75,7 +75,7 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
       });
 
       const datePart = new Date().toISOString().slice(0, 10);
-      const fileName = `ai-wrapped-${sanitizeFilenamePart(title)}-${datePart}.png`;
+      const fileName = `codex-wrapped-${sanitizeFilenamePart(title)}-${datePart}.png`;
       const imageBlob = await dataUrlToBlob(imageDataUrl);
       const imageFile = new File([imageBlob], fileName, { type: "image/png" });
       const nav = navigator as Navigator & {
@@ -87,7 +87,7 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
           await nav.share({
             files: [imageFile],
             title: `${title} card`,
-            text: "Shared from AI Wrapped",
+            text: "Shared from Codex Wrapped",
           });
           return;
         } catch (error) {

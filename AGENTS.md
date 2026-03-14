@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Overview
-AI Wrapped is a local-first Bun web app that scans local AI coding session logs and renders a Wrapped-style dashboard with stats, trends, and breakdowns.
+Codex Wrapped is a local-first Bun web app that scans local AI coding session logs and renders a Wrapped-style dashboard with stats, trends, and breakdowns.
 
 ## Non-Negotiables
 1. Use Bun for all runtime, scripts, tests, and tooling commands.
@@ -39,7 +39,7 @@ AI Wrapped is a local-first Bun web app that scans local AI coding session logs 
 5. For user-facing fixes, validate against the live local endpoint, not only tests.
 
 ## Data & Runtime Notes
-1. Aggregated app data is stored locally in `~/.ai-wrapped`.
+1. Aggregated app data is stored locally in `~/.codex-wrapped`.
 2. Current enabled source is Codex (`~/.codex`).
 3. Scans and summaries must remain deterministic and local-only.
 4. Never mutate or delete source session logs in `~/.codex` as part of normal feature/fix work.

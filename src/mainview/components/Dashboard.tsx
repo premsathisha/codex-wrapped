@@ -12,7 +12,7 @@ import { formatDate, formatDuration, formatNumber } from "../lib/formatters";
 
 const clampPercentage = (value: number): number => Math.max(0, Math.min(100, value));
 const CARD_ANIMATION_MS = 2000;
-const THEME_STORAGE_KEY = "ai-wrapped-theme";
+const THEME_STORAGE_KEY = "codex-wrapped-theme";
 type CostAgentFilter = "all" | SessionSource;
 type CostGroupBy = "none" | "by-agent" | "by-model";
 

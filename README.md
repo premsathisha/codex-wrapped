@@ -1,6 +1,6 @@
-# AI Wrapped
+# Codex Wrapped
 
-AI Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard. This project is a fork of [gulivan/ai-wrapped](https://github.com/gulivan/ai-wrapped) with a few improvements. Codex card inspiration from [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter).
+Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard. This project is a fork of [gulivan/codex-wrapped](https://github.com/gulivan/codex-wrapped) with a few improvements. Codex card inspiration from [JeanMeijer/slopmeter](https://github.com/JeanMeijer/slopmeter).
 
 ## Improvements in This Fork
 
@@ -12,7 +12,7 @@ AI Wrapped is a local dashboard that summarizes your Codex activity in a Spotify
 
 ## Screenshot
 
-![AI Wrapped dashboard screenshot](assets/screenshot.png)
+![Codex Wrapped dashboard screenshot](assets/screenshot.png)
 
 Quick start:
 
@@ -33,7 +33,7 @@ bun ./bin/cli.ts
 
 ### Who this is for
 
-AI Wrapped is for developers who use Codex regularly and want a clear, visual summary of how they code over time.
+Codex Wrapped is for developers who use Codex regularly and want a clear, visual summary of how they code over time.
 
 ### Run The App
 
@@ -47,14 +47,14 @@ bun ./bin/cli.ts
 
 `http://127.0.0.1:3210`
 
-On macOS, you can also double-click `AI Wrapped Launcher.app` in the repo root to start the local server and open the app.
+On macOS, you can also double-click `Codex Wrapped Launcher.app` in the repo root to start the local server and open the app.
 
 ## How It Works
 
 1. **Local session discovery**: the scanner reads Codex session logs from `~/.codex/sessions` (or `CODEX_HOME/sessions`, or a configured custom Codex path).
 2. **Parsing + normalization**: each session file is parsed into a consistent internal schema (events, tokens, costs, tools, model, timestamps, repo context).
 3. **Aggregation**: normalized sessions are aggregated by day/hour/model/repo for fast dashboard queries.
-4. **Local persistence**: aggregated artifacts and scan metadata are stored in `~/.ai-wrapped`.
+4. **Local persistence**: aggregated artifacts and scan metadata are stored in `~/.codex-wrapped`.
 5. **Pricing enrichment**: pricing is resolved locally from built-in mappings, and if a model is missing there, pricing data is fetched from [models.dev](https://models.dev) and cached for later lookups.
 6. **UI rendering**: the local Bun server serves the dashboard, and the frontend queries local RPC endpoints to render cards/charts.
 
@@ -115,7 +115,7 @@ bun ./bin/cli.ts --help
 
 - `--version` or `-v`: show app version
 - `--rebuild`: rebuild frontend assets before launch
-- `--uninstall`: remove local AI Wrapped data at `~/.ai-wrapped`
+- `--uninstall`: remove local Codex Wrapped data at `~/.codex-wrapped`
 
 ## Architecture
 
@@ -124,14 +124,14 @@ bun ./bin/cli.ts --help
 - `src/mainview` — React dashboard UI
 - `src/shared` — shared schemas/types
 - `~/.codex` — source Codex session logs
-- `~/.ai-wrapped` — aggregated local data store
+- `~/.codex-wrapped` — aggregated local data store
 
 ## Privacy
 
-AI Wrapped is local-first.
+Codex Wrapped is local-first.
 
 - Codex session logs are read locally from `~/.codex`
-- Aggregated summaries are stored in `~/.ai-wrapped`
+- Aggregated summaries are stored in `~/.codex-wrapped`
 - Pricing fallback may fetch model pricing metadata from [models.dev](https://models.dev) when a model is not available in the local pricing map
 - No external telemetry is required for core functionality
 
@@ -140,6 +140,7 @@ AI Wrapped is local-first.
 - If the UI looks stale, run `bun ./bin/cli.ts --rebuild`.
 - If data seems outdated, trigger a refresh/scan from the app and ensure your Codex directory exists.
 - To save a card image, use the save icon on the top-right edge of each card; desktop browsers download PNG, and supported mobile browsers open native share/save.
+- If the launcher reports an older server is still running, close duplicate `bun ./bin/cli.ts` processes and relaunch. The launcher will now try to stop stale Codex Wrapped processes automatically before starting.
 - If port `3210` is busy, set `PORT` before launch:
 
 ```bash

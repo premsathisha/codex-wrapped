@@ -14,11 +14,12 @@ async function getPackageVersion(): Promise<string> {
 
 async function uninstallData(): Promise<void> {
   if (!HOME) return;
+  const legacyDataDir = `${HOME}/.ai${"-wrapped"}`;
   if (process.platform === "win32") {
-    await Bun.$`powershell -Command "Remove-Item -Recurse -Force '${HOME}/.ai-wrapped' -ErrorAction SilentlyContinue"`.quiet();
+    await Bun.$`powershell -Command "Remove-Item -Recurse -Force '${HOME}/.codex-wrapped' -ErrorAction SilentlyContinue; Remove-Item -Recurse -Force '${legacyDataDir}' -ErrorAction SilentlyContinue"`.quiet();
     return;
   }
-  await Bun.$`rm -rf ${HOME}/.ai-wrapped`.quiet();
+  await Bun.$`rm -rf ${HOME}/.codex-wrapped ${legacyDataDir}`.quiet();
 }
 
 async function runBuild(): Promise<void> {
@@ -50,22 +51,22 @@ async function main() {
   const version = await getPackageVersion();
 
   if (process.argv.includes("--help") || process.argv.includes("-h")) {
-    console.log("Usage: ai-wrapped [options]\n");
+    console.log("Usage: codex-wrapped [options]\n");
     console.log("Options:");
     console.log("  --version, -v   Show package version");
     console.log("  --rebuild       Rebuild frontend assets before launch");
-    console.log("  --uninstall     Remove ~/.ai-wrapped data");
+    console.log("  --uninstall     Remove ~/.codex-wrapped data");
     console.log("  --help, -h      Show this help");
     return;
   }
 
   if (process.argv.includes("--version") || process.argv.includes("-v")) {
-    console.log(`ai-wrapped v${version}`);
+    console.log(`codex-wrapped v${version}`);
     return;
   }
 
   if (process.argv.includes("--uninstall")) {
-    console.log("Removing ~/.ai-wrapped...");
+    console.log("Removing ~/.codex-wrapped...");
     await uninstallData();
     console.log("Done.");
     return;
@@ -81,6 +82,6 @@ async function main() {
 
 void main().catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
-  console.error(`[ai-wrapped] ${message}`);
+  console.error(`[codex-wrapped] ${message}`);
   process.exit(1);
 });

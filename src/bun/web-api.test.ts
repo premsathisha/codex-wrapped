@@ -5,7 +5,7 @@ import { expect, test } from "bun:test";
 import { startWebServer } from "./index";
 
 test("web API endpoints expose dashboard and scan status contracts", async () => {
-  const staticDir = await mkdtemp(join(tmpdir(), "ai-wrapped-web-static-"));
+  const staticDir = await mkdtemp(join(tmpdir(), "codex-wrapped-web-static-"));
   await writeFile(join(staticDir, "index.html"), "<!doctype html><title>ok</title>\n", "utf8");
 
   const server = await startWebServer({

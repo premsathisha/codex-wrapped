@@ -28,7 +28,7 @@ import {
   type DayStats,
 } from "./store";
 
-const SHARE_PDF_FILENAME_PREFIX = "ai-wrapped-full";
+const SHARE_PDF_FILENAME_PREFIX = "codex-wrapped-full";
 const SHARE_PDF_RENDER_TIMEOUT_MS = 60_000;
 const SHARE_PDF_VIRTUAL_TIME_BUDGET_MS = 15_000;
 const DEFAULT_HOST = "127.0.0.1";
@@ -493,7 +493,7 @@ const exportFullSharePdf = async (url: string): Promise<{ path: string; browser:
   const parsed = new URL(resolvedUrl);
   const isSharePath = parsed.pathname === "/share" || parsed.pathname === "/share/";
   if (!isSharePath) {
-    throw new Error("PDF export only supports ai-wrapped.com/share URLs.");
+    throw new Error("PDF export only supports codex-wrapped.com/share URLs.");
   }
 
   const outputPath = await buildSharePdfOutputPath();
@@ -509,7 +509,7 @@ const exportFullSharePdf = async (url: string): Promise<{ path: string; browser:
   }
 
   let lastFailure = "";
-  const userDataDir = await mkdtemp(join(tmpdir(), "ai-wrapped-pdf-"));
+  const userDataDir = await mkdtemp(join(tmpdir(), "codex-wrapped-pdf-"));
 
   try {
     for (const candidate of candidates) {
@@ -843,7 +843,7 @@ export const startWebServer = async (
 
   activeServer = server;
   const baseUrl = `http://${host}:${server.port}`;
-  console.log(`[ai-wrapped] Web app running at ${baseUrl}`);
+  console.log(`[codex-wrapped] Web app running at ${baseUrl}`);
 
   if (options.openBrowser ?? true) {
     openExternalUrl(baseUrl);
