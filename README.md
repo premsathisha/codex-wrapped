@@ -132,6 +132,7 @@ AI Wrapped is local-first.
 
 - Codex session logs are read locally from `~/.codex`
 - Aggregated summaries are stored in `~/.ai-wrapped`
+- Pricing fallback may fetch model pricing metadata from [models.dev](https://models.dev) when a model is not available in the local pricing map
 - No external telemetry is required for core functionality
 
 ## Troubleshooting
