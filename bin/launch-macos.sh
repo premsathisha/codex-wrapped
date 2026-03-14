@@ -136,12 +136,12 @@ restart_local_server_if_needed() {
   if [[ -n "${conflict_pid}" ]]; then
     local conflict_command
     conflict_command="$(ps -o command= -p "${conflict_pid}" 2>/dev/null || true)"
-    osascript -e "display alert \"Codex Wrapped Launcher\" message \"Port ${PORT} is in use by PID ${conflict_pid}. Close that app first, then launch Codex Wrapped again.\" as critical"
+    osascript -e "display alert \"Codex Wrapped\" message \"Port ${PORT} is in use by PID ${conflict_pid}. Close that app first, then launch Codex Wrapped again.\" as critical"
     printf '[codex-wrapped-launch] Port %s blocked by PID %s: %s\n' "${PORT}" "${conflict_pid}" "${conflict_command}" >>"${LOG_FILE}" 2>&1
     exit 1
   fi
 
-  osascript -e 'display alert "Codex Wrapped Launcher" message "An older Codex Wrapped server is still running and could not be restarted automatically." as critical'
+  osascript -e 'display alert "Codex Wrapped" message "An older Codex Wrapped server is still running and could not be restarted automatically." as critical'
   exit 1
 }
 
@@ -149,7 +149,7 @@ restart_local_server_if_needed
 
 if ! curl -fsS "${URL}" >/dev/null 2>&1; then
   BUN_PATH="$(find_bun)" || {
-    osascript -e 'display alert "Codex Wrapped Launcher" message "Bun was not found. Install Bun or set BUN_BIN before launching." as critical'
+    osascript -e 'display alert "Codex Wrapped" message "Bun was not found. Install Bun or set BUN_BIN before launching." as critical'
     exit 1
   }
 
@@ -162,7 +162,7 @@ if ! curl -fsS "${URL}" >/dev/null 2>&1; then
   nohup "${BUN_PATH}" ./bin/cli.ts >>"${LOG_FILE}" 2>&1 </dev/null &
 
   if ! wait_for_server; then
-    osascript -e 'display alert "Codex Wrapped Launcher" message "Codex Wrapped did not start successfully. Check /tmp/codex-wrapped-launch.log for details." as critical'
+    osascript -e 'display alert "Codex Wrapped" message "Codex Wrapped did not start successfully. Check /tmp/codex-wrapped-launch.log for details." as critical'
     exit 1
   fi
 fi

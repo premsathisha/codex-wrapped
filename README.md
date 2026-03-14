@@ -47,7 +47,7 @@ bun ./bin/cli.ts
 
 `http://127.0.0.1:3210`
 
-On macOS, you can also double-click `Codex Wrapped Launcher.app` in the repo root to start the local server and open the app.
+On macOS, you can also double-click `Open Codex Wrapped.command` in the repo root to start the local server and open the app.
 
 ## How It Works
 
