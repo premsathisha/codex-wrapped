@@ -12,13 +12,13 @@ Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spot
 
 ## Preview
 
-Screenshot (already exists)
+### Screenshot
 
 ![Codex Wrapped dashboard screenshot](assets/screenshot.png)
 
 ---
 
-Video
+### Video
 
 [Watch preview video](assets/codex%20wrapped%20video.mp4)
 
