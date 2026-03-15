@@ -10,19 +10,13 @@ Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spot
 - Shift from the original app + multi-agent scope to a local website focused specifically on Codex-only support
 - Improved pricing accuracy and handling of edge-case scenarios in cost calculations
 
-## Preview
-
-### Screenshot
+## Screenshot
 
 ![Codex Wrapped dashboard screenshot](assets/screenshot.png)
 
 ---
 
-### Video
-
-[Watch preview video](assets/video.mp4)
-
-Quick start:
+## Quick start:
 
 ```bash
 bun install
