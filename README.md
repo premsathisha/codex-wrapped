@@ -20,7 +20,7 @@ Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spot
 
 ### Video
 
-[Watch preview video](assets/codex%20wrapped%20video.mp4)
+[Watch preview video](assets/video.mp4)
 
 Quick start:
 
