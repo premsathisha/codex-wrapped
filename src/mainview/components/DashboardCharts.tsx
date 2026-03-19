@@ -710,7 +710,6 @@ const DashboardCharts = ({
             <div>
               <h2 className="wrapped-title">Your Top Models</h2>
             </div>
-            <p className="text-sm text-slate-300">Ranked by token usage</p>
           </header>
 
           {modelRows.length === 0 ? (
@@ -1074,7 +1073,6 @@ const DashboardCharts = ({
             <div>
               <h2 className="wrapped-title">Your Top Repos</h2>
             </div>
-            <p className="text-sm text-slate-300">By tokens</p>
           </header>
 
           {topRepos.length === 0 ? (
@@ -1155,7 +1153,6 @@ const DashboardCharts = ({
             <div>
               <h2 className="wrapped-title">Your Coding Hours</h2>
             </div>
-            <p className="text-sm text-slate-300">When you code the most</p>
           </header>
 
           {!hasHourlyData ? (

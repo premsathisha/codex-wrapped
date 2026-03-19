@@ -341,7 +341,6 @@ const Dashboard = () => {
                 <div>
                   <h2 className="wrapped-title">Time Spent Coding with AI</h2>
                 </div>
-                <p className="text-sm text-slate-300">Active on {formatNumber(totals.activeDays)} days</p>
               </header>
 
               <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
