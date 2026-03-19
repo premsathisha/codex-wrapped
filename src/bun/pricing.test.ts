@@ -62,6 +62,46 @@ describe("computeCost", () => {
     expect(computeCost(usage, "gpt-5.4-mini") ?? 0).toBeCloseTo(expected, 12);
   });
 
+  test("uses local pricing for gpt-5.2 and its dated snapshot alias", () => {
+    const usage = {
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheReadTokens: 200_000,
+      cacheWriteTokens: 100_000,
+      reasoningTokens: 0,
+    };
+
+    const expected =
+      1.75 + // input
+      (500_000 * 14) / 1_000_000 + // output
+      (200_000 * 0.175) / 1_000_000; // cache read
+
+    expect(computeCost(usage, "gpt-5.2") ?? 0).toBeCloseTo(expected, 12);
+    expect(computeCost(usage, "gpt-5.2-2025-12-11") ?? 0).toBeCloseTo(expected, 12);
+  });
+
+  test("uses local pricing for gpt-5.1 codex variants", () => {
+    const usage = {
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheReadTokens: 200_000,
+      cacheWriteTokens: 100_000,
+      reasoningTokens: 0,
+    };
+
+    const maxExpected =
+      1.25 + // input
+      (500_000 * 10) / 1_000_000 + // output
+      (200_000 * 0.125) / 1_000_000; // cache read
+    const miniExpected =
+      0.25 + // input
+      (500_000 * 2) / 1_000_000 + // output
+      (200_000 * 0.025) / 1_000_000; // cache read
+
+    expect(computeCost(usage, "gpt-5.1-codex-max") ?? 0).toBeCloseTo(maxExpected, 12);
+    expect(computeCost(usage, "gpt-5.1-codex-mini") ?? 0).toBeCloseTo(miniExpected, 12);
+  });
+
   test("prefers local pricing over remote pricing for known models", async () => {
     globalThis.fetch = ((async () =>
       new Response(
