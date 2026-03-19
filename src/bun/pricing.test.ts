@@ -45,6 +45,23 @@ describe("computeCost", () => {
     expect(cost).toBe(0);
   });
 
+  test("uses local pricing for gpt-5.4-mini", () => {
+    const usage = {
+      inputTokens: 1_000_000,
+      outputTokens: 500_000,
+      cacheReadTokens: 200_000,
+      cacheWriteTokens: 100_000,
+      reasoningTokens: 0,
+    };
+
+    const expected =
+      0.75 + // input
+      (500_000 * 4.5) / 1_000_000 + // output
+      (200_000 * 0.075) / 1_000_000; // cache read
+
+    expect(computeCost(usage, "gpt-5.4-mini") ?? 0).toBeCloseTo(expected, 12);
+  });
+
   test("prefers local pricing over remote pricing for known models", async () => {
     globalThis.fetch = ((async () =>
       new Response(
