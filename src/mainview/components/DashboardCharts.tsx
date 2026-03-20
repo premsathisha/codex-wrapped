@@ -122,6 +122,13 @@ interface TopRepoRow {
   durationMs: number;
 }
 
+interface ChartPlotOffset {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 interface CodingPersonality {
   label: string;
   emoji: string;
@@ -213,16 +220,13 @@ const buildHeatmapWeeks = (cells: HeatmapCell[]): HeatmapWeek[] => {
 const chartWrapperClass = "h-56 w-full sm:h-64";
 const chartRevealClass = "wrapped-chart-reveal";
 const CHART_ANIMATION_MS = 2000;
+const COST_LINE_FALLBACK_TOP_PX = 8;
+const COST_LINE_FALLBACK_BOTTOM_PX = 34;
 const HEATMAP_TOOLTIP_HALF_WIDTH_PX = 112;
 const HEATMAP_LEFT_GUTTER_PX = 36;
 const HEATMAP_MONTH_ROW_HEIGHT_PX = 18;
 const HEATMAP_WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 const HEATMAP_MONTH_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
-
-const formatTokensTooltipWithValue = (value: number | string | undefined) => {
-  const numericValue = typeof value === "number" ? value : Number(value ?? 0);
-  return [`${formatTokens(numericValue)} (${formatNumber(numericValue)})`, "Tokens"];
-};
 
 const formatUsdTooltip = (value: number | string | undefined) =>
   formatUsd(typeof value === "number" ? value : Number(value ?? 0));
@@ -442,8 +446,13 @@ const DashboardCharts = ({
   const hasHourlyData = hasHourlyActivity(hourlyBreakdown);
   const heatmapViewportRef = useRef<HTMLDivElement | null>(null);
   const heatmapTooltipHostRef = useRef<HTMLDivElement | null>(null);
+  const costChartHoverRef = useRef<HTMLDivElement | null>(null);
+  const costHoverTargetXRef = useRef<number | null>(null);
+  const costHoverAnimFrameRef = useRef<number | null>(null);
   const [heatmapTargetWidthPx, setHeatmapTargetWidthPx] = useState<number | undefined>(undefined);
   const [heatmapHoverState, setHeatmapHoverState] = useState<HeatmapHoverState | null>(null);
+  const [costHoverLineX, setCostHoverLineX] = useState<number | null>(null);
+  const [costPlotOffset, setCostPlotOffset] = useState<ChartPlotOffset | null>(null);
 
   useEffect(() => {
     const viewport = heatmapViewportRef.current;
@@ -498,6 +507,87 @@ const DashboardCharts = ({
     });
   }, []);
 
+  const clearCostHoverLine = useCallback(() => {
+    costHoverTargetXRef.current = null;
+    if (costHoverAnimFrameRef.current !== null) {
+      window.cancelAnimationFrame(costHoverAnimFrameRef.current);
+      costHoverAnimFrameRef.current = null;
+    }
+    setCostHoverLineX((current) => (current === null ? current : null));
+  }, []);
+
+  const updateCostHoverLine = useCallback((event: MouseEvent<HTMLDivElement>) => {
+    const hoverHost = costChartHoverRef.current;
+    if (!hoverHost) return;
+    const rect = hoverHost.getBoundingClientRect();
+    const nextX = event.clientX - rect.left;
+    const clampedX = Math.max(0, Math.min(rect.width, nextX));
+    costHoverTargetXRef.current = clampedX;
+
+    const svg = hoverHost.querySelector("svg");
+    const clipRect = hoverHost.querySelector("svg clipPath rect");
+    if (svg instanceof SVGSVGElement && clipRect instanceof SVGRectElement) {
+      const svgRect = svg.getBoundingClientRect();
+      const x = Number(clipRect.getAttribute("x"));
+      const y = Number(clipRect.getAttribute("y"));
+      const width = Number(clipRect.getAttribute("width"));
+      const height = Number(clipRect.getAttribute("height"));
+      if ([x, y, width, height].every((value) => Number.isFinite(value))) {
+        setCostPlotOffset((current) => {
+          const next = {
+            left: svgRect.left - rect.left + x,
+            top: svgRect.top - rect.top + y,
+            width,
+            height,
+          };
+          if (
+            current &&
+            current.left === next.left &&
+            current.top === next.top &&
+            current.width === next.width &&
+            current.height === next.height
+          ) {
+            return current;
+          }
+          return next;
+        });
+      }
+    }
+
+    if (costHoverAnimFrameRef.current !== null) {
+      return;
+    }
+
+    const tick = () => {
+      const target = costHoverTargetXRef.current;
+      if (target === null) {
+        costHoverAnimFrameRef.current = null;
+        return;
+      }
+
+      setCostHoverLineX((current) => {
+        if (current === null) return target;
+        const next = current + (target - current) * 0.22;
+        if (Math.abs(target - next) < 0.1) {
+          return target;
+        }
+        return next;
+      });
+
+      costHoverAnimFrameRef.current = window.requestAnimationFrame(tick);
+    };
+
+    costHoverAnimFrameRef.current = window.requestAnimationFrame(tick);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (costHoverAnimFrameRef.current !== null) {
+        window.cancelAnimationFrame(costHoverAnimFrameRef.current);
+      }
+    },
+    [],
+  );
   const visibleModelBreakdown = modelBreakdown.filter((row) => row.model !== "<synthetic>");
   const totalModelTokens = visibleModelBreakdown.reduce((sum, row) => sum + row.tokens, 0);
   const modelRows = visibleModelBreakdown.map((row, index) => ({
@@ -728,18 +818,6 @@ const DashboardCharts = ({
                       tickLine={false}
                       axisLine={false}
                       width={188}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "rgba(59,130,246,0.15)" }}
-                      contentStyle={{
-                        background: "#000000",
-                        border: "1px solid rgba(148,163,184,0.35)",
-                        borderRadius: "12px",
-                        color: "#ffffff",
-                      }}
-                      labelStyle={{ color: "#ffffff" }}
-                      itemStyle={{ color: "#ffffff" }}
-                      formatter={formatTokensTooltipWithValue}
                     />
                     <Bar
                       dataKey="tokens"
@@ -989,7 +1067,12 @@ const DashboardCharts = ({
             </article>
           </div>
 
-          <div className={`mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}>
+          <div
+            ref={costChartHoverRef}
+            className={`relative mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}
+            onMouseMove={updateCostHoverLine}
+            onMouseLeave={clearCostHoverLine}
+          >
             {effectiveCostGroupBy === "none" ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={costTimeline}>
@@ -1003,6 +1086,7 @@ const DashboardCharts = ({
                   <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                   <Tooltip
+                    cursor={false}
                     contentStyle={{
                       background: "#000000",
                       border: "1px solid rgba(148,163,184,0.35)",
@@ -1018,6 +1102,7 @@ const DashboardCharts = ({
                     stroke={themePalette.medium}
                     fill="url(#costFill)"
                     strokeWidth={2.5}
+                    activeDot={false}
                     isAnimationActive={animateCard6}
                     animationDuration={CHART_ANIMATION_MS}
                     animationBegin={0}
@@ -1032,6 +1117,7 @@ const DashboardCharts = ({
                   <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                   <Tooltip
+                    cursor={false}
                     contentStyle={{
                       background: "#000000",
                       border: "1px solid rgba(148,163,184,0.35)",
@@ -1054,6 +1140,7 @@ const DashboardCharts = ({
                       fill={series.color}
                       fillOpacity={0.22}
                       strokeWidth={2}
+                      activeDot={false}
                       isAnimationActive={animateCard6}
                       animationDuration={CHART_ANIMATION_MS}
                       animationBegin={0}
@@ -1062,6 +1149,29 @@ const DashboardCharts = ({
                   ))}
                 </AreaChart>
               </ResponsiveContainer>
+            )}
+            {costHoverLineX !== null && (
+              <div
+                className="pointer-events-none absolute z-10 border-l border-white"
+                style={
+                  costPlotOffset !== null
+                    ? {
+                        left: Math.max(
+                          costPlotOffset.left,
+                          Math.min(costPlotOffset.left + costPlotOffset.width, costHoverLineX),
+                        ),
+                        top: costPlotOffset.top,
+                        height: costPlotOffset.height,
+                        borderLeftWidth: "2.5px",
+                      }
+                    : {
+                        left: costHoverLineX,
+                        top: COST_LINE_FALLBACK_TOP_PX,
+                        bottom: COST_LINE_FALLBACK_BOTTOM_PX,
+                        borderLeftWidth: "2.5px",
+                      }
+                }
+              />
             )}
           </div>
         </section>
