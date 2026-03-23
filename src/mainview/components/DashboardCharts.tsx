@@ -5,10 +5,12 @@ import {
   AreaChart,
   Bar,
   BarChart,
+  type BarShapeProps,
   CartesianGrid,
   Cell,
   Pie,
   PieChart,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -232,6 +234,37 @@ const formatUsdTooltip = (value: number | string | undefined) =>
   formatUsd(typeof value === "number" ? value : Number(value ?? 0));
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const BAR_FILL_TRANSITION = "fill 180ms ease-in-out";
+
+const lightenHexColor = (hexColor: string, amount = 0.14): string => {
+  const match = /^#([0-9a-f]{6})$/i.exec(hexColor.trim());
+  if (!match) return hexColor;
+
+  const hex = match[1];
+  const lightenChannel = (offset: number) => {
+    const current = Number.parseInt(hex.slice(offset, offset + 2), 16);
+    return Math.round(current + (255 - current) * amount);
+  };
+  const toHex = (value: number) => value.toString(16).padStart(2, "0");
+
+  return `#${toHex(lightenChannel(0))}${toHex(lightenChannel(2))}${toHex(lightenChannel(4))}`.toUpperCase();
+};
+
+const buildBarTransitionStyle = (style?: CSSProperties): CSSProperties => {
+  const transition =
+    typeof style?.transition === "string" && style.transition.length > 0
+      ? `${style.transition}, ${BAR_FILL_TRANSITION}`
+      : BAR_FILL_TRANSITION;
+
+  return {
+    ...style,
+    transition,
+  };
+};
+
+const renderAnimatedBarShape = (props: BarShapeProps, fill: string) => (
+  <Rectangle {...props} fill={fill} style={buildBarTransitionStyle(props.style)} />
+);
 
 const AgentPieTooltip = ({ active, payload }: AgentPieTooltipProps) => {
   const row = payload?.[0]?.payload;
@@ -453,6 +486,20 @@ const DashboardCharts = ({
   const [heatmapHoverState, setHeatmapHoverState] = useState<HeatmapHoverState | null>(null);
   const [costHoverLineX, setCostHoverLineX] = useState<number | null>(null);
   const [costPlotOffset, setCostPlotOffset] = useState<ChartPlotOffset | null>(null);
+  const renderBarShape = useCallback(
+    (props: BarShapeProps) => {
+      const fill = typeof props.fill === "string" ? props.fill : themePalette.medium;
+      return renderAnimatedBarShape(props, fill);
+    },
+    [themePalette.medium],
+  );
+  const renderActiveBarShape = useCallback(
+    (props: BarShapeProps) => {
+      const fill = typeof props.fill === "string" ? props.fill : themePalette.medium;
+      return renderAnimatedBarShape(props, lightenHexColor(fill));
+    },
+    [themePalette.medium],
+  );
 
   useEffect(() => {
     const viewport = heatmapViewportRef.current;
@@ -1230,6 +1277,7 @@ const DashboardCharts = ({
                       width={140}
                     />
                     <Tooltip
+                      cursor={false}
                       contentStyle={{
                         background: "#000000",
                         border: "1px solid rgba(148,163,184,0.35)",
@@ -1244,6 +1292,8 @@ const DashboardCharts = ({
                       animationDuration={CHART_ANIMATION_MS}
                       animationBegin={0}
                       animationEasing="ease-in-out"
+                      shape={renderBarShape}
+                      activeBar={renderActiveBarShape}
                     >
                       {topRepos.map((repo, index) => (
                         <Cell key={repo.repo} fill={topRepoBarColors[Math.min(index, topRepoBarColors.length - 1)]} />
@@ -1295,6 +1345,7 @@ const DashboardCharts = ({
                       <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                       <Tooltip
                         content={<HourlyBarTooltip />}
+                        cursor={false}
                         allowEscapeViewBox={{ x: true, y: true }}
                         wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
                       />
@@ -1306,6 +1357,8 @@ const DashboardCharts = ({
                         animationDuration={CHART_ANIMATION_MS}
                         animationBegin={0}
                         animationEasing="ease-in-out"
+                        shape={renderBarShape}
+                        activeBar={renderActiveBarShape}
                       >
                         {hourlyBreakdown.map((row) => (
                           <Cell
