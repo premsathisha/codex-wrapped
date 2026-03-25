@@ -109,4 +109,66 @@ describe("dashboardSummary", () => {
     expect(topRepos.some((repo) => repo.repo === "spawned-agent-heavy")).toBe(true);
     expect(topRepos[0]?.repo).toBe("spawned-agent-heavy");
   });
+
+  test("buildTopRepos consolidates alias repos using shared meaningful tokens and latest name", () => {
+    const byRepo = new Map<string, DayStats>([
+      [
+        "AI Wrapped",
+        makeStats({
+          sessions: 2,
+          inputTokens: 100,
+          outputTokens: 20,
+          costUsd: 0.4,
+          durationMs: 120_000,
+        }),
+      ],
+      [
+        "ai-wrapped-1.8.1",
+        makeStats({
+          sessions: 1,
+          inputTokens: 50,
+          outputTokens: 10,
+          costUsd: 0.2,
+          durationMs: 60_000,
+        }),
+      ],
+      [
+        "Codex Wrapped",
+        makeStats({
+          sessions: 3,
+          inputTokens: 200,
+          outputTokens: 40,
+          costUsd: 0.8,
+          durationMs: 240_000,
+        }),
+      ],
+      [
+        "another-project",
+        makeStats({
+          sessions: 1,
+          inputTokens: 10,
+        }),
+      ],
+    ]);
+
+    const repoLastSeen = new Map<string, string>([
+      ["AI Wrapped", "2026-03-01"],
+      ["ai-wrapped-1.8.1", "2026-03-10"],
+      ["Codex Wrapped", "2026-03-25"],
+      ["another-project", "2026-03-20"],
+    ]);
+
+    const topRepos = buildTopRepos(byRepo, repoLastSeen);
+    const wrapped = topRepos.find((row) => row.repo === "Codex Wrapped");
+
+    expect(wrapped).toBeDefined();
+    expect(wrapped?.repo).toBe("Codex Wrapped");
+    expect(wrapped?.sessions).toBe(6);
+    expect(wrapped?.tokens).toBe(420);
+    expect(wrapped?.costUsd).toBeCloseTo(1.4, 10);
+    expect(wrapped?.durationMs).toBe(420_000);
+    expect(topRepos.some((row) => row.repo === "AI Wrapped")).toBe(false);
+    expect(topRepos.some((row) => row.repo === "ai-wrapped-1.8.1")).toBe(false);
+    expect(topRepos.some((row) => row.repo === "another-project")).toBe(true);
+  });
 });

@@ -3,11 +3,6 @@
   "version": "0.0.1",
   "description": "Your year in AI — a Spotify Wrapped-style dashboard for AI coding agents",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/premsathisha/codex-wrapped.git"
-  },
-  "homepage": "https://github.com/premsathisha/codex-wrapped",
   "keywords": ["ai", "wrapped", "codex", "stats", "dashboard"],
   "bin": {
     "codex-wrapped": "bin/cli.ts"
@@ -17,13 +12,9 @@
     "src/bun/",
     "src/shared/",
     "dist/",
-    "assets/icons/icon.iconset/",
-    "assets/icons/icon.png",
-    "assets/icons/icon.ico",
-    "assets/icons/icon.icns",
     "tsconfig.json",
     "README.md",
-    "LICENSE"
+    "AGENTS.md"
   ],
   "scripts": {
     "dev": "bun run build && bun --hot ./src/bun/index.ts",

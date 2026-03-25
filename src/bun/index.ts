@@ -140,6 +140,7 @@ const getDashboardSummaryFromStore = async (
   const byAgent = createEmptyByAgent();
   const byModelMap = new Map<string, DayStats>();
   const byRepoMap = new Map<string, DayStats>();
+  const byRepoLastSeenDateMap = new Map<string, string>();
   const byHourMap = new Map<number, DayStats>();
   const byHourSourceMap = new Map<number, Map<string, DayStats>>();
   const totals = createEmptyDayStats();
@@ -178,6 +179,11 @@ const getDashboardSummaryFromStore = async (
         byRepoMap.set(repo, createEmptyDayStats());
       }
       addDayStats(byRepoMap.get(repo) as DayStats, repoStats);
+
+      const previousLastSeen = byRepoLastSeenDateMap.get(repo);
+      if (!previousLastSeen || date > previousLastSeen) {
+        byRepoLastSeenDateMap.set(repo, date);
+      }
     }
 
     for (const [hour, hourStats] of Object.entries(entry.byHour)) {
@@ -217,7 +223,7 @@ const getDashboardSummaryFromStore = async (
     .slice(0, 100);
 
   const dailyTimeline = dateFrom && dateTo ? await getDailyTimelineFromStore(dateFrom, dateTo) : [];
-  const topRepos = buildTopRepos(byRepoMap);
+  const topRepos = buildTopRepos(byRepoMap, byRepoLastSeenDateMap);
 
   const hourlyBreakdown: HourlyBreakdownEntry[] = Array.from({ length: 24 }, (_, hour) => {
     const stats = byHourMap.get(hour) ?? createEmptyDayStats();

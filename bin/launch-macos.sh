@@ -56,7 +56,7 @@ list_port_listener_pids() {
   lsof -tiTCP:"${PORT}" -sTCP:LISTEN 2>/dev/null || true
 }
 
-is_ai_wrapped_server_pid() {
+is_codex_wrapped_server_pid() {
   local pid="$1"
   local command
   command="$(ps -o command= -p "${pid}" 2>/dev/null || true)"
@@ -104,7 +104,7 @@ restart_local_server_if_needed() {
 
   while IFS= read -r pid; do
     [[ -z "${pid}" ]] && continue
-    if is_ai_wrapped_server_pid "${pid}"; then
+    if is_codex_wrapped_server_pid "${pid}"; then
       pids_to_stop+=("${pid}")
     fi
   done < <(list_port_listener_pids)
