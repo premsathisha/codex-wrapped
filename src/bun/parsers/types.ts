@@ -13,6 +13,7 @@ export interface RawParsedSession {
     model: string | null;
     cliVersion: string | null;
     title: string | null;
+    isSubagent: boolean;
   };
   events: SessionEvent[];
 }

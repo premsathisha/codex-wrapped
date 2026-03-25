@@ -341,6 +341,7 @@ export const codexParser: SessionParser = {
       let model: string | null = null;
       let cliVersion: string | null = null;
       let title: string | null = null;
+      let isSubagent = false;
       let previousCodexTotalUsage: CodexUsageTotals | null = null;
       let previousCodexTotalCostUsd: number | null = null;
 
@@ -354,11 +355,15 @@ export const codexParser: SessionParser = {
 
         if (type === "session_meta") {
           const git = asRecord(payload?.git);
+          const source = asRecord(payload?.source);
+          const subagent = asRecord(source?.subagent);
+          const threadSpawn = asRecord(subagent?.thread_spawn);
 
           cwd = cwd ?? getString(payload?.cwd);
           gitBranch = gitBranch ?? getString(git?.branch);
           cliVersion = cliVersion ?? getString(payload?.cli_version);
           model = model ?? getString(payload?.model_provider);
+          isSubagent = isSubagent || Boolean(threadSpawn) || getString(payload?.forked_from_id) !== null;
 
           events.push(
             createEvent(sessionId, lineIndex, record, "meta", {
@@ -540,6 +545,7 @@ export const codexParser: SessionParser = {
           model,
           cliVersion,
           title,
+          isSubagent,
         },
         events,
       };

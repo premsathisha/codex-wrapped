@@ -57,7 +57,7 @@ describe("dashboardSummary", () => {
     ]);
 
     const topRepos = buildTopRepos(byRepo);
-    expect(topRepos).toHaveLength(2);
+    expect(topRepos).toHaveLength(3);
     expect(topRepos[0]).toEqual({
       repo: "alpha",
       sessions: 2,
@@ -71,6 +71,13 @@ describe("dashboardSummary", () => {
       tokens: 20,
       costUsd: 0.25,
       durationMs: 120_000,
+    });
+    expect(topRepos[2]).toEqual({
+      repo: "zero",
+      sessions: 0,
+      tokens: 999,
+      costUsd: 0,
+      durationMs: 999,
     });
   });
 });

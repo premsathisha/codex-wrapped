@@ -22,6 +22,7 @@ const makeSession = (overrides: Partial<Session>): Session => ({
   totalTokens: { ...EMPTY_TOKEN_USAGE },
   totalCostUsd: 0.5,
   toolCallCount: 1,
+  isSubagent: false,
   isHousekeeping: false,
   parsedAt: "2026-02-21T10:02:00.000Z",
   ...overrides,
@@ -220,5 +221,49 @@ describe("aggregateSessionsByDate", () => {
     expect(entry?.byModel["gpt-5.4"]?.inputTokens).toBe(100);
     expect(entry?.byModel["gpt-5.4"]?.sessions).toBe(0);
     expect(entry?.totals.costUsd).toBeCloseTo(0.84, 10);
+  });
+
+  test("excludes subagent sessions from session totals while keeping spend and tokens", () => {
+    const daily = aggregateSessionsByDate([
+      makeSession({
+        id: "parent",
+        durationMs: 300_000,
+        totalTokens: {
+          inputTokens: 100,
+          outputTokens: 20,
+          cacheReadTokens: 10,
+          cacheWriteTokens: 0,
+          reasoningTokens: 5,
+        },
+        totalCostUsd: 0.3,
+      }),
+      makeSession({
+        id: "child-subagent",
+        model: "gpt-5.4-mini",
+        isSubagent: true,
+        durationMs: 300_000,
+        totalTokens: {
+          inputTokens: 70,
+          outputTokens: 15,
+          cacheReadTokens: 5,
+          cacheWriteTokens: 0,
+          reasoningTokens: 3,
+        },
+        totalCostUsd: 0.2,
+      }),
+    ], { timeZone: "UTC" });
+
+    const entry = daily["2026-02-21"];
+    expect(entry?.totals.sessions).toBe(1);
+    expect(entry?.totals.inputTokens).toBe(170);
+    expect(entry?.totals.costUsd).toBeCloseTo(0.5, 10);
+    expect(entry?.totals.durationMs).toBe(300_000);
+    expect(entry?.byModel["gpt-5"]?.sessions).toBe(1);
+    expect(entry?.byModel["gpt-5.4-mini"]?.sessions).toBe(0);
+    expect(entry?.byModel["gpt-5.4-mini"]?.inputTokens).toBe(70);
+    expect(entry?.byModel["gpt-5.4-mini"]?.durationMs).toBe(0);
+    expect(entry?.byRepo["ai-stats"]?.sessions).toBe(1);
+    expect(entry?.byRepo["ai-stats"]?.durationMs).toBe(300_000);
+    expect(entry?.byRepo["ai-stats"]?.costUsd).toBeCloseTo(0.5, 10);
   });
 });

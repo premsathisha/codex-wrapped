@@ -39,6 +39,7 @@ export interface Session {
   totalTokens: TokenUsage;
   totalCostUsd: number | null;
   toolCallCount: number;
+  isSubagent: boolean;
   isHousekeeping: boolean;
   parsedAt: string;
 }

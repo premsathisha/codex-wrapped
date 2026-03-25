@@ -33,6 +33,7 @@ const makeRawSession = (sessionId: string, events: SessionEvent[]): RawParsedSes
     model: "gpt-5",
     cliVersion: "1.0.0",
     title: null,
+    isSubagent: false,
   },
   events,
 });
@@ -86,6 +87,18 @@ describe("normalizeSession costs", () => {
 
     expect(result.events[0]?.costUsd).toBe(0.42);
     expect(result.session.totalCostUsd).toBe(0.42);
+  });
+
+  test("preserves the parsed subagent flag on the normalized session", () => {
+    const result = normalizeSession({
+      ...makeRawSession("session-subagent", [makeEvent({ id: "subagent-event" })]),
+      metadata: {
+        ...makeRawSession("session-subagent", []).metadata,
+        isSubagent: true,
+      },
+    });
+
+    expect(result.session.isSubagent).toBe(true);
   });
 });
 

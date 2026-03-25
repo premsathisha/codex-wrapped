@@ -178,6 +178,50 @@ describe("codexParser", () => {
     }
   });
 
+  test("marks spawned subagent sessions from session metadata", async () => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "ai-stats-codex-"));
+
+    try {
+      const filePath = join(fixtureDir, "rollout-2026-02-03T11-38-55-subagent.jsonl");
+      const content = [
+        JSON.stringify({
+          type: "session_meta",
+          timestamp: "2026-02-03T11:38:55Z",
+          payload: {
+            id: "session-subagent",
+            cwd: "/tmp/project",
+            model_provider: "openai",
+            forked_from_id: "parent-session",
+            source: {
+              subagent: {
+                thread_spawn: {
+                  parent_thread_id: "parent-session",
+                  depth: 1,
+                },
+              },
+            },
+          },
+        }),
+      ].join("\n");
+
+      writeFileSync(filePath, content, "utf8");
+      const fileStat = statSync(filePath);
+
+      const parsed = await codexParser.parse({
+        path: filePath,
+        source: "codex",
+        mtime: fileStat.mtimeMs,
+        size: fileStat.size,
+      });
+
+      expect(parsed).not.toBeNull();
+      expect(parsed?.metadata.isSubagent).toBe(true);
+      expect(normalizeSession(parsed as NonNullable<typeof parsed>).session.isSubagent).toBe(true);
+    } finally {
+      rmSync(fixtureDir, { recursive: true, force: true });
+    }
+  });
+
   test("uses token_count cumulative total_cost_usd as deltas", async () => {
     const fixtureDir = mkdtempSync(join(tmpdir(), "ai-stats-codex-"));
 

@@ -17,7 +17,7 @@ export const buildTopRepos = (byRepoMap: Map<string, DayStats>): DashboardSummar
       costUsd: stats.costUsd,
       durationMs: stats.durationMs,
     }))
-    .filter((entry) => entry.sessions > 0)
+    .filter((entry) => entry.sessions > 0 || entry.tokens > 0 || entry.costUsd > 0 || entry.durationMs > 0)
     .sort((left, right) => {
       if (right.sessions !== left.sessions) return right.sessions - left.sessions;
       if (right.costUsd !== left.costUsd) return right.costUsd - left.costUsd;

@@ -1,5 +1,25 @@
 import { describe, expect, test } from "bun:test";
-import { rawAggregationMetaNeedsTimeZoneBackfill, rawDailyStoreMissingHourDimension } from "./store";
+import {
+  createEmptyDayStats,
+  hasTrackedActivity,
+  rawAggregationMetaNeedsTimeZoneBackfill,
+  rawDailyStoreMissingHourDimension,
+} from "./store";
+
+describe("hasTrackedActivity", () => {
+  test("returns false for empty stats", () => {
+    expect(hasTrackedActivity(createEmptyDayStats())).toBe(false);
+  });
+
+  test("treats zero-session token activity as active", () => {
+    expect(
+      hasTrackedActivity({
+        ...createEmptyDayStats(),
+        inputTokens: 120,
+      }),
+    ).toBe(true);
+  });
+});
 
 describe("rawDailyStoreMissingHourDimension", () => {
   test("returns false for non-record input", () => {
@@ -7,7 +27,7 @@ describe("rawDailyStoreMissingHourDimension", () => {
     expect(rawDailyStoreMissingHourDimension([])).toBe(false);
   });
 
-  test("ignores entries with zero sessions", () => {
+  test("ignores entries with no tracked activity", () => {
     expect(
       rawDailyStoreMissingHourDimension({
         "2026-02-21": {
@@ -15,6 +35,16 @@ describe("rawDailyStoreMissingHourDimension", () => {
         },
       }),
     ).toBe(false);
+  });
+
+  test("returns true when active zero-session entries are missing hour dimensions", () => {
+    expect(
+      rawDailyStoreMissingHourDimension({
+        "2026-02-21": {
+          totals: { sessions: 0, inputTokens: 25 },
+        },
+      }),
+    ).toBe(true);
   });
 
   test("returns true when byHour is missing for active entries", () => {
@@ -117,7 +147,7 @@ describe("rawAggregationMetaNeedsTimeZoneBackfill", () => {
   test("returns true when version changes", () => {
     expect(
       rawAggregationMetaNeedsTimeZoneBackfill(
-        { version: 2, timeZone: "America/Los_Angeles" },
+        { version: 1, timeZone: "America/Los_Angeles" },
         "America/Los_Angeles",
       ),
     ).toBe(true);
@@ -126,7 +156,7 @@ describe("rawAggregationMetaNeedsTimeZoneBackfill", () => {
   test("returns true when timezone changes", () => {
     expect(
       rawAggregationMetaNeedsTimeZoneBackfill(
-        { version: 1, timeZone: "UTC" },
+        { version: 2, timeZone: "UTC" },
         "America/Los_Angeles",
       ),
     ).toBe(true);
@@ -135,7 +165,7 @@ describe("rawAggregationMetaNeedsTimeZoneBackfill", () => {
   test("returns false for matching version and timezone", () => {
     expect(
       rawAggregationMetaNeedsTimeZoneBackfill(
-        { version: 1, timeZone: "America/Los_Angeles" },
+        { version: 2, timeZone: "America/Los_Angeles" },
         "America/Los_Angeles",
       ),
     ).toBe(false);

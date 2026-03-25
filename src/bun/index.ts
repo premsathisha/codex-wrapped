@@ -23,6 +23,7 @@ import {
   dailyStoreMissingHourDimension,
   dailyStoreMissingRepoDimension,
   getSettings,
+  hasTrackedActivity,
   readDailyStore,
   setSettings,
   type DayStats,
@@ -269,16 +270,16 @@ const getDashboardSummaryFromStore = async (
 
 const dailyStoreNeedsRepoBackfill = async (): Promise<boolean> => {
   const daily = await readDailyStore();
-  let hasSessions = false;
+  let hasActivity = false;
 
   for (const entry of Object.values(daily)) {
-    if (entry.totals.sessions > 0) {
-      hasSessions = true;
+    if (hasTrackedActivity(entry.totals)) {
+      hasActivity = true;
       break;
     }
   }
 
-  if (!hasSessions) {
+  if (!hasActivity) {
     return false;
   }
 

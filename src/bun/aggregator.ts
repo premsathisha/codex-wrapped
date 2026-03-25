@@ -99,7 +99,7 @@ const toHourKey = (session: Session, hourFormatter: Intl.DateTimeFormat): string
 };
 
 const toSessionStats = (session: Session, includeRollupStats: boolean): DayStats => ({
-  sessions: 1,
+  sessions: session.isSubagent ? 0 : 1,
   messages: includeRollupStats ? session.messageCount : 0,
   toolCalls: includeRollupStats ? session.toolCallCount : 0,
   inputTokens: includeRollupStats ? session.totalTokens.inputTokens : 0,
@@ -108,7 +108,7 @@ const toSessionStats = (session: Session, includeRollupStats: boolean): DayStats
   cacheWriteTokens: includeRollupStats ? session.totalTokens.cacheWriteTokens : 0,
   reasoningTokens: includeRollupStats ? session.totalTokens.reasoningTokens : 0,
   costUsd: includeRollupStats ? session.totalCostUsd ?? 0 : 0,
-  durationMs: session.durationMs ?? 0,
+  durationMs: session.isSubagent ? 0 : session.durationMs ?? 0,
 });
 
 const toEventStats = (event: SessionEvent): DayStats => ({

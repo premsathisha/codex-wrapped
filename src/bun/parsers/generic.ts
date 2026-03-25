@@ -478,6 +478,7 @@ export const parseGeneric = async (
         model,
         cliVersion,
         title,
+        isSubagent: false,
       },
       events,
     };

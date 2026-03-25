@@ -48,7 +48,7 @@ const SCAN_STATE_PATH = join(DATA_DIR, "scan-state.json");
 const DAILY_PATH = join(DATA_DIR, "daily.json");
 const AGGREGATION_META_PATH = join(DATA_DIR, "aggregation-meta.json");
 const SETTINGS_PATH = join(DATA_DIR, "settings.json");
-const AGGREGATION_META_VERSION = 1;
+const AGGREGATION_META_VERSION = 2;
 
 const DEFAULT_SETTINGS: AppSettings = {
   scanOnLaunch: true,
@@ -117,6 +117,21 @@ export const createEmptyDayStats = (): DayStats => ({
   costUsd: 0,
   durationMs: 0,
 });
+
+export const hasTrackedActivity = (stats: DayStats | null | undefined): boolean =>
+  Boolean(stats) &&
+  (
+    (stats?.sessions ?? 0) > 0 ||
+    (stats?.messages ?? 0) > 0 ||
+    (stats?.toolCalls ?? 0) > 0 ||
+    (stats?.inputTokens ?? 0) > 0 ||
+    (stats?.outputTokens ?? 0) > 0 ||
+    (stats?.cacheReadTokens ?? 0) > 0 ||
+    (stats?.cacheWriteTokens ?? 0) > 0 ||
+    (stats?.reasoningTokens ?? 0) > 0 ||
+    (stats?.costUsd ?? 0) > 0 ||
+    (stats?.durationMs ?? 0) > 0
+  );
 
 const normalizeDayStats = (value: unknown): DayStats => {
   if (!isRecord(value)) {
@@ -309,7 +324,7 @@ export const writeDailyStore = async (daily: DailyStore): Promise<void> => {
   await writeJson(DAILY_PATH, dailyCache);
 };
 
-const rawDailyStoreHasSessions = (raw: unknown): boolean => {
+const rawDailyStoreHasActivity = (raw: unknown): boolean => {
   if (!isRecord(raw)) {
     return false;
   }
@@ -319,9 +334,8 @@ const rawDailyStoreHasSessions = (raw: unknown): boolean => {
       continue;
     }
 
-    const totals = isRecord(rawEntry.totals) ? rawEntry.totals : null;
-    const hasSessions = totals && typeof totals.sessions === "number" && totals.sessions > 0;
-    if (hasSessions) {
+    const totals = normalizeDayStats(rawEntry.totals);
+    if (hasTrackedActivity(totals)) {
       return true;
     }
   }
@@ -358,9 +372,8 @@ export const rawDailyStoreMissingHourDimension = (raw: unknown): boolean => {
       continue;
     }
 
-    const totals = isRecord(rawEntry.totals) ? rawEntry.totals : null;
-    const hasSessions = totals && typeof totals.sessions === "number" && totals.sessions > 0;
-    if (!hasSessions) {
+    const totals = normalizeDayStats(rawEntry.totals);
+    if (!hasTrackedActivity(totals)) {
       continue;
     }
 
@@ -415,7 +428,7 @@ export const dailyStoreNeedsTimeZoneBackfill = async (
   currentTimeZone: string,
 ): Promise<boolean> => {
   const rawDaily = await readJson<unknown>(DAILY_PATH, {});
-  if (!rawDailyStoreHasSessions(rawDaily)) {
+  if (!rawDailyStoreHasActivity(rawDaily)) {
     return false;
   }
 

@@ -446,6 +446,7 @@ export const normalizeSession = (parsed: RawParsedSession): { session: Session; 
     totalTokens,
     totalCostUsd: hasCost ? totalCost : null,
     toolCallCount,
+    isSubagent: parsed.metadata.isSubagent,
     isHousekeeping: housekeeping,
     parsedAt: new Date().toISOString(),
   };
