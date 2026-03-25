@@ -19,8 +19,10 @@ export const buildTopRepos = (byRepoMap: Map<string, DayStats>): DashboardSummar
     }))
     .filter((entry) => entry.sessions > 0 || entry.tokens > 0 || entry.costUsd > 0 || entry.durationMs > 0)
     .sort((left, right) => {
-      if (right.sessions !== left.sessions) return right.sessions - left.sessions;
+      if (right.tokens !== left.tokens) return right.tokens - left.tokens;
       if (right.costUsd !== left.costUsd) return right.costUsd - left.costUsd;
+      if (right.sessions !== left.sessions) return right.sessions - left.sessions;
+      if (right.durationMs !== left.durationMs) return right.durationMs - left.durationMs;
       return left.repo.localeCompare(right.repo);
     })
     .slice(0, 24);

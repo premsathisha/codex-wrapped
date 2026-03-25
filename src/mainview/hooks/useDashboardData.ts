@@ -8,6 +8,7 @@ import {
   toLocalISODate,
 } from "@shared/localDate";
 import { SOURCE_LABELS } from "../lib/constants";
+import { hasTimelineActivity } from "../lib/activity";
 import { formatHourLabel } from "../lib/hourly";
 import { collectModelKeys } from "./modelKeys";
 import { rpcRequest, useRPC } from "./useRPC";
@@ -376,7 +377,7 @@ export const useDashboardData = () => {
 
     const spanDays = rangeLengthDays(dateFrom, dateTo);
     const activeDates = new Set(
-      timelinePoints.filter((entry) => entry.sessions > 0).map((entry) => entry.date),
+      timelinePoints.filter(hasTimelineActivity).map((entry) => entry.date),
     );
     const activeDays = activeDates.size;
     const currentStreak = calculateCurrentStreakFromDates(activeDates, dateFrom, dateTo);

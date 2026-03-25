@@ -59,25 +59,54 @@ describe("dashboardSummary", () => {
     const topRepos = buildTopRepos(byRepo);
     expect(topRepos).toHaveLength(3);
     expect(topRepos[0]).toEqual({
-      repo: "alpha",
-      sessions: 2,
-      tokens: 35,
-      costUsd: 0.5,
-      durationMs: 90_000,
-    });
-    expect(topRepos[1]).toEqual({
-      repo: "beta",
-      sessions: 2,
-      tokens: 20,
-      costUsd: 0.25,
-      durationMs: 120_000,
-    });
-    expect(topRepos[2]).toEqual({
       repo: "zero",
       sessions: 0,
       tokens: 999,
       costUsd: 0,
       durationMs: 999,
     });
+    expect(topRepos[1]).toEqual({
+      repo: "alpha",
+      sessions: 2,
+      tokens: 35,
+      costUsd: 0.5,
+      durationMs: 90_000,
+    });
+    expect(topRepos[2]).toEqual({
+      repo: "beta",
+      sessions: 2,
+      tokens: 20,
+      costUsd: 0.25,
+      durationMs: 120_000,
+    });
+  });
+
+  test("buildTopRepos keeps high-activity zero-session repos inside the top 24 cutoff", () => {
+    const byRepo = new Map<string, DayStats>();
+
+    for (let index = 0; index < 24; index += 1) {
+      byRepo.set(
+        `session-repo-${index}`,
+        makeStats({
+          sessions: 1,
+          inputTokens: 10 + index,
+          costUsd: 0.01,
+        }),
+      );
+    }
+
+    byRepo.set(
+      "spawned-agent-heavy",
+      makeStats({
+        sessions: 0,
+        inputTokens: 10_000,
+        costUsd: 5,
+      }),
+    );
+
+    const topRepos = buildTopRepos(byRepo);
+    expect(topRepos).toHaveLength(24);
+    expect(topRepos.some((repo) => repo.repo === "spawned-agent-heavy")).toBe(true);
+    expect(topRepos[0]?.repo).toBe("spawned-agent-heavy");
   });
 });
