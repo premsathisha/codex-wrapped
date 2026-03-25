@@ -2,27 +2,13 @@
 
 Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spotify Wrapped–style dashboard. This project is built on top of gulivan/ai-wrapped with a few improvements. Codex card inspiration from JeanMeijer/slopmeter.
 
-## Improvements in This Fork
-
-- Visual redesign and UI polish across the dashboard
-- Theme switching with multiple palette options
-- Ability to save/share individual cards as PNG images
-- Shift from the original app + multi-agent scope to a local website focused specifically on Codex-only support
-- Improved pricing accuracy and handling of edge-case scenarios in cost calculations
-
 ## Screenshot
 
 ![Codex Wrapped dashboard screenshot](assets/screenshot.png)
 
----
+## Who This Is For
 
-## Quick start:
-
-```bash
-bun install
-bun run build
-bun ./bin/cli.ts
-```
+Codex Wrapped is for developers who use Codex regularly and want a clear, visual summary of how they code over time.
 
 ## Key Features
 
@@ -31,13 +17,25 @@ bun ./bin/cli.ts
 - Wrapped-style cards and charts for sessions, tokens, cost, models, repos, and coding hours
 - Save/share each card as PNG directly to your device
 
+## Improvements in This Fork
+
+- Visual redesign and UI polish across the dashboard
+- Theme switching with multiple palette options
+- Ability to save/share individual cards as PNG images
+- Shift from the original app + multi-agent scope to a local website focused specifically on Codex-only support
+- Improved pricing accuracy and handling of edge-case scenarios in cost calculations
+
+## Quick Start
+
+```bash
+bun install
+bun run build
+bun ./bin/cli.ts
+```
+
 ## For Users
 
-### Who this is for
-
-Codex Wrapped is for developers who use Codex regularly and want a clear, visual summary of how they code over time.
-
-### Run The App
+## Run The App
 
 1. Start the app:
 
@@ -51,31 +49,22 @@ bun ./bin/cli.ts
 
 On macOS, you can also double-click `Open Codex Wrapped.command` in the repo root to start the local server and open the app.
 
-## How It Works
-
-1. **Local session discovery**: the scanner reads Codex session logs from `~/.codex/sessions` (or `CODEX_HOME/sessions`, or a configured custom Codex path).
-2. **Parsing + normalization**: each session file is parsed into a consistent internal schema (events, tokens, costs, tools, model, timestamps, repo context).
-3. **Aggregation**: normalized sessions are aggregated by day/hour/model/repo for fast dashboard queries.
-4. **Local persistence**: aggregated artifacts and scan metadata are stored in `~/.codex-wrapped`.
-5. **Pricing enrichment**: pricing is resolved locally from built-in mappings, and if a model is missing there, pricing data is fetched from [models.dev](https://models.dev) and cached for later lookups.
-6. **UI rendering**: the local Bun server serves the dashboard, and the frontend queries local RPC endpoints to render cards/charts.
-
-## Build & Development
-
-### Prerequisites
+## Prerequisites
 
 - Bun (latest stable)
 - macOS, Linux, or Windows
 - Local Codex history files in your home directory (`~/.codex`)
 
-### Quick Start (Source Build)
+## Quick Start (Source Build)
 
 ```bash
 bun run build
 bun ./bin/cli.ts
 ```
 
-### Development
+## Build & Development
+
+## Development
 
 Run backend + built frontend:
 
@@ -118,6 +107,15 @@ bun ./bin/cli.ts --help
 - `--version` or `-v`: show app version
 - `--rebuild`: rebuild frontend assets before launch
 - `--uninstall`: remove local Codex Wrapped data at `~/.codex-wrapped`
+
+## How It Works
+
+1. **Local session discovery**: the scanner reads Codex session logs from `~/.codex/sessions` (or `CODEX_HOME/sessions`, or a configured custom Codex path).
+2. **Parsing + normalization**: each session file is parsed into a consistent internal schema (events, tokens, costs, tools, model, timestamps, repo context).
+3. **Aggregation**: normalized sessions are aggregated by day/hour/model/repo for fast dashboard queries.
+4. **Local persistence**: aggregated artifacts and scan metadata are stored in `~/.codex-wrapped`.
+5. **Pricing enrichment**: pricing is resolved locally from built-in mappings, and if a model is missing there, pricing data is fetched from [models.dev](https://models.dev) and cached for later lookups.
+6. **UI rendering**: the local Bun server serves the dashboard, and the frontend queries local RPC endpoints to render cards/charts.
 
 ## Architecture
 
