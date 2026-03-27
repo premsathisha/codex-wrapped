@@ -883,7 +883,7 @@ const DashboardCharts = ({
                 </ResponsiveContainer>
               </div>
 
-              <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1" data-export-expand="vertical">
                 {modelRows.map((row) => (
                   <article
                     key={row.model}

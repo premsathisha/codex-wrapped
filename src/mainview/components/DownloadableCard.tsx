@@ -48,6 +48,15 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
         contentTransition: content?.style.transition ?? "",
       };
     });
+    const exportExpandElements = Array.from(
+      cardTarget.querySelectorAll<HTMLElement>('[data-export-expand="vertical"]'),
+    );
+    const previousExpandState = exportExpandElements.map((element) => ({
+      element,
+      overflowY: element.style.overflowY,
+      maxHeight: element.style.maxHeight,
+      height: element.style.height,
+    }));
 
     try {
       for (const state of previousExportState) {
@@ -58,6 +67,11 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
           state.content.style.transition = "none";
           state.content.style.transform = `translateX(-${shiftPx}px)`;
         }
+      }
+      for (const state of previousExpandState) {
+        state.element.style.overflowY = "visible";
+        state.element.style.maxHeight = "none";
+        state.element.style.height = `${state.element.scrollHeight}px`;
       }
 
       await nextFrame();
@@ -80,6 +94,11 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
           content.style.transform = contentTransform;
           content.style.transition = contentTransition;
         }
+      }
+      for (const { element, overflowY, maxHeight, height } of previousExpandState) {
+        element.style.overflowY = overflowY;
+        element.style.maxHeight = maxHeight;
+        element.style.height = height;
       }
       setIsDownloading(false);
     }
