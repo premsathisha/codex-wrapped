@@ -17,11 +17,6 @@ const nextFrame = () =>
     window.requestAnimationFrame(() => resolve());
   });
 
-const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
-  const response = await fetch(dataUrl);
-  return response.blob();
-};
-
 const triggerFileDownload = (href: string, fileName: string) => {
   const anchor = document.createElement("a");
   anchor.href = href;
@@ -76,27 +71,6 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
 
       const datePart = new Date().toISOString().slice(0, 10);
       const fileName = `codex-wrapped-${sanitizeFilenamePart(title)}-${datePart}.png`;
-      const imageBlob = await dataUrlToBlob(imageDataUrl);
-      const imageFile = new File([imageBlob], fileName, { type: "image/png" });
-      const nav = navigator as Navigator & {
-        canShare?: (data?: ShareData) => boolean;
-      };
-
-      if (nav.canShare?.({ files: [imageFile] })) {
-        try {
-          await nav.share({
-            files: [imageFile],
-            title: `${title} card`,
-            text: "Shared from Codex Wrapped",
-          });
-          return;
-        } catch (error) {
-          if (error instanceof DOMException && error.name === "AbortError") {
-            return;
-          }
-        }
-      }
-
       triggerFileDownload(imageDataUrl, fileName);
     } finally {
       for (const { element, content, scrollLeft, overflowX, contentTransform, contentTransition } of previousExportState) {
