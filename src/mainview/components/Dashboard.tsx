@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { SESSION_SOURCES, type SessionSource } from "@shared/schema";
 import DashboardCharts from "./DashboardCharts";
+import DashboardFooter from "./DashboardFooter";
 import EmptyState from "./EmptyState";
 import Sidebar from "./Sidebar";
 import StatsCards, { AnimatedNumber } from "./StatsCards";
@@ -314,7 +315,7 @@ const Dashboard = () => {
     <>
       <div ref={scrollRef} className="wrapped-scroll">
         {sidebar}
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-12 sm:px-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-0 sm:px-6">
           <DownloadableCard title={heroCopy.title}>
             <section data-card-index="1" className="wrapped-card wrapped-card-hero">
               <header className="mb-6">
@@ -474,6 +475,7 @@ const Dashboard = () => {
             busiestSingleDay={busiestSingleDay}
           />
         </div>
+        <DashboardFooter />
       </div>
     </>
   );

@@ -223,7 +223,7 @@ describe("aggregateSessionsByDate", () => {
     expect(entry?.totals.costUsd).toBeCloseTo(0.84, 10);
   });
 
-  test("excludes subagent sessions from session totals while keeping spend and tokens", () => {
+  test("counts subagent sessions in session totals while keeping spend and tokens", () => {
     const daily = aggregateSessionsByDate([
       makeSession({
         id: "parent",
@@ -254,15 +254,15 @@ describe("aggregateSessionsByDate", () => {
     ], { timeZone: "UTC" });
 
     const entry = daily["2026-02-21"];
-    expect(entry?.totals.sessions).toBe(1);
+    expect(entry?.totals.sessions).toBe(2);
     expect(entry?.totals.inputTokens).toBe(170);
     expect(entry?.totals.costUsd).toBeCloseTo(0.5, 10);
     expect(entry?.totals.durationMs).toBe(300_000);
     expect(entry?.byModel["gpt-5"]?.sessions).toBe(1);
-    expect(entry?.byModel["gpt-5.4-mini"]?.sessions).toBe(0);
+    expect(entry?.byModel["gpt-5.4-mini"]?.sessions).toBe(1);
     expect(entry?.byModel["gpt-5.4-mini"]?.inputTokens).toBe(70);
     expect(entry?.byModel["gpt-5.4-mini"]?.durationMs).toBe(0);
-    expect(entry?.byRepo["ai-stats"]?.sessions).toBe(1);
+    expect(entry?.byRepo["ai-stats"]?.sessions).toBe(2);
     expect(entry?.byRepo["ai-stats"]?.durationMs).toBe(300_000);
     expect(entry?.byRepo["ai-stats"]?.costUsd).toBeCloseTo(0.5, 10);
   });

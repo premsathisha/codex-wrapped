@@ -87,8 +87,8 @@ textarea {
 .wrapped-scroll {
   height: 100%;
   overflow-y: auto;
-  background:
-    radial-gradient(circle at 14% calc(10% + (var(--wrapped-scroll-y) * 0.08)), rgba(255, 255, 255, 0.05), transparent 20%);
+  overflow-x: hidden;
+  overscroll-behavior: none;
   background-color: #000000;
 }
 
@@ -250,6 +250,160 @@ textarea {
   background: rgba(56, 189, 248, 0.28);
 }
 
+.wrapped-footer {
+  width: 100%;
+  background: #1d1d1f;
+  margin-top: 1.5rem;
+  padding: 0;
+  font-family: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.wrapped-footer-inner {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 48px 24px 0;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid #2d2d2f;
+}
+
+.footer-section-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #6e6e73;
+  margin-bottom: 20px;
+}
+
+.data-block h4 {
+  font-size: 13px;
+  font-weight: 500;
+  color: #f5f5f7;
+  margin: 0 0 6px;
+}
+
+.data-block .desc {
+  font-size: 12px;
+  color: #a1a1a6;
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.file-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid #2d2d2f;
+  border-radius: 8px;
+  color: #a1a1a6;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.file-btn:hover {
+  border-color: #48484a;
+  color: #f5f5f7;
+}
+
+.file-tag {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #2c2c2e;
+  color: #86868b;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background: transparent;
+  border: 1px solid #2d2d2f;
+  border-radius: 8px;
+  color: #a1a1a6;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 16px;
+}
+
+.export-btn:hover {
+  border-color: #48484a;
+  color: #f5f5f7;
+  background: #2c2c2e;
+}
+
+.frontend-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #2c2c2e;
+  color: #86868b;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 10px;
+}
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 calc(20px + env(safe-area-inset-bottom));
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.footer-copy {
+  font-size: 12px;
+  color: #6e6e73;
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.footer-links a,
+.footer-sep {
+  font-size: 12px;
+  color: #6e6e73;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.footer-links a:hover {
+  color: #f5f5f7;
+}
+
+.footer-sep {
+  margin: 0 10px;
+  opacity: 0.3;
+}
+
 .wrapped-nav-solid {
   position: relative;
   overflow: hidden;
@@ -302,6 +456,15 @@ textarea {
   .wrapped-card {
     border-radius: 1.5rem;
     padding: 1.1rem;
+  }
+
+  .footer-top {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+
+  .wrapped-footer-inner {
+    padding: 36px 24px 0;
   }
 
   .wrapped-card-download {

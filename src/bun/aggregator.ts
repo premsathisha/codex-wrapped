@@ -99,7 +99,9 @@ const toHourKey = (session: Session, hourFormatter: Intl.DateTimeFormat): string
 };
 
 const toSessionStats = (session: Session, includeRollupStats: boolean): DayStats => ({
-  sessions: session.isSubagent ? 0 : 1,
+  // Count both parent and subagent sessions so high-activity days driven by subagents
+  // are reflected accurately in day-level session totals.
+  sessions: 1,
   messages: includeRollupStats ? session.messageCount : 0,
   toolCalls: includeRollupStats ? session.toolCallCount : 0,
   inputTokens: includeRollupStats ? session.totalTokens.inputTokens : 0,

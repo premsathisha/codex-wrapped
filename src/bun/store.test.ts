@@ -156,7 +156,7 @@ describe("rawAggregationMetaNeedsTimeZoneBackfill", () => {
   test("returns true when timezone changes", () => {
     expect(
       rawAggregationMetaNeedsTimeZoneBackfill(
-        { version: 2, timeZone: "UTC" },
+        { version: 3, timeZone: "UTC" },
         "America/Los_Angeles",
       ),
     ).toBe(true);
@@ -165,7 +165,7 @@ describe("rawAggregationMetaNeedsTimeZoneBackfill", () => {
   test("returns false for matching version and timezone", () => {
     expect(
       rawAggregationMetaNeedsTimeZoneBackfill(
-        { version: 2, timeZone: "America/Los_Angeles" },
+        { version: 3, timeZone: "America/Los_Angeles" },
         "America/Los_Angeles",
       ),
     ).toBe(false);
