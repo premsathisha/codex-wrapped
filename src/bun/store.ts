@@ -445,6 +445,20 @@ export const writeAggregationMeta = async (timeZone: string): Promise<void> => {
   });
 };
 
+export const readAggregationMeta = async (): Promise<AggregationMeta | null> => {
+  const raw = await readJson<unknown>(AGGREGATION_META_PATH, null);
+  return normalizeAggregationMeta(raw);
+};
+
+export const readAggregationTimeZone = async (fallback = "UTC"): Promise<string> => {
+  const meta = await readAggregationMeta();
+  if (meta?.timeZone) {
+    return meta.timeZone;
+  }
+
+  return typeof fallback === "string" && fallback.trim().length > 0 ? fallback.trim() : "UTC";
+};
+
 export const getSettings = async (): Promise<AppSettings> => {
   if (settingsCache === null) {
     const raw = await readJson<unknown>(SETTINGS_PATH, DEFAULT_SETTINGS);

@@ -1,5 +1,8 @@
 const padDatePart = (value: number): string => String(value).padStart(2, "0");
 
+const formatUTCDate = (date: Date): string =>
+  `${date.getUTCFullYear()}-${padDatePart(date.getUTCMonth() + 1)}-${padDatePart(date.getUTCDate())}`;
+
 export const toISODateInTimeZone = (date: Date, timeZone?: string): string => {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -28,14 +31,16 @@ export const daysAgoLocalISO = (daysAgo: number, now = new Date()): string => {
   return toLocalISODate(date);
 };
 
-export const shiftLocalISODate = (value: string, days: number): string => {
+export const shiftISODate = (value: string, days: number): string => {
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return value;
 
-  const next = new Date(year, month - 1, day);
-  next.setDate(next.getDate() + days);
-  return toLocalISODate(next);
+  const next = new Date(Date.UTC(year, month - 1, day));
+  next.setUTCDate(next.getUTCDate() + days);
+  return formatUTCDate(next);
 };
+
+export const shiftLocalISODate = (value: string, days: number): string => shiftISODate(value, days);
 
 export const calculateCurrentStreakFromDates = (
   activeDates: Set<string>,
@@ -46,7 +51,7 @@ export const calculateCurrentStreakFromDates = (
 
   let streak = 0;
   let streakStartDate: string | null = null;
-  for (let key = dateTo; key >= dateFrom; key = shiftLocalISODate(key, -1)) {
+  for (let key = dateTo; key >= dateFrom; key = shiftISODate(key, -1)) {
     if (!activeDates.has(key)) break;
     streak += 1;
     streakStartDate = key;
@@ -64,7 +69,7 @@ export const calculateLongestStreakFromDates = (
 
   let best = 0;
   let current = 0;
-  for (let key = dateFrom; key <= dateTo; key = shiftLocalISODate(key, 1)) {
+  for (let key = dateFrom; key <= dateTo; key = shiftISODate(key, 1)) {
     if (activeDates.has(key)) {
       current += 1;
       if (current > best) best = current;

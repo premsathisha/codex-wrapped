@@ -114,4 +114,49 @@ describe("runScan parse error resilience", () => {
     expect(second.dailyExists).toBe(true);
     expect(second.totalSessions).toBe(1);
   });
+
+  test("discovers sessions from archived Codex logs", () => {
+    const homeDir = makeTempDir("codexwrapped-home-");
+    const codexHome = makeTempDir("codexwrapped-codex-");
+
+    const archivedDir = join(codexHome, "archived_sessions");
+    mkdirSync(archivedDir, { recursive: true });
+
+    writeGoodCodexSession(
+      join(archivedDir, "rollout-2026-03-12T00-00-00-archived.jsonl"),
+      "session-archived",
+    );
+
+    const run = runIsolatedScan(homeDir, codexHome);
+    expect(run.result.errors).toBe(0);
+    expect(run.result.scanned).toBe(1);
+    expect(run.dailyExists).toBe(true);
+    expect(run.totalSessions).toBe(1);
+  });
+
+  test("deduplicates sessions copied across active and archived logs", () => {
+    const homeDir = makeTempDir("codexwrapped-home-");
+    const codexHome = makeTempDir("codexwrapped-codex-");
+
+    const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
+    const archivedDir = join(codexHome, "archived_sessions");
+    mkdirSync(sessionsDir, { recursive: true });
+    mkdirSync(archivedDir, { recursive: true });
+
+    writeGoodCodexSession(
+      join(sessionsDir, "rollout-2026-03-12T00-00-00-duplicate.jsonl"),
+      "session-duplicate",
+    );
+    writeGoodCodexSession(
+      join(archivedDir, "rollout-2026-03-12T00-00-00-duplicate-copy.jsonl"),
+      "session-duplicate",
+    );
+
+    const run = runIsolatedScan(homeDir, codexHome);
+    expect(run.result.errors).toBe(0);
+    expect(run.result.total).toBe(2);
+    expect(run.result.scanned).toBe(2);
+    expect(run.dailyExists).toBe(true);
+    expect(run.totalSessions).toBe(1);
+  });
 });

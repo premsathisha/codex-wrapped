@@ -3,6 +3,7 @@ import {
   calculateCurrentStreakFromDates,
   calculateLongestStreakFromDates,
   daysAgoLocalISO,
+  shiftISODate,
   shiftLocalISODate,
   toISODateInTimeZone,
   toLocalISODate,
@@ -20,6 +21,11 @@ describe("localDate", () => {
   test("shifts local ISO dates across month boundaries", () => {
     expect(shiftLocalISODate("2026-03-01", -1)).toBe("2026-02-28");
     expect(shiftLocalISODate("2026-12-31", 1)).toBe("2027-01-01");
+  });
+
+  test("shifts ISO dates independent of the browser timezone", () => {
+    expect(shiftISODate("2026-03-01", -1)).toBe("2026-02-28");
+    expect(shiftISODate("2026-12-31", 1)).toBe("2027-01-01");
   });
 
   test("keeps the current streak active for the local day", () => {

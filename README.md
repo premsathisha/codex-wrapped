@@ -110,7 +110,7 @@ bun ./bin/cli.ts --help
 
 ## How It Works
 
-1. **Local session discovery**: the scanner reads Codex session logs from `~/.codex/sessions` (or `CODEX_HOME/sessions`, or a configured custom Codex path).
+1. **Local session discovery**: the scanner reads Codex session logs from both `~/.codex/sessions` and `~/.codex/archived_sessions` (or equivalent paths under `CODEX_HOME`, or a configured custom Codex path).
 2. **Parsing + normalization**: each session file is parsed into a consistent internal schema (events, tokens, costs, tools, model, timestamps, repo context).
 3. **Aggregation**: normalized sessions are aggregated by day/hour/model/repo for fast dashboard queries.
 4. **Local persistence**: aggregated artifacts and scan metadata are stored in `~/.codex-wrapped`.

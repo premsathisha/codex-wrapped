@@ -1,9 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
+  --font-ui: "Geist", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
   --wrapped-header-clearance: 7rem;
   --wrapped-slide-bottom-space: 1rem;
   --wrapped-scroll-y: 0px;
@@ -68,7 +70,7 @@ body,
 
 body {
   margin: 0;
-  font-family: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
   background:
     radial-gradient(circle at 20% 0%, rgba(32, 84, 162, 0.18), transparent 30%),
     linear-gradient(180deg, #050608 0%, #0a0b10 45%, #040507 100%);
@@ -204,6 +206,7 @@ textarea {
 .wrapped-kicker {
   margin: 0;
   font-size: 0.72rem;
+  font-family: var(--font-mono);
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #2a97ff;
@@ -229,6 +232,7 @@ textarea {
 .wrapped-label {
   margin: 0;
   font-size: 0.68rem;
+  font-family: var(--font-mono);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(203, 213, 225, 0.92);
@@ -255,7 +259,7 @@ textarea {
   background: #1d1d1f;
   margin-top: 1.5rem;
   padding: 0;
-  font-family: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
 }
 
 .wrapped-footer-inner {
@@ -275,6 +279,7 @@ textarea {
 
 .footer-section-label {
   font-size: 10px;
+  font-family: var(--font-mono);
   font-weight: 500;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -325,6 +330,7 @@ textarea {
 
 .file-tag {
   font-size: 10px;
+  font-family: var(--font-mono);
   padding: 3px 8px;
   border-radius: 4px;
   background: #2c2c2e;
@@ -358,6 +364,7 @@ textarea {
 .frontend-tag {
   display: inline-block;
   font-size: 10px;
+  font-family: var(--font-mono);
   padding: 3px 8px;
   border-radius: 4px;
   background: #2c2c2e;
@@ -428,6 +435,13 @@ textarea {
 
 .wrapped-nav-select:focus-visible {
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
 }
 
 @keyframes wrappedRevealLeftToRight {

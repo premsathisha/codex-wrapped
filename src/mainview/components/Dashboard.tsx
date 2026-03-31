@@ -36,6 +36,7 @@ const Dashboard = () => {
   const {
     dateFrom,
     dateTo,
+    aggregationTimeZone,
     summary,
     timeline,
     loading,
@@ -324,6 +325,7 @@ const Dashboard = () => {
                 <p className="mt-3 text-sm text-slate-200/90">
                   {formatDate(dateFrom)} - {formatDate(dateTo)}
                 </p>
+                <p className="mt-1 text-xs text-slate-400">Date buckets: {aggregationTimeZone}</p>
               </header>
 
               <StatsCards
@@ -383,7 +385,7 @@ const Dashboard = () => {
                   </article>
 
                   <article className="wrapped-tile sm:col-span-2">
-                    <p className="wrapped-label">Current Streak 🔥</p>
+                    <p className="wrapped-label">Current Streak</p>
                     <p className="mt-2 text-3xl font-semibold text-white">
                       <AnimatedNumber
                         value={totals.currentStreakDays}

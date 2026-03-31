@@ -27,9 +27,11 @@ test("web API endpoints expose dashboard and scan status contracts", async () =>
     });
     expect(summaryResponse.status).toBe(200);
     const summary = (await summaryResponse.json()) as {
+      aggregationTimeZone: string;
       totals: { sessions: number; costUsd: number };
       byAgent: Record<string, unknown>;
     };
+    expect(typeof summary.aggregationTimeZone).toBe("string");
     expect(typeof summary.totals.sessions).toBe("number");
     expect(typeof summary.totals.costUsd).toBe("number");
     expect(typeof summary.byAgent).toBe("object");

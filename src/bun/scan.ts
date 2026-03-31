@@ -29,6 +29,29 @@ export interface ScanResult {
   errors: number;
 }
 
+interface NormalizedSessionCandidate {
+  session: Session;
+  events: ReturnType<typeof normalizeSession>["events"];
+  filePath: string;
+  fileMtimeMs: number;
+  fileSizeBytes: number;
+}
+
+const isPreferredDuplicate = (
+  next: NormalizedSessionCandidate,
+  current: NormalizedSessionCandidate,
+): boolean => {
+  if (next.fileMtimeMs !== current.fileMtimeMs) {
+    return next.fileMtimeMs > current.fileMtimeMs;
+  }
+
+  if (next.fileSizeBytes !== current.fileSizeBytes) {
+    return next.fileSizeBytes > current.fileSizeBytes;
+  }
+
+  return next.filePath.localeCompare(current.filePath) > 0;
+};
+
 export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> => {
   await prefetchPricing();
   const aggregationTimeZone = resolveAggregationTimeZone(options.timeZone);
@@ -56,7 +79,8 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
 
   let scanned = 0;
   let errors = 0;
-  const normalizedSessions: Array<{ session: Session; events: ReturnType<typeof normalizeSession>["events"] }> = [];
+  const normalizedSessions: NormalizedSessionCandidate[] = [];
+  const normalizedSessionIndexById = new Map<string, number>();
 
   for (const path of deletedPaths) {
     delete nextScanState[path];
@@ -72,7 +96,24 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
 
     const normalized = normalizeSession(parsed);
     const { session } = normalized;
-    normalizedSessions.push(normalized);
+    const normalizedCandidate: NormalizedSessionCandidate = {
+      session,
+      events: normalized.events,
+      filePath: candidate.path,
+      fileMtimeMs: candidate.mtime,
+      fileSizeBytes: candidate.size,
+    };
+    const dedupeKey = `${session.source}:${session.id}`;
+    const existingIndex = normalizedSessionIndexById.get(dedupeKey);
+    if (existingIndex === undefined) {
+      normalizedSessionIndexById.set(dedupeKey, normalizedSessions.length);
+      normalizedSessions.push(normalizedCandidate);
+    } else {
+      const current = normalizedSessions[existingIndex] as NormalizedSessionCandidate;
+      if (isPreferredDuplicate(normalizedCandidate, current)) {
+        normalizedSessions[existingIndex] = normalizedCandidate;
+      }
+    }
 
     nextScanState[candidate.path] = {
       source: candidate.source,
@@ -96,7 +137,12 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
     );
 
   if (shouldPersistRebuild) {
-    await writeDailyStore(aggregateNormalizedSessionsByDate(normalizedSessions, { timeZone: aggregationTimeZone }));
+    await writeDailyStore(
+      aggregateNormalizedSessionsByDate(
+        normalizedSessions.map(({ session, events }) => ({ session, events })),
+        { timeZone: aggregationTimeZone },
+      ),
+    );
     await writeAggregationMeta(aggregationTimeZone);
     await writeScanState(nextScanState);
   }

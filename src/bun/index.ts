@@ -12,7 +12,7 @@ import {
   type TokenUsage,
   type TrayStats,
 } from "../shared/schema";
-import { toLocalISODate } from "../shared/localDate";
+import { toISODateInTimeZone } from "../shared/localDate";
 import type { AppSettings } from "../shared/types";
 import { resolveAggregationTimeZone } from "./aggregator";
 import { buildTopRepos } from "./dashboardSummary";
@@ -24,6 +24,7 @@ import {
   dailyStoreMissingRepoDimension,
   getSettings,
   hasTrackedActivity,
+  readAggregationTimeZone,
   readDailyStore,
   setSettings,
   type DayStats,
@@ -137,6 +138,7 @@ const getDashboardSummaryFromStore = async (
   dateTo?: string,
 ): Promise<DashboardSummary> => {
   const daily = await readDailyStore();
+  const aggregationTimeZone = await readAggregationTimeZone(resolveAggregationTimeZone());
   const byAgent = createEmptyByAgent();
   const byModelMap = new Map<string, DayStats>();
   const byRepoMap = new Map<string, DayStats>();
@@ -256,6 +258,7 @@ const getDashboardSummaryFromStore = async (
   });
 
   return {
+    aggregationTimeZone,
     totals: {
       sessions: totals.sessions,
       events: totals.messages + totals.toolCalls,
@@ -302,7 +305,8 @@ const getSessionCountFromStore = async (): Promise<number> => {
 };
 
 const getTrayStatsFromStore = async (): Promise<TrayStats> => {
-  const today = toLocalISODate(new Date());
+  const aggregationTimeZone = await readAggregationTimeZone(resolveAggregationTimeZone());
+  const today = toISODateInTimeZone(new Date(), aggregationTimeZone);
   const daily = await readDailyStore();
   const todayStats = daily[today]?.totals ?? createEmptyDayStats();
 

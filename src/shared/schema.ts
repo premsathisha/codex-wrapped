@@ -49,6 +49,7 @@ export interface HourlyBreakdownEntry {
 }
 
 export interface DashboardSummary {
+  aggregationTimeZone: string;
   totals: {
     sessions: number;
     events: number;

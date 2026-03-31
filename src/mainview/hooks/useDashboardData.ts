@@ -4,8 +4,8 @@ import { SESSION_SOURCES } from "@shared/schema";
 import {
   calculateCurrentStreakFromDates,
   calculateLongestStreakFromDates,
-  daysAgoLocalISO,
-  toLocalISODate,
+  shiftISODate,
+  toISODateInTimeZone,
 } from "@shared/localDate";
 import { SOURCE_LABELS } from "../lib/constants";
 import { hasTimelineActivity } from "../lib/activity";
@@ -22,9 +22,9 @@ const LOOKBACK_DAYS_BY_RANGE = {
   last365: 365,
 } as const;
 
-const daysAgoISO = (daysAgo: number): string => daysAgoLocalISO(daysAgo);
+const resolveClientTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
-const todayISO = (): string => toLocalISODate(new Date());
+const todayISO = (timeZone: string): string => toISODateInTimeZone(new Date(), timeZone);
 
 const tokenTotal = (tokens: TokenUsage): number =>
   tokens.inputTokens +
@@ -73,19 +73,27 @@ const buildRangeOptions = (): DashboardDateRangeOption[] => {
   return options;
 };
 
-const resolveDateRange = (selection: DashboardDateRange): { dateFrom: string; dateTo: string } => {
-  const today = todayISO();
+const resolveDateRange = (
+  selection: DashboardDateRange,
+  timeZone: string,
+): { dateFrom: string; dateTo: string } => {
+  const today = todayISO(timeZone);
   const lookbackDays = LOOKBACK_DAYS_BY_RANGE[selection as LookbackRange];
   if (typeof lookbackDays === "number") {
     return {
-      dateFrom: daysAgoISO(lookbackDays - 1),
+      dateFrom: shiftISODate(today, -(lookbackDays - 1)),
       dateTo: today,
     };
   }
 
   const selectedYear = parseYearSelection(selection);
 
-  if (selectedYear === null) return { dateFrom: daysAgoISO(364), dateTo: today };
+  if (selectedYear === null) {
+    return {
+      dateFrom: shiftISODate(today, -364),
+      dateTo: today,
+    };
+  }
 
   return {
     dateFrom: `${selectedYear}-01-01`,
@@ -255,8 +263,12 @@ const buildDailyModelTokensByDate = (
 export const useDashboardData = () => {
   const rpc = useRPC();
   const [selectedRange, setSelectedRange] = useState<DashboardDateRange>("last365");
+  const [aggregationTimeZone, setAggregationTimeZone] = useState<string>(resolveClientTimeZone);
   const rangeOptions = useMemo<DashboardDateRangeOption[]>(() => buildRangeOptions(), []);
-  const { dateFrom, dateTo } = useMemo(() => resolveDateRange(selectedRange), [selectedRange]);
+  const { dateFrom, dateTo } = useMemo(
+    () => resolveDateRange(selectedRange, aggregationTimeZone),
+    [aggregationTimeZone, selectedRange],
+  );
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [timeline, setTimeline] = useState<DailyAggregate[]>([]);
   const [dailyAgentTokensByDate, setDailyAgentTokensByDate] = useState<DailyAgentTokensByDate>({});
@@ -279,6 +291,9 @@ export const useDashboardData = () => {
       ]);
 
       setSummary(summaryResult);
+      if (summaryResult.aggregationTimeZone && summaryResult.aggregationTimeZone !== aggregationTimeZone) {
+        setAggregationTimeZone(summaryResult.aggregationTimeZone);
+      }
       setTimeline(timelineResult);
 
       const rowsBySource = timelineBySourceResults.map((rows, index) => ({
@@ -329,7 +344,7 @@ export const useDashboardData = () => {
     } finally {
       setLoading(false);
     }
-  }, [dateFrom, dateTo]);
+  }, [aggregationTimeZone, dateFrom, dateTo]);
 
   useEffect(() => {
     void refresh();
@@ -508,6 +523,7 @@ export const useDashboardData = () => {
   }, [timelinePoints]);
 
   return {
+    aggregationTimeZone,
     dateFrom,
     dateTo,
     selectedRange,
