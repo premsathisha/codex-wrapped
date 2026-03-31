@@ -24,7 +24,7 @@ const LOOKBACK_DAYS_BY_RANGE = {
 
 const resolveClientTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
-const todayISO = (timeZone: string): string => toISODateInTimeZone(new Date(), timeZone);
+const todayISO = (timeZone: string, now = new Date()): string => toISODateInTimeZone(now, timeZone);
 
 const tokenTotal = (tokens: TokenUsage): number =>
   tokens.inputTokens +
@@ -40,7 +40,11 @@ const rangeLengthDays = (dateFrom: string, dateTo: string): number => {
   return Math.floor((to - from) / ONE_DAY_MS) + 1;
 };
 
-const currentYear = (): number => new Date().getFullYear();
+export const getCurrentYearInTimeZone = (timeZone: string, now = new Date()): number => {
+  const isoDate = todayISO(timeZone, now);
+  const parsed = Number(isoDate.slice(0, 4));
+  return Number.isInteger(parsed) ? parsed : now.getUTCFullYear();
+};
 
 type LookbackRange = keyof typeof LOOKBACK_DAYS_BY_RANGE;
 export type DashboardDateRange = LookbackRange | `year:${number}`;
@@ -56,8 +60,11 @@ const parseYearSelection = (selection: DashboardDateRange): number | null => {
   return Number.isInteger(parsed) ? parsed : null;
 };
 
-const buildRangeOptions = (): DashboardDateRangeOption[] => {
-  const thisYear = currentYear();
+export const buildRangeOptions = (
+  timeZone: string,
+  now = new Date(),
+): DashboardDateRangeOption[] => {
+  const thisYear = getCurrentYearInTimeZone(timeZone, now);
   const options: DashboardDateRangeOption[] = [
     { value: "last7", label: "Last 7 days" },
     { value: "last30", label: "Last 30 days" },
@@ -73,11 +80,13 @@ const buildRangeOptions = (): DashboardDateRangeOption[] => {
   return options;
 };
 
-const resolveDateRange = (
+export const resolveDateRange = (
   selection: DashboardDateRange,
   timeZone: string,
+  now = new Date(),
 ): { dateFrom: string; dateTo: string } => {
-  const today = todayISO(timeZone);
+  const today = todayISO(timeZone, now);
+  const currentYear = getCurrentYearInTimeZone(timeZone, now);
   const lookbackDays = LOOKBACK_DAYS_BY_RANGE[selection as LookbackRange];
   if (typeof lookbackDays === "number") {
     return {
@@ -97,7 +106,7 @@ const resolveDateRange = (
 
   return {
     dateFrom: `${selectedYear}-01-01`,
-    dateTo: selectedYear === currentYear() ? today : `${selectedYear}-12-31`,
+    dateTo: selectedYear === currentYear ? today : `${selectedYear}-12-31`,
   };
 };
 
@@ -264,7 +273,10 @@ export const useDashboardData = () => {
   const rpc = useRPC();
   const [selectedRange, setSelectedRange] = useState<DashboardDateRange>("last365");
   const [aggregationTimeZone, setAggregationTimeZone] = useState<string>(resolveClientTimeZone);
-  const rangeOptions = useMemo<DashboardDateRangeOption[]>(() => buildRangeOptions(), []);
+  const rangeOptions = useMemo<DashboardDateRangeOption[]>(
+    () => buildRangeOptions(aggregationTimeZone),
+    [aggregationTimeZone],
+  );
   const { dateFrom, dateTo } = useMemo(
     () => resolveDateRange(selectedRange, aggregationTimeZone),
     [aggregationTimeZone, selectedRange],
