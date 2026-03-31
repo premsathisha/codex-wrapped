@@ -7,6 +7,7 @@ export interface RawParsedSession {
   source: SessionSource;
   filePath: string;
   fileSizeBytes: number;
+  fileMtimeMs: number;
   metadata: {
     cwd: string | null;
     gitBranch: string | null;

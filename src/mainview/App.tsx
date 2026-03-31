@@ -12,8 +12,22 @@ const App = () => {
   const rpc = useRPC();
 
   useEffect(() => {
-    applyTheme("system");
-  }, []);
+    let active = true;
+
+    void rpc.request.getSettings({})
+      .then((settings) => {
+        if (!active) return;
+        applyTheme(settings.theme);
+      })
+      .catch(() => {
+        if (!active) return;
+        applyTheme("system");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [rpc]);
 
   useEffect(() => {
     const listener = (payload: unknown) => {

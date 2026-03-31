@@ -539,6 +539,7 @@ export const codexParser: SessionParser = {
         source: "codex",
         filePath: candidate.path,
         fileSizeBytes: candidate.size,
+        fileMtimeMs: candidate.mtime,
         metadata: {
           cwd,
           gitBranch,

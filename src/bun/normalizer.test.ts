@@ -27,6 +27,7 @@ const makeRawSession = (sessionId: string, events: SessionEvent[]): RawParsedSes
   source: "codex",
   filePath: `/tmp/${sessionId}.jsonl`,
   fileSizeBytes: 123,
+  fileMtimeMs: Date.parse("2026-02-21T12:34:56.000Z"),
   metadata: {
     cwd: "/tmp/repo",
     gitBranch: "main",
@@ -99,6 +100,17 @@ describe("normalizeSession costs", () => {
     });
 
     expect(result.session.isSubagent).toBe(true);
+  });
+
+  test("uses the file mtime as a stable parsedAt fallback", () => {
+    const result = normalizeSession(
+      makeRawSession("session-no-timestamps", [
+        makeEvent({ id: "meta-1", kind: "meta", timestamp: null, text: "housekeeping" }),
+      ]),
+    );
+
+    expect(result.session.startTime).toBeNull();
+    expect(result.session.parsedAt).toBe("2026-02-21T12:34:56.000Z");
   });
 });
 

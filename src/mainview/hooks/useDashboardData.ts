@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DashboardSummary, DailyAggregate, SessionSource, TokenUsage } from "@shared/schema";
 import { SESSION_SOURCES } from "@shared/schema";
 import {
@@ -271,6 +271,7 @@ const buildDailyModelTokensByDate = (
 
 export const useDashboardData = () => {
   const rpc = useRPC();
+  const refreshRequestIdRef = useRef(0);
   const [selectedRange, setSelectedRange] = useState<DashboardDateRange>("last365");
   const [aggregationTimeZone, setAggregationTimeZone] = useState<string>(resolveClientTimeZone);
   const rangeOptions = useMemo<DashboardDateRangeOption[]>(
@@ -292,6 +293,7 @@ export const useDashboardData = () => {
   const [isScanning, setIsScanning] = useState<boolean>(false);
 
   const refresh = useCallback(async () => {
+    const requestId = ++refreshRequestIdRef.current;
     setLoading(true);
     setError(null);
 
@@ -301,6 +303,10 @@ export const useDashboardData = () => {
         rpcRequest("getDailyTimeline", { dateFrom, dateTo }),
         ...SESSION_SOURCES.map((source) => rpcRequest("getDailyTimeline", { dateFrom, dateTo, source })),
       ]);
+
+      if (requestId !== refreshRequestIdRef.current) {
+        return;
+      }
 
       setSummary(summaryResult);
       if (summaryResult.aggregationTimeZone && summaryResult.aggregationTimeZone !== aggregationTimeZone) {
@@ -334,6 +340,10 @@ export const useDashboardData = () => {
             )
           : [];
 
+      if (requestId !== refreshRequestIdRef.current) {
+        return;
+      }
+
       setDailyModelCostsByDate(
         buildDailyModelCostsByDate(
           timelineByModelResults.map((rows, index) => ({
@@ -351,10 +361,15 @@ export const useDashboardData = () => {
         ),
       );
     } catch (caught) {
+      if (requestId !== refreshRequestIdRef.current) {
+        return;
+      }
       const message = caught instanceof Error ? caught.message : "Failed to load dashboard";
       setError(message);
     } finally {
-      setLoading(false);
+      if (requestId === refreshRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [aggregationTimeZone, dateFrom, dateTo]);
 

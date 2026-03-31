@@ -448,7 +448,7 @@ export const normalizeSession = (parsed: RawParsedSession): { session: Session; 
     toolCallCount,
     isSubagent: parsed.metadata.isSubagent,
     isHousekeeping: housekeeping,
-    parsedAt: new Date().toISOString(),
+    parsedAt: normalizeTimestamp(parsed.fileMtimeMs) ?? new Date().toISOString(),
   };
 
   return { session, events };

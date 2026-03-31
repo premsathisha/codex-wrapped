@@ -472,6 +472,7 @@ export const parseGeneric = async (
       source,
       filePath: candidate.path,
       fileSizeBytes: candidate.size,
+      fileMtimeMs: candidate.mtime,
       metadata: {
         cwd,
         gitBranch,
