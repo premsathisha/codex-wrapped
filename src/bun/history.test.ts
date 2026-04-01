@@ -1,0 +1,364 @@
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import {
+  deleteImportedBackup,
+  exportBackupCsv,
+  importBackupCsv,
+  listImportedBackups,
+  rematerializeDailyStoreFromHistory,
+  writeScanHistoryFacts,
+  type CanonicalHistoryFact,
+} from "./history";
+import { setDataDirOverrideForTests, writeDailyStore } from "./store";
+import { startWebServer } from "./index";
+
+const makeFact = (overrides: Partial<CanonicalHistoryFact>): CanonicalHistoryFact => ({
+  bucketStartUtc: "2026-03-01T08:00:00.000Z",
+  dimensionKind: "all",
+  dimensionKey: "all",
+  sessions: 1,
+  messages: 2,
+  toolCalls: 1,
+  inputTokens: 100,
+  outputTokens: 25,
+  cacheReadTokens: 5,
+  cacheWriteTokens: 0,
+  reasoningTokens: 3,
+  costUsd: 1.25,
+  durationMs: 60_000,
+  lastSeenAtUtc: "2026-03-01T08:45:00.000Z",
+  ...overrides,
+});
+
+const factsForBucket = (
+  bucketStartUtc: string,
+  stats: Partial<CanonicalHistoryFact> = {},
+  repo = "Codex Wrapped",
+): CanonicalHistoryFact[] => [
+  makeFact({ bucketStartUtc, dimensionKind: "all", dimensionKey: "all", ...stats }),
+  makeFact({ bucketStartUtc, dimensionKind: "source", dimensionKey: "codex", ...stats }),
+  makeFact({ bucketStartUtc, dimensionKind: "model", dimensionKey: "gpt-5", ...stats }),
+  makeFact({ bucketStartUtc, dimensionKind: "repo", dimensionKey: repo, ...stats }),
+];
+
+let tempDirs: string[] = [];
+
+beforeEach(() => {
+  tempDirs = [];
+});
+
+afterEach(async () => {
+  setDataDirOverrideForTests(null);
+  for (const dir of tempDirs) {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+const createTempDataDir = async (): Promise<string> => {
+  const dir = await mkdtemp(join(tmpdir(), "codex-wrapped-history-test-"));
+  tempDirs.push(dir);
+  return dir;
+};
+
+const createStaticDir = async (): Promise<string> => {
+  const dir = await mkdtemp(join(tmpdir(), "codex-wrapped-history-static-"));
+  tempDirs.push(dir);
+  await writeFile(join(dir, "index.html"), "<!doctype html><title>ok</title>\n", "utf8");
+  return dir;
+};
+
+describe("history import/export", () => {
+  test("export creates a manifest row with the canonical CSV schema", async () => {
+    const dir = await createTempDataDir();
+    setDataDirOverrideForTests(dir);
+    await writeScanHistoryFacts(factsForBucket("2026-03-01T08:00:00.000Z"));
+
+    const result = await exportBackupCsv("UTC");
+    const lines = result.csv.trim().split(/\r?\n/);
+
+    expect(result.filename.endsWith(".csv")).toBe(true);
+    expect(lines[0]).toContain("schema_id,schema_version,record_type");
+    expect(lines[1]).toContain(",manifest,");
+    expect(result.csv).toContain("codex_wrapped_backup");
+    expect(result.csv).toContain("2026-03-01");
+  });
+
+  test("import rejects unrecognized CSV files", async () => {
+    const dir = await createTempDataDir();
+    setDataDirOverrideForTests(dir);
+
+    const result = await importBackupCsv("bad.csv", "hello,world\n1,2\n", "UTC");
+    expect(result.recognized).toBe(false);
+    expect(result.message).toBe("CSV is missing the manifest row.");
+  });
+
+  test("importing the same CSV twice is a no-op", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts(factsForBucket("2026-03-01T08:00:00.000Z"));
+    const exported = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    const first = await importBackupCsv(exported.filename, exported.csv, "UTC");
+    const second = await importBackupCsv(exported.filename, exported.csv, "UTC");
+    const backups = await listImportedBackups("UTC");
+
+    expect(first.duplicate).toBe(false);
+    expect(second.duplicate).toBe(true);
+    expect(backups).toHaveLength(1);
+    expect(backups[0]?.contributesData).toBe(true);
+  });
+
+  test("importing a CSV that matches the currently displayed history is a no-op", async () => {
+    const dir = await createTempDataDir();
+    setDataDirOverrideForTests(dir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }),
+      ...factsForBucket("2026-03-02T08:00:00.000Z", { inputTokens: 200, costUsd: 2 }),
+    ]);
+    const exported = await exportBackupCsv("UTC");
+
+    const imported = await importBackupCsv(exported.filename, exported.csv, "UTC");
+    const backups = await listImportedBackups("UTC");
+    const daily = await rematerializeDailyStoreFromHistory("UTC");
+
+    expect(imported.recognized).toBe(true);
+    expect(imported.message).toContain("already shown");
+    expect(backups).toHaveLength(0);
+    expect(daily["2026-03-01"]?.totals.inputTokens).toBe(100);
+    expect(daily["2026-03-02"]?.totals.inputTokens).toBe(200);
+  });
+
+  test("importing a CSV with heavy overlap still succeeds when it adds a new day", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }),
+      ...factsForBucket("2026-03-02T08:00:00.000Z", { inputTokens: 200, costUsd: 2 }),
+      ...factsForBucket("2026-03-03T08:00:00.000Z", { inputTokens: 300, costUsd: 3 }),
+      ...factsForBucket("2026-03-04T08:00:00.000Z", { inputTokens: 400, costUsd: 4 }),
+      ...factsForBucket("2026-03-05T08:00:00.000Z", { inputTokens: 500, costUsd: 5 }),
+      ...factsForBucket("2026-03-06T08:00:00.000Z", { inputTokens: 600, costUsd: 6 }),
+    ]);
+    const exported = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }),
+      ...factsForBucket("2026-03-02T08:00:00.000Z", { inputTokens: 200, costUsd: 2 }),
+      ...factsForBucket("2026-03-03T08:00:00.000Z", { inputTokens: 300, costUsd: 3 }),
+      ...factsForBucket("2026-03-04T08:00:00.000Z", { inputTokens: 400, costUsd: 4 }),
+      ...factsForBucket("2026-03-05T08:00:00.000Z", { inputTokens: 500, costUsd: 5 }),
+    ]);
+
+    const imported = await importBackupCsv(exported.filename, exported.csv, "UTC");
+    const backups = await listImportedBackups("UTC");
+    const daily = await rematerializeDailyStoreFromHistory("UTC");
+
+    expect(imported.recognized).toBe(true);
+    expect(imported.duplicate).toBe(false);
+    expect(imported.newDateCount).toBe(1);
+    expect(imported.overlappingDateCount).toBe(5);
+    expect(backups).toHaveLength(1);
+    expect(backups[0]?.contributesData).toBe(true);
+    expect(daily["2026-03-06"]?.totals.inputTokens).toBe(600);
+  });
+
+  test("re-importing a backup for the same covered day is rejected as already shown", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-05T08:00:00.000Z", { inputTokens: 500, costUsd: 5 }),
+    ]);
+    const exported = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-05T15:00:00.000Z", { inputTokens: 250, costUsd: 2.5 }),
+    ]);
+
+    const imported = await importBackupCsv(exported.filename, exported.csv, "UTC");
+    const backups = await listImportedBackups("UTC");
+
+    expect(imported.recognized).toBe(true);
+    expect(imported.duplicate).toBe(false);
+    expect(imported.newDateCount).toBe(0);
+    expect(imported.message).toContain("already shown");
+    expect(backups).toHaveLength(0);
+  });
+
+  test("materialization keeps imported history as the base but lets local scan win on overlapping dates", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }),
+      ...factsForBucket("2026-03-02T08:00:00.000Z", { inputTokens: 200, costUsd: 2 }),
+    ]);
+    const exported = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-02T15:00:00.000Z", { inputTokens: 500, costUsd: 5 }, "codex-wrapped"),
+    ]);
+
+    const importResult = await importBackupCsv(exported.filename, exported.csv, "America/Phoenix");
+    const backups = await listImportedBackups("America/Phoenix");
+    const daily = await rematerializeDailyStoreFromHistory("America/Phoenix");
+
+    expect(importResult.newDateCount).toBe(1);
+    expect(importResult.overlappingDateCount).toBe(1);
+    expect(backups[0]?.contributesData).toBe(true);
+    expect(daily["2026-03-01"]?.totals.inputTokens).toBe(100);
+    expect(daily["2026-03-01"]?.totals.costUsd).toBe(1);
+    expect(daily["2026-03-02"]?.totals.inputTokens).toBe(500);
+    expect(daily["2026-03-02"]?.totals.costUsd).toBe(5);
+
+    await deleteImportedBackup(backups[0]?.backupId as string);
+    const afterDelete = await rematerializeDailyStoreFromHistory("America/Phoenix");
+    expect(afterDelete["2026-03-01"]).toBeUndefined();
+    expect(afterDelete["2026-03-02"]?.totals.inputTokens).toBe(500);
+  });
+
+  test("newer backup from the same origin refreshes imported facts without double counting", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }, "AI Wrapped"),
+    ]);
+    const exportedOne = await exportBackupCsv("UTC");
+
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 150, costUsd: 1.5 }, "AI Wrapped"),
+      ...factsForBucket("2026-03-02T08:00:00.000Z", { inputTokens: 200, costUsd: 2 }, "AI Wrapped"),
+    ]);
+    const exportedTwo = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    const first = await importBackupCsv(exportedOne.filename, exportedOne.csv, "UTC");
+    const second = await importBackupCsv(exportedTwo.filename, exportedTwo.csv, "UTC");
+    const backups = await listImportedBackups("UTC");
+    const daily = await rematerializeDailyStoreFromHistory("UTC");
+
+    expect(first.newDateCount).toBe(1);
+    expect(second.newDateCount).toBe(1);
+    expect(backups).toHaveLength(2);
+    expect(backups.filter((backup) => backup.isActive)).toHaveLength(1);
+    expect(daily["2026-03-01"]?.totals.inputTokens).toBe(150);
+    expect(daily["2026-03-02"]?.totals.inputTokens).toBe(200);
+    expect(daily["2026-03-01"]?.totals.costUsd).toBe(1.5);
+
+    const latestBackup = backups.find((backup) => backup.isActive);
+    await deleteImportedBackup(latestBackup?.backupId as string);
+    const reverted = await rematerializeDailyStoreFromHistory("UTC");
+    expect(reverted["2026-03-01"]?.totals.inputTokens).toBe(100);
+    expect(reverted["2026-03-02"]).toBeUndefined();
+  });
+
+  test("latest imported backup is the only imported base and different-machine imports do not merge", async () => {
+    const firstDir = await createTempDataDir();
+    setDataDirOverrideForTests(firstDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }, "Machine One"),
+    ]);
+    const exportOne = await exportBackupCsv("UTC");
+
+    const secondDir = await createTempDataDir();
+    setDataDirOverrideForTests(secondDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-04-01T08:00:00.000Z", { inputTokens: 400, costUsd: 4 }, "Machine Two"),
+    ]);
+    const exportTwo = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    await importBackupCsv(exportOne.filename, exportOne.csv, "UTC");
+    await importBackupCsv(exportTwo.filename, exportTwo.csv, "UTC");
+
+    const backups = await listImportedBackups("UTC");
+    const daily = await rematerializeDailyStoreFromHistory("UTC");
+
+    expect(backups.filter((backup) => backup.isActive)).toHaveLength(1);
+    expect(daily["2026-03-01"]).toBeUndefined();
+    expect(daily["2026-04-01"]?.totals.inputTokens).toBe(400);
+  });
+
+  test("imported history survives later local scans and timezone rematerialization", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-02T00:30:00.000Z", { inputTokens: 90, costUsd: 0.9 }, "Prem Repo"),
+    ]);
+    const exported = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    await importBackupCsv(exported.filename, exported.csv, "America/Phoenix");
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-03T12:00:00.000Z", { inputTokens: 250, costUsd: 2.5 }, "Prem Repo"),
+    ]);
+
+    const dailyPhoenix = await rematerializeDailyStoreFromHistory("America/Phoenix");
+    const dailyUtc = await rematerializeDailyStoreFromHistory("UTC");
+
+    expect(dailyPhoenix["2026-03-01"]?.totals.inputTokens).toBe(90);
+    expect(dailyPhoenix["2026-03-03"]?.totals.inputTokens).toBe(250);
+    expect(dailyUtc["2026-03-02"]?.totals.inputTokens).toBe(90);
+    expect(dailyUtc["2026-03-03"]?.totals.inputTokens).toBe(250);
+  });
+
+  test("dashboard summary round-trips through export and import, including repo alias consolidation", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 120, costUsd: 1.2, durationMs: 3_600_000 }, "AI Wrapped"),
+      ...factsForBucket("2026-03-02T08:00:00.000Z", { inputTokens: 180, costUsd: 2.4, durationMs: 7_200_000 }, "AI Wrapped"),
+    ]);
+    const exported = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    const importStatic = await createStaticDir();
+    setDataDirOverrideForTests(importDir);
+    await importBackupCsv(exported.filename, exported.csv, "UTC");
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-03T08:00:00.000Z", { inputTokens: 220, costUsd: 3.3, durationMs: 10_800_000 }, "Codex Wrapped"),
+    ]);
+    await writeDailyStore(await rematerializeDailyStoreFromHistory("UTC"));
+
+    const server = await startWebServer({
+      host: "127.0.0.1",
+      port: 0,
+      openBrowser: false,
+      staticDir: importStatic,
+      runScanOnLaunch: false,
+      enableBackgroundScan: false,
+    });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/api/getDashboardSummary`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dateFrom: "2026-03-01", dateTo: "2026-03-03" }),
+      });
+      const summary = await response.json() as {
+        totals: { sessions: number; costUsd: number; durationMs: number };
+        topRepos: Array<{ repo: string; tokens: number }>;
+      };
+
+      expect(summary.totals.sessions).toBe(3);
+      expect(summary.totals.costUsd).toBeCloseTo(6.9, 10);
+      expect(summary.totals.durationMs).toBe(21_600_000);
+      const wrappedRepo = summary.topRepos.find((repo) => repo.repo === "Codex Wrapped");
+      expect(wrappedRepo).toBeDefined();
+      expect(wrappedRepo?.tokens).toBe(619);
+    } finally {
+      server.stop(true);
+    }
+  });
+});

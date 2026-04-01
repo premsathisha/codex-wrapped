@@ -8,20 +8,21 @@ Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spot
 
 ## Who This Is For
 
-Codex Wrapped is for developers who use Codex regularly and want a clear, visual summary of how they code over time.
+Codex Wrapped is for developers who use Codex through an OpenAI subscription and want a clear, visual summary of how they code over time, and it is also useful for understanding an estimate of what that usage would have cost if billed through the API.
 
 ## Key Features
 
-- Theme switching (palette options in the sidebar)
+- Theme switching with multiple palette options
 - Date range selection (Last 7/30/90/365 days and yearly views)
 - Wrapped-style cards and charts for sessions, tokens, cost, models, repos, and coding hours
-- Save/share each card as PNG directly to your device
+- Save each card as PNG directly to your device
+- Import/export full-history CSV backups for moving between computers, with popup import feedback that surfaces backend rejection reasons
 
 ## Improvements in This Fork
 
 - Visual redesign and UI polish across the dashboard
 - Theme switching with multiple palette options
-- Ability to save/share individual cards as PNG images
+- Ability to save individual cards as PNG images
 - Shift from the original app + multi-agent scope to a local website focused specifically on Codex-only support
 - Improved pricing accuracy and handling of edge-case scenarios in cost calculations
 
@@ -37,17 +38,18 @@ bun ./bin/cli.ts
 
 ## Run The App
 
-1. Start the app:
+1. On macOS, preferred launcher: double-click `Open Codex Wrapped.command` in the repo root.
+   - This starts the local server and opens the app URL for you.
+
+2. Or start manually from Terminal:
 
 ```bash
 bun ./bin/cli.ts
 ```
 
-2. Open:
+3. Open:
 
 `http://127.0.0.1:3210`
-
-On macOS, you can also double-click `Open Codex Wrapped.command` in the repo root to start the local server and open the app.
 
 ## Prerequisites
 
@@ -110,12 +112,13 @@ bun ./bin/cli.ts --help
 
 ## How It Works
 
-1. **Local session discovery**: the scanner reads Codex session logs from both `~/.codex/sessions` and `~/.codex/archived_sessions` (or equivalent paths under `CODEX_HOME`, or a configured custom Codex path).
+1. **Local session discovery**: the scanner reads Codex session logs from both `~/.codex/sessions` and `~/.codex/archived_sessions` (or equivalent paths under `CODEX_HOME`, or a configured custom Codex path). By default, background scans run every 5 minutes.
 2. **Parsing + normalization**: each session file is parsed into a consistent internal schema (events, tokens, costs, tools, model, timestamps, repo context).
-3. **Aggregation**: normalized sessions are aggregated by day/hour/model/repo for fast dashboard queries.
-4. **Local persistence**: aggregated artifacts and scan metadata are stored in `~/.codex-wrapped`.
-5. **Pricing enrichment**: pricing is resolved locally from built-in mappings, and if a model is missing there, pricing data is fetched from [models.dev](https://models.dev) and cached for later lookups.
-6. **UI rendering**: the local Bun server serves the dashboard, and the frontend queries local RPC endpoints to render cards/charts.
+3. **Canonical history**: normalized sessions are aggregated into UTC hourly facts for durable local history storage.
+4. **Import/export**: Codex Wrapped can export the full known history chain to CSV and import it later on another machine.
+5. **Materialization**: scan history + imported history are re-materialized into the current timezone-specific dashboard store in `~/.codex-wrapped`.
+6. **Pricing enrichment**: pricing is resolved locally from built-in mappings, and if a model is missing there, pricing data is fetched from [models.dev](https://models.dev) and cached for later lookups.
+7. **UI rendering**: the local Bun server serves the dashboard, and the frontend queries local RPC endpoints to render cards/charts.
 
 ## Architecture
 
@@ -124,7 +127,7 @@ bun ./bin/cli.ts --help
 - `src/mainview` — React dashboard UI
 - `src/shared` — shared schemas/types
 - `~/.codex` — source Codex session logs
-- `~/.codex-wrapped` — aggregated local data store
+- `~/.codex-wrapped` — local scan/import history, imported CSV copies, and the materialized dashboard store
 
 ## Privacy
 
@@ -132,14 +135,52 @@ Codex Wrapped is local-first.
 
 - Codex session logs are read locally from `~/.codex`
 - Aggregated summaries are stored in `~/.codex-wrapped`
+- Imported CSV backups are copied into `~/.codex-wrapped/imports`
 - Pricing fallback may fetch model pricing metadata from [models.dev](https://models.dev) when a model is not available in the local pricing map
 - No external telemetry is required for core functionality
+
+## FAQ
+
+### i have two similar repos, only one is shown, why?
+
+Codex Wrapped consolidates very similar repository names to avoid duplicate-looking entries in the top repos card. It groups repo names that share meaningful tokens and keeps one canonical name for display. The UI also shows only the top 8 repos, so lower-ranked repos may not appear in that card.
+
+### how does it calculate the most active hour/week?
+
+Most active hour is based on the selected date range: it sums activity by hour of day (0-23) and picks the hour with the highest token total.  
+There is currently no separate "most active week" metric; weekly patterns are shown through the heatmap and day-of-week signals (for example, busiest day-of-week and weekend share).
+
+### what is a session?
+
+A session is one parsed Codex session record (source + session id) from your local logs. During scanning, duplicate copies of the same session id are deduplicated, and only the preferred/latest copy is used for aggregation.
+
+### my input and output dont add up to total tokens, why?
+
+Total tokens include more than just input and output. Codex Wrapped totals:
+- input tokens
+- output tokens
+- cached input/read tokens
+- cache write tokens
+- reasoning tokens
+
+So `input + output` is expected to be lower than total whenever cache or reasoning tokens are present.
+
+### why was my import rejected
+
+Imports are validated by the backend and can be rejected when:
+- the same backup file was already imported (checksum duplicate)
+- the CSV is invalid or not a Codex Wrapped backup format/schema
+- importing it would not change what is currently shown (already represented)
+- it only contains dates already covered by local data
+
+When an import is rejected, the popup message shows the backend reason directly.
 
 ## Troubleshooting
 
 - If the UI looks stale, run `bun ./bin/cli.ts --rebuild`.
 - If data seems outdated, trigger a refresh/scan from the app and ensure your Codex directory exists.
-- To save a card image, use the save icon on the top-right edge of each card; desktop browsers download PNG, and supported mobile browsers open native share/save.
+- To move to a new computer, export a CSV backup from the footer on the old machine, then import that CSV from the footer on the new machine.
+- To save a card image, use the save icon on the top-right edge of each card; desktop browsers download PNG, and supported mobile browsers may open native save options.
 - If the launcher reports an older server is still running, close duplicate `bun ./bin/cli.ts` processes and relaunch. The launcher will now try to stop stale Codex Wrapped processes automatically before starting.
 - If port `3210` is busy, set `PORT` before launch:
 

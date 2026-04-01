@@ -15,7 +15,14 @@ import {
 import { toISODateInTimeZone } from "../shared/localDate";
 import type { AppSettings } from "../shared/types";
 import { resolveAggregationTimeZone } from "./aggregator";
-import { buildTopRepos } from "./dashboardSummary";
+import {
+  deleteImportedBackup as deleteImportedBackupFromHistory,
+  exportBackupCsv as exportHistoryBackupCsv,
+  importBackupCsv as importHistoryBackupCsv,
+  listImportedBackups as listHistoryImportedBackups,
+  rematerializeDailyStoreFromHistory,
+} from "./history";
+import { buildTopRepos, buildTopTools } from "./dashboardSummary";
 import { getOpenExternalCommand, tryResolveAllowedExternalUrl } from "./external";
 import { runScan } from "./scan";
 import {
@@ -27,6 +34,7 @@ import {
   readAggregationTimeZone,
   readDailyStore,
   setSettings,
+  writeDailyStore,
   type DayStats,
 } from "./store";
 
@@ -145,6 +153,7 @@ const getDashboardSummaryFromStore = async (
   const byAgent = createEmptyByAgent();
   const byModelMap = new Map<string, DayStats>();
   const byRepoMap = new Map<string, DayStats>();
+  const byToolMap = new Map<string, DayStats>();
   const byRepoLastSeenDateMap = new Map<string, string>();
   const byHourMap = new Map<number, DayStats>();
   const byHourSourceMap = new Map<number, Map<string, DayStats>>();
@@ -191,6 +200,13 @@ const getDashboardSummaryFromStore = async (
       }
     }
 
+    for (const [tool, toolStats] of Object.entries(entry.byTool)) {
+      if (!byToolMap.has(tool)) {
+        byToolMap.set(tool, createEmptyDayStats());
+      }
+      addDayStats(byToolMap.get(tool) as DayStats, toolStats);
+    }
+
     for (const [hour, hourStats] of Object.entries(entry.byHour)) {
       const hourNum = Number(hour);
       if (!byHourMap.has(hourNum)) {
@@ -229,6 +245,7 @@ const getDashboardSummaryFromStore = async (
 
   const dailyTimeline = dateFrom && dateTo ? await getDailyTimelineFromStore(dateFrom, dateTo) : [];
   const topRepos = buildTopRepos(byRepoMap, byRepoLastSeenDateMap);
+  const topTools = buildTopTools(byToolMap);
 
   const hourlyBreakdown: HourlyBreakdownEntry[] = Array.from({ length: 24 }, (_, hour) => {
     const stats = byHourMap.get(hour) ?? createEmptyDayStats();
@@ -275,9 +292,17 @@ const getDashboardSummaryFromStore = async (
     byModel,
     dailyTimeline,
     topRepos,
-    topTools: [],
+    topTools,
     hourlyBreakdown,
   };
+};
+
+const rematerializeDashboardStore = async (): Promise<void> => {
+  const settings = await getSettings();
+  const aggregationTimeZone = await readAggregationTimeZone(
+    resolveAggregationTimeZone(settings.aggregationTimeZone),
+  );
+  await writeDailyStore(await rematerializeDailyStoreFromHistory(aggregationTimeZone));
 };
 
 const dailyStoreNeedsRepoBackfill = async (): Promise<boolean> => {
@@ -569,6 +594,9 @@ const updateSettings = async (patch: Partial<AppSettings>): Promise<AppSettings>
     },
   };
   await setSettings(next);
+  if (patch.aggregationTimeZone && patch.aggregationTimeZone !== current.aggregationTimeZone) {
+    await rematerializeDashboardStore();
+  }
   return next;
 };
 
@@ -773,6 +801,37 @@ const handleApi = async (request: Request): Promise<Response> => {
       return toJsonResponse({ error: "Rejected PDF export for invalid URL." }, 400);
     }
     return toJsonResponse(await exportFullSharePdf(resolved));
+  }
+  if (request.method === "POST" && pathname === "/api/exportBackupCsv") {
+    const settings = await getSettings();
+    return toJsonResponse(await exportHistoryBackupCsv(resolveAggregationTimeZone(settings.aggregationTimeZone)));
+  }
+  if (request.method === "POST" && pathname === "/api/importBackupCsv") {
+    const payload = await readJsonBody<{ filename: string; csv: string }>(request);
+    if (typeof payload.csv !== "string" || payload.csv.trim().length === 0) {
+      return toJsonResponse({ error: "Missing CSV content." }, 400);
+    }
+    const settings = await getSettings();
+    const result = await importHistoryBackupCsv(
+      typeof payload.filename === "string" ? payload.filename : "backup.csv",
+      payload.csv,
+      resolveAggregationTimeZone(settings.aggregationTimeZone),
+    );
+    await rematerializeDashboardStore();
+    return toJsonResponse(result);
+  }
+  if (request.method === "GET" && pathname === "/api/listImportedBackups") {
+    const settings = await getSettings();
+    return toJsonResponse(await listHistoryImportedBackups(resolveAggregationTimeZone(settings.aggregationTimeZone)));
+  }
+  if (request.method === "POST" && pathname === "/api/deleteImportedBackup") {
+    const payload = await readJsonBody<{ backupId: string }>(request);
+    if (typeof payload.backupId !== "string" || payload.backupId.trim().length === 0) {
+      return toJsonResponse({ error: "Missing backup id." }, 400);
+    }
+    await deleteImportedBackupFromHistory(payload.backupId.trim());
+    await rematerializeDashboardStore();
+    return toJsonResponse({ ok: true });
   }
   if (request.method === "POST" && pathname === "/api/updateSettings") {
     const payload = await readJsonBody<Partial<AppSettings>>(request);

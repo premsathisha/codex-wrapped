@@ -1,9 +1,11 @@
 import type { SessionSource } from "../shared/schema";
-import {
-  aggregateNormalizedSessionsByDate,
-  resolveAggregationTimeZone,
-} from "./aggregator";
+import { resolveAggregationTimeZone } from "./aggregator";
 import { discoverAll } from "./discovery";
+import {
+  aggregateNormalizedSessionsToHistoryFacts,
+  rematerializeDailyStoreFromHistory,
+  writeScanHistoryFacts,
+} from "./history";
 import { normalizeSession } from "./normalizer";
 import { parseFile } from "./parsers";
 import type { Session } from "./session-schema";
@@ -137,15 +139,16 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
     );
 
   if (shouldPersistRebuild) {
-    await writeDailyStore(
-      aggregateNormalizedSessionsByDate(
+    await writeScanHistoryFacts(
+      aggregateNormalizedSessionsToHistoryFacts(
         normalizedSessions.map(({ session, events }) => ({ session, events })),
-        { timeZone: aggregationTimeZone },
       ),
     );
-    await writeAggregationMeta(aggregationTimeZone);
     await writeScanState(nextScanState);
   }
+
+  await writeDailyStore(await rematerializeDailyStoreFromHistory(aggregationTimeZone));
+  await writeAggregationMeta(aggregationTimeZone);
 
   return {
     scanned,

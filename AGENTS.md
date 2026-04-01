@@ -15,7 +15,9 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 - `bin/launch-macos.sh`: macOS launcher that starts the local app and opens the local URL.
 - `src/bun/*`: Bun server routes, session discovery/parsing, aggregation, local store persistence.
 - `src/mainview/*`: React UI (dashboard/cards/charts/hooks/styles).
+- `src/mainview/components/DashboardFooter.tsx`: CSV import/export actions, imported backup list, and popup import result alerts.
 - `src/mainview/components/DownloadableCard.tsx`: shared card wrapper for saving/sharing wrapped cards as PNG.
+- `src/shared/components/ui/sonner.tsx`: shared shadcn Sonner toaster used for popup alerts.
 - `src/shared/*`: shared schemas/types used by backend and frontend.
 - `index.html`: Vite entry HTML for the frontend bundle.
 
@@ -43,6 +45,8 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 2. Current enabled source is Codex (`~/.codex`).
 3. Scans and summaries must remain deterministic and local-only.
 4. Never mutate or delete source session logs in `~/.codex` as part of normal feature/fix work.
+5. CSV import responses are backend-driven; frontend import toasts must preserve backend `message` text (including rejection reasons like overlap/similarity/already-shown outcomes).
+6. Import feedback is shown as popup alerts (`Backup imported` success, `Import rejected` amber/error) and should display again on repeated import attempts, even when the message text is identical.
 
 ## Coding Principles
 1. Prefer small, targeted changes over broad rewrites.
@@ -72,3 +76,5 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 4. If scan/persistence logic changes, sanity-check `scan` completion and dashboard totals from local endpoints.
 5. Prefer non-destructive operations; do not remove user data or rewrite source logs unless explicitly requested.
 6. For card export changes, validate save/share behavior from the card download button against the live local UI.
+7. For import/export footer changes, validate popup import alert behavior for both success and rejection paths, including repeated identical retries.
+8. Keep the Codex heatmap card static on load/reload (no reveal/count-up intro animation), while preserving existing animations on other cards/charts.

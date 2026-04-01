@@ -518,7 +518,6 @@ const DashboardCharts = ({
 }: DashboardChartsProps) => {
   const animateCard3 = Boolean(cardAnimations[3]);
   const animateCard4 = Boolean(cardAnimations[4]);
-  const animateCard5 = Boolean(cardAnimations[5]);
   const animateCard6 = Boolean(cardAnimations[6]);
   const animateCard7 = Boolean(cardAnimations[7]);
   const animateCard8 = Boolean(cardAnimations[8]);
@@ -903,7 +902,7 @@ const DashboardCharts = ({
 
       <DownloadableCard title="Codex">
         <section data-card-index="5" className="wrapped-card wrapped-card-activity">
-          <div className={`rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7 ${animateCard5 ? chartRevealClass : ""}`}>
+          <div className="rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7">
             <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
               <h2 className="text-[1.9rem] font-semibold tracking-tight text-[#FAFAFA]">Codex</h2>
               <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 sm:gap-10">

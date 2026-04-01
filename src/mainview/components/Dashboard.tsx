@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { SESSION_SOURCES, type SessionSource } from "@shared/schema";
+import type { ImportBackupResult, ImportedBackupSummary } from "@shared/types";
 import DashboardCharts from "./DashboardCharts";
 import DashboardFooter from "./DashboardFooter";
 import EmptyState from "./EmptyState";
@@ -87,6 +88,11 @@ const Dashboard = () => {
   const [activeCardIndex, setActiveCardIndex] = useState<number>(1);
   const [animatingCardIndices, setAnimatingCardIndices] = useState<Record<number, boolean>>({});
   const [isUpdatingTimeZone, setIsUpdatingTimeZone] = useState(false);
+  const [importedBackups, setImportedBackups] = useState<ImportedBackupSummary[]>([]);
+  const [importResult, setImportResult] = useState<ImportBackupResult | null>(null);
+  const [isImportingBackup, setIsImportingBackup] = useState(false);
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+  const [deletingBackupId, setDeletingBackupId] = useState<string | null>(null);
   const activeCardRef = useRef<number>(1);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const animatedCardIndicesRef = useRef<Set<number>>(new Set());
@@ -165,6 +171,11 @@ const Dashboard = () => {
     return [{ value: aggregationTimeZone, label: city }, ...TIME_ZONE_OPTIONS];
   }, [aggregationTimeZone]);
 
+  const loadImportedBackups = useCallback(async () => {
+    const backups = await rpc.request.listImportedBackups({});
+    setImportedBackups(backups);
+  }, [rpc]);
+
   const handleTimeZoneChange = useCallback((value: string) => {
     if (!value || value === aggregationTimeZone || isUpdatingTimeZone) return;
 
@@ -174,12 +185,12 @@ const Dashboard = () => {
       try {
         await rpc.request.updateSettings({ aggregationTimeZone: value });
         await rpc.request.triggerScan({ fullScan: false });
-        await refresh();
+        await Promise.all([refresh(), loadImportedBackups()]);
       } finally {
         setIsUpdatingTimeZone(false);
       }
     })();
-  }, [aggregationTimeZone, isUpdatingTimeZone, refresh, rpc]);
+  }, [aggregationTimeZone, isUpdatingTimeZone, loadImportedBackups, refresh, rpc]);
   const themePalette = THEME_PALETTES[selectedTheme];
 
   useEffect(() => {
@@ -194,6 +205,10 @@ const Dashboard = () => {
   useEffect(() => {
     window.localStorage.setItem(THEME_STORAGE_KEY, selectedTheme);
   }, [selectedTheme]);
+
+  useEffect(() => {
+    void loadImportedBackups();
+  }, [loadImportedBackups]);
 
   useEffect(() => {
     const root = scrollRef.current;
@@ -283,6 +298,78 @@ const Dashboard = () => {
       isScanning={isScanning}
     />
   );
+
+  const handleImportFile = useCallback((file: File) => {
+    setIsImportingBackup(true);
+
+    void (async () => {
+      try {
+        const csv = await file.text();
+        const result = await rpc.request.importBackupCsv({ filename: file.name, csv });
+        setImportResult(result);
+        await Promise.all([refresh(), loadImportedBackups()]);
+      } catch (error) {
+        setImportResult({
+          recognized: false,
+          duplicate: false,
+          backup: null,
+          activeCoverageStartDateUtc: null,
+          activeCoverageEndDateUtc: null,
+          newDateCount: 0,
+          overlappingDateCount: 0,
+          skippedOverlappingDates: [],
+          message: error instanceof Error ? error.message : "Import failed.",
+        });
+      } finally {
+        setIsImportingBackup(false);
+      }
+    })();
+  }, [loadImportedBackups, refresh, rpc]);
+
+  const handleExportBackup = useCallback(() => {
+    setIsExportingBackup(true);
+
+    void (async () => {
+      try {
+        const result = await rpc.request.exportBackupCsv({});
+        const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8" });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = result.filename;
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        await rpc.send.log({
+          level: "error",
+          msg: error instanceof Error ? error.message : "Backup export failed.",
+        });
+      } finally {
+        setIsExportingBackup(false);
+      }
+    })();
+  }, [rpc]);
+
+  const handleDeleteBackup = useCallback((backupId: string) => {
+    setDeletingBackupId(backupId);
+
+    void (async () => {
+      try {
+        await rpc.request.deleteImportedBackup({ backupId });
+        setImportResult(null);
+        await Promise.all([refresh(), loadImportedBackups()]);
+      } catch (error) {
+        await rpc.send.log({
+          level: "error",
+          msg: error instanceof Error ? error.message : "Delete backup failed.",
+        });
+      } finally {
+        setDeletingBackupId(null);
+      }
+    })();
+  }, [loadImportedBackups, refresh, rpc]);
 
   if (loading && !summary) {
     return (
@@ -519,7 +606,16 @@ const Dashboard = () => {
             busiestSingleDay={busiestSingleDay}
           />
         </div>
-        <DashboardFooter />
+        <DashboardFooter
+          importedBackups={importedBackups}
+          importResult={importResult}
+          isImporting={isImportingBackup}
+          isExporting={isExportingBackup}
+          deletingBackupId={deletingBackupId}
+          onImportFile={handleImportFile}
+          onExport={handleExportBackup}
+          onDeleteBackup={handleDeleteBackup}
+        />
       </div>
     </>
   );

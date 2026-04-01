@@ -142,6 +142,7 @@ const ensureDateEntry = (daily: DailyStore, date: string): DailyAggregateEntry =
     bySource: {},
     byModel: {},
     byRepo: {},
+    byTool: {},
     byHour: {},
     byHourSource: {},
     totals: createEmptyDayStats(),
@@ -165,6 +166,7 @@ const applyStatsToEntry = (
   model: string,
   repo: string | null,
   hour: string | null,
+  tool: string | null,
 ): void => {
   addStats(entry.totals, stats);
   addStats(ensureBucket(entry.bySource, source), stats);
@@ -172,6 +174,10 @@ const applyStatsToEntry = (
 
   if (repo) {
     addStats(ensureBucket(entry.byRepo, repo), stats);
+  }
+
+  if (tool) {
+    addStats(ensureBucket(entry.byTool, tool), stats);
   }
 
   if (hour !== null) {
@@ -207,6 +213,7 @@ const sortDailyStore = (daily: DailyStore): DailyStore => {
       bySource: sortedEntries(entry.bySource),
       byModel: sortedEntries(entry.byModel),
       byRepo: sortedEntries(entry.byRepo),
+      byTool: sortedEntries(entry.byTool),
       byHour: sortedEntries(entry.byHour),
       byHourSource: sortedByHourSource,
       totals: { ...entry.totals },
@@ -297,6 +304,7 @@ const aggregateEntriesByDate = (
       modelKey,
       repoKey,
       toHourKey(session, hourFormatter),
+      null,
     );
 
     for (const event of events) {
@@ -325,6 +333,7 @@ const aggregateEntriesByDate = (
         eventModelKey,
         repoKey,
         toEventHourKey(event, session, hourFormatter),
+        event.kind === "tool_call" && event.toolName && event.toolName.trim().length > 0 ? event.toolName : null,
       );
     }
   }

@@ -30,6 +30,7 @@ export interface DailyAggregateEntry {
   bySource: Record<string, DayStats>;
   byModel: Record<string, DayStats>;
   byRepo: Record<string, DayStats>;
+  byTool: Record<string, DayStats>;
   byHour: Record<string, DayStats>;
   byHourSource: Record<string, Record<string, DayStats>>;
   totals: DayStats;
@@ -42,13 +43,8 @@ export interface AggregationMeta {
   timeZone: string;
 }
 
-const DATA_DIR = join(homedir(), ".codex-wrapped");
-const LEGACY_DATA_DIR = join(homedir(), `.ai${"-wrapped"}`);
-const SCAN_STATE_PATH = join(DATA_DIR, "scan-state.json");
-const DAILY_PATH = join(DATA_DIR, "daily.json");
-const AGGREGATION_META_PATH = join(DATA_DIR, "aggregation-meta.json");
-const SETTINGS_PATH = join(DATA_DIR, "settings.json");
 const AGGREGATION_META_VERSION = 3;
+let dataDirOverride = Bun.env.CODEX_WRAPPED_DATA_DIR?.trim() || null;
 
 const resolveDefaultTimeZone = (): string => {
   const fallback = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -88,13 +84,38 @@ let settingsCache: AppSettings | null = null;
 
 const clone = <T>(value: T): T => structuredClone(value);
 
+const getDataDir = (): string => dataDirOverride || join(homedir(), ".codex-wrapped");
+
+const getLegacyDataDir = (): string => join(homedir(), `.ai${"-wrapped"}`);
+
+const getScanStatePath = (): string => join(getDataDir(), "scan-state.json");
+
+const getDailyPath = (): string => join(getDataDir(), "daily.json");
+
+const getAggregationMetaPath = (): string => join(getDataDir(), "aggregation-meta.json");
+
+const getSettingsPath = (): string => join(getDataDir(), "settings.json");
+
+const resetStoreCaches = (): void => {
+  scanStateCache = null;
+  dailyCache = null;
+  settingsCache = null;
+};
+
+export const setDataDirOverrideForTests = (nextPath: string | null): void => {
+  dataDirOverride = typeof nextPath === "string" && nextPath.trim().length > 0 ? nextPath.trim() : null;
+  resetStoreCaches();
+};
+
 const migrateLegacyDataDirIfNeeded = () => {
-  if (existsSync(DATA_DIR) || !existsSync(LEGACY_DATA_DIR)) {
+  const dataDir = getDataDir();
+  const legacyDataDir = getLegacyDataDir();
+  if (existsSync(dataDir) || !existsSync(legacyDataDir)) {
     return;
   }
 
   try {
-    renameSync(LEGACY_DATA_DIR, DATA_DIR);
+    renameSync(legacyDataDir, dataDir);
   } catch {
     // If migration fails (permissions/cross-device), continue with the new directory.
   }
@@ -102,7 +123,7 @@ const migrateLegacyDataDirIfNeeded = () => {
 
 const ensureDataDir = () => {
   migrateLegacyDataDirIfNeeded();
-  mkdirSync(DATA_DIR, { recursive: true });
+  mkdirSync(getDataDir(), { recursive: true });
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -210,6 +231,13 @@ const normalizeDailyStore = (value: unknown): DailyStore => {
       }
     }
 
+    const byTool: Record<string, DayStats> = {};
+    if (isRecord(rawEntry.byTool)) {
+      for (const [tool, rawStats] of Object.entries(rawEntry.byTool)) {
+        byTool[tool] = normalizeDayStats(rawStats);
+      }
+    }
+
     const byHour: Record<string, DayStats> = {};
     if (isRecord(rawEntry.byHour)) {
       for (const [hour, rawStats] of Object.entries(rawEntry.byHour)) {
@@ -232,6 +260,7 @@ const normalizeDailyStore = (value: unknown): DailyStore => {
       bySource,
       byModel,
       byRepo,
+      byTool,
       byHour,
       byHourSource,
       totals: normalizeDayStats(rawEntry.totals),
@@ -324,7 +353,7 @@ const normalizeSettings = (value: unknown): AppSettings => {
 
 export const readScanState = async (): Promise<ScanStateStore> => {
   if (scanStateCache === null) {
-    const raw = await readJson<unknown>(SCAN_STATE_PATH, {});
+    const raw = await readJson<unknown>(getScanStatePath(), {});
     scanStateCache = normalizeScanState(raw);
   }
 
@@ -333,12 +362,12 @@ export const readScanState = async (): Promise<ScanStateStore> => {
 
 export const writeScanState = async (state: ScanStateStore): Promise<void> => {
   scanStateCache = normalizeScanState(state);
-  await writeJson(SCAN_STATE_PATH, scanStateCache);
+  await writeJson(getScanStatePath(), scanStateCache);
 };
 
 export const readDailyStore = async (): Promise<DailyStore> => {
   if (dailyCache === null) {
-    const raw = await readJson<unknown>(DAILY_PATH, {});
+    const raw = await readJson<unknown>(getDailyPath(), {});
     dailyCache = normalizeDailyStore(raw);
   }
 
@@ -347,7 +376,7 @@ export const readDailyStore = async (): Promise<DailyStore> => {
 
 export const writeDailyStore = async (daily: DailyStore): Promise<void> => {
   dailyCache = normalizeDailyStore(daily);
-  await writeJson(DAILY_PATH, dailyCache);
+  await writeJson(getDailyPath(), dailyCache);
 };
 
 const rawDailyStoreHasActivity = (raw: unknown): boolean => {
@@ -370,7 +399,7 @@ const rawDailyStoreHasActivity = (raw: unknown): boolean => {
 };
 
 export const dailyStoreMissingRepoDimension = async (): Promise<boolean> => {
-  const raw = await readJson<unknown>(DAILY_PATH, {});
+  const raw = await readJson<unknown>(getDailyPath(), {});
   if (!isRecord(raw)) {
     return false;
   }
@@ -446,33 +475,33 @@ export const rawAggregationMetaNeedsTimeZoneBackfill = (
 };
 
 export const dailyStoreMissingHourDimension = async (): Promise<boolean> => {
-  const raw = await readJson<unknown>(DAILY_PATH, {});
+  const raw = await readJson<unknown>(getDailyPath(), {});
   return rawDailyStoreMissingHourDimension(raw);
 };
 
 export const dailyStoreNeedsTimeZoneBackfill = async (
   currentTimeZone: string,
 ): Promise<boolean> => {
-  const rawDaily = await readJson<unknown>(DAILY_PATH, {});
+  const rawDaily = await readJson<unknown>(getDailyPath(), {});
   if (!rawDailyStoreHasActivity(rawDaily)) {
     return false;
   }
 
-  const rawMeta = await readJson<unknown>(AGGREGATION_META_PATH, null);
+  const rawMeta = await readJson<unknown>(getAggregationMetaPath(), null);
   return rawAggregationMetaNeedsTimeZoneBackfill(rawMeta, currentTimeZone);
 };
 
 export const writeAggregationMeta = async (timeZone: string): Promise<void> => {
   const normalizedTimeZone =
     typeof timeZone === "string" && timeZone.trim().length > 0 ? timeZone.trim() : "UTC";
-  await writeJson<AggregationMeta>(AGGREGATION_META_PATH, {
+  await writeJson<AggregationMeta>(getAggregationMetaPath(), {
     version: AGGREGATION_META_VERSION,
     timeZone: normalizedTimeZone,
   });
 };
 
 export const readAggregationMeta = async (): Promise<AggregationMeta | null> => {
-  const raw = await readJson<unknown>(AGGREGATION_META_PATH, null);
+  const raw = await readJson<unknown>(getAggregationMetaPath(), null);
   return normalizeAggregationMeta(raw);
 };
 
@@ -487,7 +516,7 @@ export const readAggregationTimeZone = async (fallback = "UTC"): Promise<string>
 
 export const getSettings = async (): Promise<AppSettings> => {
   if (settingsCache === null) {
-    const raw = await readJson<unknown>(SETTINGS_PATH, DEFAULT_SETTINGS);
+    const raw = await readJson<unknown>(getSettingsPath(), DEFAULT_SETTINGS);
     settingsCache = normalizeSettings(raw);
   }
 
@@ -496,13 +525,23 @@ export const getSettings = async (): Promise<AppSettings> => {
 
 export const setSettings = async (settings: AppSettings): Promise<void> => {
   settingsCache = normalizeSettings(settings);
-  await writeJson(SETTINGS_PATH, settingsCache);
+  await writeJson(getSettingsPath(), settingsCache);
 };
 
 export const paths = {
-  dataDir: DATA_DIR,
-  scanState: SCAN_STATE_PATH,
-  daily: DAILY_PATH,
-  aggregationMeta: AGGREGATION_META_PATH,
-  settings: SETTINGS_PATH,
+  get dataDir() {
+    return getDataDir();
+  },
+  get scanState() {
+    return getScanStatePath();
+  },
+  get daily() {
+    return getDailyPath();
+  },
+  get aggregationMeta() {
+    return getAggregationMetaPath();
+  },
+  get settings() {
+    return getSettingsPath();
+  },
 };

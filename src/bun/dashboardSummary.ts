@@ -191,3 +191,16 @@ export const buildTopRepos = (
       return left.repo.localeCompare(right.repo);
     })
     .slice(0, 24);
+
+export const buildTopTools = (byToolMap: Map<string, DayStats>): DashboardSummary["topTools"] =>
+  [...byToolMap.entries()]
+    .map(([tool, stats]) => ({
+      tool,
+      count: stats.toolCalls,
+    }))
+    .filter((entry) => entry.count > 0)
+    .sort((left, right) => {
+      if (right.count !== left.count) return right.count - left.count;
+      return left.tool.localeCompare(right.tool);
+    })
+    .slice(0, 24);

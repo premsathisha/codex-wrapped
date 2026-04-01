@@ -20,6 +20,10 @@ const endpointByRequest: { [K in keyof BunRequests]: string } = {
   getTrayStats: "/api/getTrayStats",
   getSettings: "/api/getSettings",
   exportFullSharePdf: "/api/exportFullSharePdf",
+  exportBackupCsv: "/api/exportBackupCsv",
+  importBackupCsv: "/api/importBackupCsv",
+  listImportedBackups: "/api/listImportedBackups",
+  deleteImportedBackup: "/api/deleteImportedBackup",
   updateSettings: "/api/updateSettings",
 };
 
@@ -127,6 +131,23 @@ const rpc = {
     exportFullSharePdf: (params: BunRequests["exportFullSharePdf"]["params"]) =>
       postJson<typeof params, BunRequests["exportFullSharePdf"]["response"]>(
         endpointByRequest.exportFullSharePdf,
+        params,
+      ),
+    exportBackupCsv: (params: BunRequests["exportBackupCsv"]["params"]) =>
+      postJson<typeof params, BunRequests["exportBackupCsv"]["response"]>(
+        endpointByRequest.exportBackupCsv,
+        params,
+      ),
+    importBackupCsv: (params: BunRequests["importBackupCsv"]["params"]) =>
+      postJson<typeof params, BunRequests["importBackupCsv"]["response"]>(
+        endpointByRequest.importBackupCsv,
+        params,
+      ),
+    listImportedBackups: (_params: BunRequests["listImportedBackups"]["params"]) =>
+      getJson<BunRequests["listImportedBackups"]["response"]>(endpointByRequest.listImportedBackups),
+    deleteImportedBackup: (params: BunRequests["deleteImportedBackup"]["params"]) =>
+      postJson<typeof params, BunRequests["deleteImportedBackup"]["response"]>(
+        endpointByRequest.deleteImportedBackup,
         params,
       ),
     updateSettings: (params: BunRequests["updateSettings"]["params"]) =>

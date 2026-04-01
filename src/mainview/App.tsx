@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { Toaster } from "@shared/components/ui/sonner";
 import Dashboard from "./components/Dashboard";
 import { useRPC } from "./hooks/useRPC";
 
@@ -47,6 +48,7 @@ const App = () => {
   return (
     <div className="h-screen overflow-hidden bg-[var(--surface-0)] text-[var(--text-primary)]">
       <Dashboard />
+      <Toaster position="bottom-right" />
     </div>
   );
 };

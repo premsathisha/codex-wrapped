@@ -8,6 +8,35 @@ export interface AppSettings {
   customPaths: Partial<Record<SessionSource, string>>;
 }
 
+export interface ImportedBackupSummary {
+  backupId: string;
+  exportId: string;
+  originInstallId: string;
+  originalFilename: string;
+  checksum: string;
+  importedAtUtc: string;
+  coverageStartDateUtc: string | null;
+  coverageEndDateUtc: string | null;
+  earliestKnownUsageDateUtc: string | null;
+  exportTimeZone: string;
+  schemaVersion: number;
+  factCount: number;
+  isActive: boolean;
+  contributesData: boolean;
+}
+
+export interface ImportBackupResult {
+  recognized: boolean;
+  duplicate: boolean;
+  backup: ImportedBackupSummary | null;
+  activeCoverageStartDateUtc: string | null;
+  activeCoverageEndDateUtc: string | null;
+  newDateCount: number;
+  overlappingDateCount: number;
+  skippedOverlappingDates: string[];
+  message: string;
+}
+
 export type AIStatsRPC = {
   bun: {
     requests: {
@@ -38,6 +67,22 @@ export type AIStatsRPC = {
       exportFullSharePdf: {
         params: { url: string };
         response: { path: string; browser: string };
+      };
+      exportBackupCsv: {
+        params: {};
+        response: { filename: string; csv: string };
+      };
+      importBackupCsv: {
+        params: { filename: string; csv: string };
+        response: ImportBackupResult;
+      };
+      listImportedBackups: {
+        params: {};
+        response: ImportedBackupSummary[];
+      };
+      deleteImportedBackup: {
+        params: { backupId: string };
+        response: { ok: boolean };
       };
       updateSettings: {
         params: Partial<AppSettings>;

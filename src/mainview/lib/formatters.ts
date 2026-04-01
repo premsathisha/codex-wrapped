@@ -50,47 +50,6 @@ export const formatDate = (value: string | null): string => {
   }).format(parsed);
 };
 
-export const formatTime = (value: string | null): string => {
-  if (!value) return "-";
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) return value;
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(parsed));
-};
-
-export const formatDateTime = (value: string | null): string => {
-  if (!value) return "-";
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) return value;
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date(parsed));
-};
-
-export const formatRelativeTime = (value: string | null): string => {
-  if (!value) return "-";
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) return value;
-
-  const diffMs = parsed - Date.now();
-  const absMs = Math.abs(diffMs);
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-
-  const minute = 60_000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (absMs < hour) return rtf.format(Math.round(diffMs / minute), "minute");
-  if (absMs < day) return rtf.format(Math.round(diffMs / hour), "hour");
-  return rtf.format(Math.round(diffMs / day), "day");
-};
-
 export const formatDuration = (durationMs: number | null): string => {
   if (!durationMs || durationMs < 0) return "-";
 
