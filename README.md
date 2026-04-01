@@ -141,36 +141,36 @@ Codex Wrapped is local-first.
 
 ## FAQ
 
-### i have two similar repos, only one is shown, why?
+### Why Is Only One of My Similar Repositories Shown?
 
-Codex Wrapped consolidates very similar repository names to avoid duplicate-looking entries in the top repos card. It groups repo names that share meaningful tokens and keeps one canonical name for display. The UI also shows only the top 8 repos, so lower-ranked repos may not appear in that card.
+Codex Wrapped consolidates similar repository names to avoid duplicate-looking entries in the Top Repos view. It groups names that share meaningful tokens and displays one canonical name. The card also shows only the top 8 repositories, so lower-ranked entries may not appear.
 
-### how does it calculate the most active hour/week?
+### How Is Most Active Hour (or Week) Calculated?
 
-Most active hour is based on the selected date range: it sums activity by hour of day (0-23) and picks the hour with the highest token total.  
-There is currently no separate "most active week" metric; weekly patterns are shown through the heatmap and day-of-week signals (for example, busiest day-of-week and weekend share).
+Most active hour is calculated from the selected date range by summing activity per hour of day (0-23) and selecting the hour with the highest token total.  
+There is currently no separate "most active week" metric. Weekly patterns are represented through the heatmap and day-of-week indicators (for example, busiest day of week and weekend share).
 
-### what is a session?
+### What Counts as a Session?
 
-A session is one parsed Codex session record (source + session id) from your local logs. During scanning, duplicate copies of the same session id are deduplicated, and only the preferred/latest copy is used for aggregation.
+A session is one parsed Codex session record (source + session ID) from your local logs. During scanning, duplicate copies of the same session ID are deduplicated, and the preferred/latest copy is used for aggregation.
 
-### my input and output dont add up to total tokens, why?
+### Why Don’t Input and Output Tokens Add Up to Total Tokens?
 
-Total tokens include more than just input and output. Codex Wrapped totals:
+Total tokens include more than input and output. Codex Wrapped totals:
 - input tokens
 - output tokens
 - cached input/read tokens
 - cache write tokens
 - reasoning tokens
 
-So `input + output` is expected to be lower than total whenever cache or reasoning tokens are present.
+Because of this, `input + output` will be lower than total whenever cache or reasoning tokens are present.
 
-### why was my import rejected
+### Why Was My Import Rejected?
 
 Imports are validated by the backend and can be rejected when:
 - the same backup file was already imported (checksum duplicate)
 - the CSV is invalid or not a Codex Wrapped backup format/schema
-- importing it would not change what is currently shown (already represented)
+- importing it would not change what is currently shown
 - it only contains dates already covered by local data
 
 When an import is rejected, the popup message shows the backend reason directly.
