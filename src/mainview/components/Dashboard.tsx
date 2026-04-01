@@ -321,11 +321,11 @@ const Dashboard = () => {
             <section data-card-index="1" className="wrapped-card wrapped-card-hero">
               <header className="mb-6">
                 <p className="wrapped-kicker" style={{ color: themePalette.medium }}>{heroCopy.kicker}</p>
-                <h1 className="text-4xl font-semibold tracking-[-0.03em] text-white sm:text-6xl">{heroCopy.title}</h1>
-                <p className="mt-3 text-sm text-slate-200/90">
+                <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[#FAFAFA] sm:text-6xl">{heroCopy.title}</h1>
+                <p className="mt-3 text-sm text-[#A1A1A1]">
                   {formatDate(dateFrom)} - {formatDate(dateTo)}
                 </p>
-                <p className="mt-1 text-xs text-slate-400">Date buckets: {aggregationTimeZone}</p>
+                <p className="mt-1 text-xs text-[#A1A1A1]">Date buckets: {aggregationTimeZone}</p>
               </header>
 
               <StatsCards
@@ -355,9 +355,9 @@ const Dashboard = () => {
                       animate={animateCard2}
                       durationMs={CARD_ANIMATION_MS}
                       format={(value) => `${value.toFixed(1)}h`}
-                      className="mt-2 block text-4xl font-semibold text-white"
+                      className="mt-2 block text-4xl font-semibold text-[#FAFAFA]"
                     />
-                    <p className="mt-2 text-xs text-slate-300">{totalDays.toFixed(1)} total days of coding time</p>
+                    <p className="mt-2 text-xs text-[#A1A1A1]">{totalDays.toFixed(1)} total days of coding time</p>
                   </article>
 
                   <article className="wrapped-tile">
@@ -367,9 +367,9 @@ const Dashboard = () => {
                       animate={animateCard2}
                       durationMs={CARD_ANIMATION_MS}
                       format={(value) => formatDuration(Math.max(0, Math.round(value)))}
-                      className="mt-2 block text-3xl font-semibold text-white"
+                      className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
                     />
-                    <p className="mt-2 text-xs text-slate-300">Per session across the full range</p>
+                    <p className="mt-2 text-xs text-[#A1A1A1]">Per session across the full range</p>
                   </article>
 
                   <article className="wrapped-tile sm:col-span-2">
@@ -379,14 +379,14 @@ const Dashboard = () => {
                       animate={animateCard2}
                       durationMs={CARD_ANIMATION_MS}
                       format={(value) => formatDuration(Math.max(0, Math.round(value)))}
-                      className="mt-2 block text-3xl font-semibold text-white"
+                      className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
                     />
-                    <p className="mt-2 text-xs text-slate-300">Estimated from daily totals and session counts</p>
+                    <p className="mt-2 text-xs text-[#A1A1A1]">Estimated from daily totals and session counts</p>
                   </article>
 
                   <article className="wrapped-tile sm:col-span-2">
                     <p className="wrapped-label">Current Streak</p>
-                    <p className="mt-2 text-3xl font-semibold text-white">
+                    <p className="mt-2 text-3xl font-semibold text-[#FAFAFA]">
                       <AnimatedNumber
                         value={totals.currentStreakDays}
                         animate={animateCard2}
@@ -395,7 +395,7 @@ const Dashboard = () => {
                       />{" "}
                       {totals.currentStreakDays === 1 ? "day" : "days"}
                     </p>
-                    <p className="mt-2 text-xs text-slate-300">
+                    <p className="mt-2 text-xs text-[#A1A1A1]">
                       {totals.currentStreakStartDate
                         ? `Started ${formatDate(totals.currentStreakStartDate)}`
                         : "No active streak in this range"}
@@ -442,9 +442,9 @@ const Dashboard = () => {
                     animate={animateCard2}
                     durationMs={CARD_ANIMATION_MS}
                     format={(value) => `${value.toFixed(1)}%`}
-                    className="mt-4 block text-4xl font-semibold text-white"
+                    className="mt-4 block text-4xl font-semibold text-[#FAFAFA]"
                   />
-                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-300">Days with activity</p>
+                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#A1A1A1]">Days with activity</p>
                 </article>
               </div>
             </section>

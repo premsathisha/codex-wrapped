@@ -85,7 +85,7 @@ const DownloadableCard = ({ title, children }: DownloadableCardProps) => {
       await nextFrame();
 
       const imageDataUrl = await toPng(cardTarget, {
-        backgroundColor: "#1D1D1F",
+        backgroundColor: "#171717",
         cacheBust: true,
         pixelRatio: Math.max(2, window.devicePixelRatio || 1),
       });

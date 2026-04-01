@@ -280,12 +280,12 @@ const AgentPieTooltip = ({ active, payload }: AgentPieTooltipProps) => {
         </span>
         <span>{row.label}</span>
       </p>
-      <p className="mt-1 text-xs text-slate-200">Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
-      <p className="text-xs text-slate-300">
+      <p className="mt-1 text-xs text-[#A1A1A1]">Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
+      <p className="text-xs text-[#A1A1A1]">
         Sessions: {formatNumber(row.sessions)} · Token share: {row.percentage.toFixed(1)}%
       </p>
-      <p className="text-xs text-slate-300">Spend: {formatUsd(row.costUsd)}</p>
-      <p className="text-xs text-slate-400">Avg/session: {formatTokens(averageTokensPerSession)}</p>
+      <p className="text-xs text-[#A1A1A1]">Spend: {formatUsd(row.costUsd)}</p>
+      <p className="text-xs text-[#A1A1A1]">Avg/session: {formatTokens(averageTokensPerSession)}</p>
     </div>
   );
 };
@@ -297,15 +297,15 @@ const HourlyBarTooltip = ({ active, payload }: { active?: boolean; payload?: Arr
   return (
     <div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
       <p className="text-sm font-semibold text-slate-100">{row.label}</p>
-      <p className="mt-1 text-xs text-slate-200">Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
-      <p className="text-xs text-slate-300">Cost: {formatUsd(row.costUsd)}</p>
-      <p className="text-xs text-slate-300">Sessions: {formatNumber(row.sessions)}</p>
+      <p className="mt-1 text-xs text-[#A1A1A1]">Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
+      <p className="text-xs text-[#A1A1A1]">Cost: {formatUsd(row.costUsd)}</p>
+      <p className="text-xs text-[#A1A1A1]">Sessions: {formatNumber(row.sessions)}</p>
       {row.byAgent.length > 0 && (
         <div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
           {row.byAgent.map((a) => (
-            <p key={a.source} className="flex items-center justify-between gap-3 text-xs text-slate-300">
-              <span className="text-slate-300">{a.label}</span>
-              <span className="text-slate-400">{formatTokens(a.tokens)} · {formatUsd(a.costUsd)} · {formatNumber(a.sessions)}s</span>
+            <p key={a.source} className="flex items-center justify-between gap-3 text-xs text-[#A1A1A1]">
+              <span className="text-[#A1A1A1]">{a.label}</span>
+              <span className="text-[#A1A1A1]">{formatTokens(a.tokens)} · {formatUsd(a.costUsd)} · {formatNumber(a.sessions)}s</span>
             </p>
           ))}
         </div>
@@ -414,7 +414,7 @@ const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<n
 
   return (
     <div className="rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl">
-      <p className="mb-1 text-sm font-semibold text-white">{typeof label === "string" ? label : "Repository"}</p>
+      <p className="mb-1 text-sm font-semibold text-[#FAFAFA]">{typeof label === "string" ? label : "Repository"}</p>
       <p>Sessions: {formatNumber(row.sessions)}</p>
       <p>Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
       <p>Spend: {formatUsd(row.costUsd)}</p>
@@ -850,7 +850,7 @@ const DashboardCharts = ({
           </header>
 
           {modelRows.length === 0 ? (
-            <p className="text-sm text-slate-300">No model activity found in this range.</p>
+            <p className="text-sm text-[#A1A1A1]">No model activity found in this range.</p>
           ) : (
             <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
               <div className={`${chartWrapperClass} ${animateCard3 ? chartRevealClass : ""} self-center lg:-translate-x-[43px]`}>
@@ -890,7 +890,7 @@ const DashboardCharts = ({
                     className="wrapped-tile"
                     title={`${row.model}: ${formatNumber(row.tokens)} tokens (${row.percentage.toFixed(1)}%)`}
                   >
-                    <div className="flex items-center justify-between text-sm text-slate-200">
+                    <div className="flex items-center justify-between text-sm text-[#A1A1A1]">
                       <span className="truncate pr-3">{row.model}</span>
                       <span>{row.percentage.toFixed(1)}%</span>
                     </div>
@@ -900,7 +900,7 @@ const DashboardCharts = ({
                         style={{ width: `${row.percentage}%`, backgroundColor: row.color }}
                       />
                     </div>
-                    <p className="mt-2 text-xs text-slate-300">{formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
+                    <p className="mt-2 text-xs text-[#A1A1A1]">{formatTokens(row.tokens)} ({formatNumber(row.tokens)})</p>
                   </article>
                 ))}
               </div>
@@ -913,25 +913,25 @@ const DashboardCharts = ({
         <section data-card-index="5" className="wrapped-card wrapped-card-activity">
           <div className={`rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7 ${animateCard5 ? chartRevealClass : ""}`}>
             <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-              <h2 className="text-[1.9rem] font-semibold tracking-tight text-white">Codex</h2>
+              <h2 className="text-[1.9rem] font-semibold tracking-tight text-[#FAFAFA]">Codex</h2>
               <div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 sm:gap-10">
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Input Tokens</p>
-                  <p className="text-2xl font-semibold text-white">{formatTokens(inputTokens)}</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Input Tokens</p>
+                  <p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(inputTokens)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Output Tokens</p>
-                  <p className="text-2xl font-semibold text-white">{formatTokens(outputTokens)}</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Output Tokens</p>
+                  <p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(outputTokens)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Total Tokens</p>
-                  <p className="text-2xl font-semibold text-white">{formatTokens(totalTokens)}</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Total Tokens</p>
+                  <p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(totalTokens)}</p>
                 </div>
               </div>
             </div>
 
             {heatmap.length === 0 ? (
-              <p className="text-sm text-slate-300">No activity timeline available.</p>
+              <p className="text-sm text-[#A1A1A1]">No activity timeline available.</p>
             ) : (
               <>
                 <div ref={heatmapTooltipHostRef} className="relative">
@@ -947,7 +947,7 @@ const DashboardCharts = ({
                         {heatmapMonthLabels.map((month) => (
                           <span
                             key={`month-${month.weekIndex}-${month.label}`}
-                            className="absolute top-0 text-[11px] leading-none text-slate-400"
+                            className="absolute top-0 text-[11px] leading-none text-[#A1A1A1]"
                             style={{ left: month.weekIndex * (heatmapCellSizePx + HEATMAP_GAP_PX) }}
                           >
                             {month.label}
@@ -956,7 +956,7 @@ const DashboardCharts = ({
                       </div>
 
                       <div
-                        className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-slate-400"
+                        className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-[#A1A1A1]"
                         style={{ width: HEATMAP_LEFT_GUTTER_PX }}
                       >
                         {HEATMAP_WEEKDAY_LABELS.map((label, dayIndex) => (
@@ -1005,15 +1005,15 @@ const DashboardCharts = ({
                       className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl"
                       style={{ left: heatmapTooltipLeftPx, top: heatmapTooltipTopPx, transform: "translate(-50%, -100%)" }}
                     >
-                      <p className="text-sm font-semibold text-white">{formatDate(heatmapHoverState.cell.date)}</p>
-                      <p className="mt-1 text-xs text-slate-200">
+                      <p className="text-sm font-semibold text-[#FAFAFA]">{formatDate(heatmapHoverState.cell.date)}</p>
+                      <p className="mt-1 text-xs text-[#A1A1A1]">
                         Tokens: {formatTokens(heatmapHoverState.cell.tokens)} ({formatNumber(heatmapHoverState.cell.tokens)})
                       </p>
-                      <p className="text-xs text-slate-300">Sessions: {formatNumber(heatmapHoverState.cell.sessions)}</p>
-                      <p className="text-xs text-slate-300">Spend: {formatUsd(heatmapHoverState.cell.costUsd)}</p>
+                      <p className="text-xs text-[#A1A1A1]">Sessions: {formatNumber(heatmapHoverState.cell.sessions)}</p>
+                      <p className="text-xs text-[#A1A1A1]">Spend: {formatUsd(heatmapHoverState.cell.costUsd)}</p>
                       <div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
                         {heatmapTooltipAgentRows.map((entry) => (
-                          <p key={entry.label} className="flex items-center justify-between gap-2 text-xs text-slate-300">
+                          <p key={entry.label} className="flex items-center justify-between gap-2 text-xs text-[#A1A1A1]">
                             <span style={{ color: entry.color }}>{entry.label}</span>
                             <span>{formatTokens(entry.tokens)}</span>
                           </p>
@@ -1023,7 +1023,7 @@ const DashboardCharts = ({
                   )}
                 </div>
 
-                <div className="mt-4 mr-auto flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                <div className="mt-4 mr-auto flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#A1A1A1]">
                   <span>Less</span>
                   <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.less }} />
                   <span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.slightlyLess }} />
@@ -1036,25 +1036,25 @@ const DashboardCharts = ({
                 <div className="mt-6 flex flex-col gap-y-6 sm:grid sm:grid-cols-2 sm:gap-y-6 lg:flex lg:flex-row lg:items-start lg:justify-between lg:gap-y-0">
                   <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-start">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Most Used Model</p>
-                    <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                    <p className="mt-1 text-2xl font-semibold leading-tight text-[#FAFAFA]">
                       {mostUsedModel ? mostUsedModel.model : "-"}
                     </p>
                   </article>
                   <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recent Use (Last 30 Days)</p>
-                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
+                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-[#FAFAFA]">
                       {recentModelUsage ? recentModelUsage.model : "-"}
                     </p>
                   </article>
                   <article className="min-w-0 flex flex-col items-center text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Longest Streak</p>
-                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-white">
+                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-[#FAFAFA]">
                       {formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
                     </p>
                   </article>
                   <article className="min-w-0 flex flex-col items-end">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current Streak</p>
-                    <p className="mt-1 text-2xl font-semibold leading-tight text-white">
+                    <p className="mt-1 text-2xl font-semibold leading-tight text-[#FAFAFA]">
                       {formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
                     </p>
                   </article>
@@ -1081,7 +1081,7 @@ const DashboardCharts = ({
                 animate={animateCard6}
                 durationMs={CHART_ANIMATION_MS}
                 format={formatUsd}
-                className="mt-2 block text-4xl font-semibold text-white"
+                className="mt-2 block text-4xl font-semibold text-[#FAFAFA]"
               />
             </article>
             <article className="wrapped-tile">
@@ -1091,25 +1091,13 @@ const DashboardCharts = ({
                 animate={animateCard6}
                 durationMs={CHART_ANIMATION_MS}
                 format={formatUsd}
-                className="mt-2 block text-3xl font-semibold text-white"
+                className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
               />
             </article>
             <article className="wrapped-tile">
               <p className="wrapped-label">Most Expensive Day</p>
-              <p className="mt-2 text-xl font-semibold text-white">
+              <p className="mt-2 block text-3xl font-semibold text-[#FAFAFA]">
                 {selectedMostExpensiveDay ? formatShortDate(selectedMostExpensiveDay.date) : "-"}
-              </p>
-              <p className="mt-1 text-sm text-slate-300">
-                {selectedMostExpensiveDay ? (
-                  <AnimatedNumber
-                    value={selectedMostExpensiveDay.costUsd}
-                    animate={animateCard6}
-                    durationMs={CHART_ANIMATION_MS}
-                    format={formatUsd}
-                  />
-                ) : (
-                  "No cost data"
-                )}
               </p>
             </article>
           </div>
@@ -1233,14 +1221,14 @@ const DashboardCharts = ({
           </header>
 
           {topRepos.length === 0 ? (
-            <p className="text-sm text-slate-300">No repository usage found.</p>
+            <p className="text-sm text-[#A1A1A1]">No repository usage found.</p>
           ) : (
             <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
               <div className="space-y-2">
                 {topRepos.map((repo) => (
                   <article key={repo.repo} className="wrapped-tile" title={buildRepoHoverDetails(repo)}>
-                    <p className="truncate text-sm font-semibold text-white">{repo.repo}</p>
-                    <div className="mt-2 flex items-center justify-between text-xs text-slate-300">
+                    <p className="truncate text-sm font-semibold text-[#FAFAFA]">{repo.repo}</p>
+                    <div className="mt-2 flex items-center justify-between text-xs text-[#A1A1A1]">
                       <span>
                         <AnimatedNumber
                           value={repo.tokens}
@@ -1316,7 +1304,7 @@ const DashboardCharts = ({
           </header>
 
           {!hasHourlyData ? (
-            <p className="text-sm text-slate-300">No hourly activity found in this range.</p>
+            <p className="text-sm text-[#A1A1A1]">No hourly activity found in this range.</p>
           ) : (() => {
             const peakEntry = hourlyBreakdown.reduce(
               (max, entry) => (entry.tokens > max.tokens ? entry : max),
@@ -1374,8 +1362,8 @@ const DashboardCharts = ({
                 <div className="flex flex-col gap-3">
                   <article className="wrapped-tile py-6 text-left">
                     <p className="text-5xl">{personality.emoji}</p>
-                    <p className="mt-3 text-2xl font-semibold text-white">{personality.label}</p>
-                    <p className="mt-2 text-sm text-slate-300">{personality.description}</p>
+                    <p className="mt-3 text-2xl font-semibold text-[#FAFAFA]">{personality.label}</p>
+                    <p className="mt-2 text-sm text-[#A1A1A1]">{personality.description}</p>
                   </article>
 
                   <article className="wrapped-tile">
@@ -1385,16 +1373,16 @@ const DashboardCharts = ({
                       animate={animateCard8}
                       durationMs={CHART_ANIMATION_MS}
                       format={(v) => formatHourLabel(Math.round(v))}
-                      className="mt-2 block text-3xl font-semibold text-white"
+                      className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
                     />
-                    <p className="mt-1 text-xs text-slate-300">
+                    <p className="mt-1 text-xs text-[#A1A1A1]">
                       {formatTokens(peakTokens)} tokens in your busiest hour
                     </p>
                   </article>
 
                   <article className="wrapped-tile">
                     <p className="wrapped-label">Fun Stats</p>
-                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-200">
+                    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[#A1A1A1]">
                       <li>{formatNumber(nightSessions)} sessions after midnight</li>
                       <li>{weekendSessionPercent}% of coding on weekends</li>
                       {busiestDayOfWeek && <li>{busiestDayOfWeek}s are your power day</li>}

@@ -115,7 +115,7 @@ const StatsCards = ({
             format={stat.format}
             durationMs={2000}
             animate={visible && animateOnMount}
-            className="mt-2 block text-3xl font-semibold tracking-tight text-white sm:text-4xl"
+            className="mt-2 block text-3xl font-semibold tracking-tight text-[#FAFAFA] sm:text-4xl"
           />
         </article>
       ))}
