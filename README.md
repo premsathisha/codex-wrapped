@@ -8,7 +8,7 @@ Codex Wrapped is a local dashboard that summarizes your Codex activity in a Spot
 
 ## Who This Is For
 
-Codex Wrapped is for developers who use Codex through an OpenAI subscription and want a clear, visual summary of how they code over time, and it is also useful for understanding an estimate of what that usage would have cost if billed through the API.
+Codex Wrapped is for developers who use Codex through an OpenAI subscription and want a clear, visual summary of how they code over time. It also helps estimate what that usage would cost if billed through the API.
 
 ## Key Features
 
@@ -34,37 +34,20 @@ bun run build
 bun ./bin/cli.ts
 ```
 
-## For Users
-
 ## Run The App
 
-1. On macOS, preferred launcher: double-click `Open Codex Wrapped.command` in the repo root.
-   - This starts the local server and opens the app URL for you.
+1. On macOS, preferred launcher: double-click `Open Codex Wrapped.command` in the repo root to start the local server and open the app URL.
 
 2. Or start manually from Terminal:
+   - Run: `bun ./bin/cli.ts`
 
-```bash
-bun ./bin/cli.ts
-```
-
-3. Open:
-
-`http://127.0.0.1:3210`
+   - Then open: `http://127.0.0.1:3210`
 
 ## Prerequisites
 
 - Bun (latest stable)
 - macOS, Linux, or Windows
 - Local Codex history files in your home directory (`~/.codex`)
-
-## Quick Start (Source Build)
-
-```bash
-bun run build
-bun ./bin/cli.ts
-```
-
-## Build & Development
 
 ## Development
 
@@ -145,10 +128,9 @@ Codex Wrapped is local-first.
 
 Codex Wrapped consolidates similar repository names to avoid duplicate-looking entries in the Top Repos view. It groups names that share meaningful tokens and displays one canonical name. The card also shows only the top 8 repositories, so lower-ranked entries may not appear.
 
-### How Is Most Active Hour (or Week) Calculated?
+### How Are Most Active Hour and Busiest Day of Week Calculated?
 
-Most active hour is calculated from the selected date range by summing activity per hour of day (0-23) and selecting the hour with the highest token total.  
-There is currently no separate "most active week" metric. Weekly patterns are represented through the heatmap and day-of-week indicators (for example, busiest day of week and weekend share).
+Most active hour is calculated from the selected date range by summing activity per hour of day (0-23) and selecting the hour with the highest token total. Busiest day of week is calculated by summing tokens by weekday across the selected range and selecting the highest total. There is currently no separate "most active week" metric; weekly patterns are represented through the heatmap.
 
 ### What Counts as a Session?
 
