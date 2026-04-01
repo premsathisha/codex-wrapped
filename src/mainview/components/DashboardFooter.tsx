@@ -15,11 +15,11 @@ const DashboardFooter = () => {
             <p className="footer-section-label">Data</p>
             <h4>Import</h4>
             <p className="desc">
-              Load wrapped backup data from an <code>.xlsx</code> file.
+              Load wrapped backup data from a <code>.csv</code> file.
             </p>
             <div className="file-input-row">
-              <input ref={fileInputRef} id="xlsx-import" type="file" accept=".xlsx" className="sr-only" />
-              <label className="file-btn" htmlFor="xlsx-import" onClick={() => fileInputRef.current?.click()}>
+              <input ref={fileInputRef} id="csv-import" type="file" accept=".csv" className="sr-only" />
+              <label className="file-btn" htmlFor="csv-import" onClick={() => fileInputRef.current?.click()}>
                 <svg
                   width="14"
                   height="14"
@@ -37,7 +37,7 @@ const DashboardFooter = () => {
                 </svg>
                 Choose file
               </label>
-              <span className="file-tag">XLSX</span>
+              <span className="file-tag">CSV</span>
             </div>
           </div>
 
@@ -45,9 +45,9 @@ const DashboardFooter = () => {
             <p className="footer-section-label">&nbsp;</p>
             <h4>Export</h4>
             <p className="desc">
-              Download your wrapped backup as an <code>.xlsx</code> file.
+              Download your wrapped backup as a <code>.csv</code> file.
             </p>
-            <div>
+            <div className="file-input-row">
               <button type="button" className="export-btn">
                 <svg
                   width="14"
@@ -64,10 +64,9 @@ const DashboardFooter = () => {
                   <polyline points="7 10 12 15 17 10" />
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                Export (.xlsx)
+                Export
               </button>
-              <br />
-              <span className="frontend-tag">Frontend only</span>
+              <span className="file-tag">CSV</span>
             </div>
           </div>
         </div>

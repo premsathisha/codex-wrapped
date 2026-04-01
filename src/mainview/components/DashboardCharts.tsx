@@ -12,13 +12,13 @@ import {
   PieChart,
   Rectangle,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { AnimatedNumber } from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
+import { ChartContainer, ChartTooltip } from "@shared/components/ui/chart";
 import { formatDate, formatDuration, formatNumber, formatTokens, formatUsd } from "../lib/formatters";
 import { getHeatmapColor } from "../lib/heatmapColors";
 import { formatHourLabel, hasHourlyActivity } from "../lib/hourly";
@@ -62,7 +62,7 @@ interface DashboardChartsProps {
   costGroupBy: CostGroupBy;
   cardAnimations: Record<number, boolean>;
   hourlyBreakdown: HourlyDataPoint[];
-  weekendSessionPercent: number;
+  weekendTokenPercent: number;
   busiestDayOfWeek: string;
   busiestSingleDay: BusiestSingleDay | null;
 }
@@ -122,13 +122,6 @@ interface TopRepoRow {
   tokens: number;
   costUsd: number;
   durationMs: number;
-}
-
-interface ChartPlotOffset {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
 }
 
 interface CodingPersonality {
@@ -201,6 +194,40 @@ const buildHeatmap = (timeline: TimelinePoint[], dateFrom: string, dateTo: strin
   return cells;
 };
 
+const buildContinuousTimeline = (
+  timeline: TimelinePoint[],
+  dateFrom: string,
+  dateTo: string,
+): TimelinePoint[] => {
+  const byDate = new Map<string, TimelinePoint>();
+  for (const point of timeline) byDate.set(point.date, point);
+
+  const start = new Date(`${dateFrom}T00:00:00Z`);
+  const end = new Date(`${dateTo}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return [];
+
+  const rows: TimelinePoint[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    const iso = cursor.toISOString().slice(0, 10);
+    const point = byDate.get(iso);
+    rows.push(
+      point ?? {
+        date: iso,
+        sessions: 0,
+        tokens: 0,
+        costUsd: 0,
+        durationMs: 0,
+        messages: 0,
+        toolCalls: 0,
+      },
+    );
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+
+  return rows;
+};
+
 const buildHeatmapWeeks = (cells: HeatmapCell[]): HeatmapWeek[] => {
   const weeks: HeatmapWeek[] = [];
 
@@ -222,16 +249,21 @@ const buildHeatmapWeeks = (cells: HeatmapCell[]): HeatmapWeek[] => {
 const chartWrapperClass = "h-56 w-full sm:h-64";
 const chartRevealClass = "wrapped-chart-reveal";
 const CHART_ANIMATION_MS = 2000;
-const COST_LINE_FALLBACK_TOP_PX = 8;
-const COST_LINE_FALLBACK_BOTTOM_PX = 34;
 const HEATMAP_TOOLTIP_HALF_WIDTH_PX = 112;
 const HEATMAP_LEFT_GUTTER_PX = 36;
 const HEATMAP_MONTH_ROW_HEIGHT_PX = 18;
 const HEATMAP_WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 const HEATMAP_MONTH_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
 
-const formatUsdTooltip = (value: number | string | undefined) =>
-  formatUsd(typeof value === "number" ? value : Number(value ?? 0));
+const toNumericTooltipValue = (value: unknown): number => {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return Number(value);
+  if (Array.isArray(value) && value.length > 0) {
+    const first = value[0];
+    return typeof first === "number" ? first : Number(first ?? 0);
+  }
+  return Number(value ?? 0);
+};
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const BAR_FILL_TRANSITION = "fill 180ms ease-in-out";
@@ -290,7 +322,7 @@ const AgentPieTooltip = ({ active, payload }: AgentPieTooltipProps) => {
   );
 };
 
-const HourlyBarTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload?: HourlyDataPoint }> }) => {
+const HourlyTooltipCard = ({ active, payload }: { active?: boolean; payload?: Array<{ payload?: HourlyDataPoint }> }) => {
   const row = payload?.[0]?.payload;
   if (!active || !row) return null;
 
@@ -310,6 +342,41 @@ const HourlyBarTooltip = ({ active, payload }: { active?: boolean; payload?: Arr
           ))}
         </div>
       )}
+    </div>
+  );
+};
+
+const CostTooltipCard = ({
+  active,
+  label,
+  payload,
+}: {
+  active?: boolean;
+  label?: string | number;
+  payload?: Array<{ name?: string | number; value?: unknown }>;
+}) => {
+  if (!active || !label || !payload || payload.length === 0) return null;
+
+  const entries = payload
+    .map((entry) => ({
+      label: String(entry.name ?? "Cost"),
+      value: toNumericTooltipValue(entry.value),
+    }))
+    .filter((entry) => Number.isFinite(entry.value));
+
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
+      <p className="text-sm font-semibold text-[#FAFAFA]">{formatShortDate(String(label))}</p>
+      <div className="mt-1.5 space-y-1">
+        {entries.map((entry) => (
+          <p key={entry.label} className="flex items-center justify-between gap-3 text-xs text-[#A1A1A1]">
+            <span>{entry.label}</span>
+            <span>{formatUsd(entry.value)}</span>
+          </p>
+        ))}
+      </div>
     </div>
   );
 };
@@ -408,7 +475,7 @@ const buildRepoHoverDetails = (repo: TopRepoRow): string =>
     `Time active: ${formatDuration(repo.durationMs)}`,
   ].join("\n");
 
-const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<number, string>) => {
+const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<any, any>) => {
   const row = payload?.[0]?.payload as TopRepoRow | undefined;
   if (!active || !row) return null;
 
@@ -445,7 +512,7 @@ const DashboardCharts = ({
   costGroupBy,
   cardAnimations,
   hourlyBreakdown,
-  weekendSessionPercent,
+  weekendTokenPercent,
   busiestDayOfWeek,
   busiestSingleDay,
 }: DashboardChartsProps) => {
@@ -473,19 +540,20 @@ const DashboardCharts = ({
     themePalette.less,
     themePalette.none,
   ];
+  const topReposChartConfig = {
+    tokens: {
+      label: "Tokens",
+      color: themePalette.medium,
+    },
+  };
   const sourceColorMap: Record<SessionSource, string> = {
     codex: themePalette.high,
   };
   const hasHourlyData = hasHourlyActivity(hourlyBreakdown);
   const heatmapViewportRef = useRef<HTMLDivElement | null>(null);
   const heatmapTooltipHostRef = useRef<HTMLDivElement | null>(null);
-  const costChartHoverRef = useRef<HTMLDivElement | null>(null);
-  const costHoverTargetXRef = useRef<number | null>(null);
-  const costHoverAnimFrameRef = useRef<number | null>(null);
   const [heatmapTargetWidthPx, setHeatmapTargetWidthPx] = useState<number | undefined>(undefined);
   const [heatmapHoverState, setHeatmapHoverState] = useState<HeatmapHoverState | null>(null);
-  const [costHoverLineX, setCostHoverLineX] = useState<number | null>(null);
-  const [costPlotOffset, setCostPlotOffset] = useState<ChartPlotOffset | null>(null);
   const renderBarShape = useCallback(
     (props: BarShapeProps) => {
       const fill = typeof props.fill === "string" ? props.fill : themePalette.medium;
@@ -554,87 +622,6 @@ const DashboardCharts = ({
     });
   }, []);
 
-  const clearCostHoverLine = useCallback(() => {
-    costHoverTargetXRef.current = null;
-    if (costHoverAnimFrameRef.current !== null) {
-      window.cancelAnimationFrame(costHoverAnimFrameRef.current);
-      costHoverAnimFrameRef.current = null;
-    }
-    setCostHoverLineX((current) => (current === null ? current : null));
-  }, []);
-
-  const updateCostHoverLine = useCallback((event: MouseEvent<HTMLDivElement>) => {
-    const hoverHost = costChartHoverRef.current;
-    if (!hoverHost) return;
-    const rect = hoverHost.getBoundingClientRect();
-    const nextX = event.clientX - rect.left;
-    const clampedX = Math.max(0, Math.min(rect.width, nextX));
-    costHoverTargetXRef.current = clampedX;
-
-    const svg = hoverHost.querySelector("svg");
-    const clipRect = hoverHost.querySelector("svg clipPath rect");
-    if (svg instanceof SVGSVGElement && clipRect instanceof SVGRectElement) {
-      const svgRect = svg.getBoundingClientRect();
-      const x = Number(clipRect.getAttribute("x"));
-      const y = Number(clipRect.getAttribute("y"));
-      const width = Number(clipRect.getAttribute("width"));
-      const height = Number(clipRect.getAttribute("height"));
-      if ([x, y, width, height].every((value) => Number.isFinite(value))) {
-        setCostPlotOffset((current) => {
-          const next = {
-            left: svgRect.left - rect.left + x,
-            top: svgRect.top - rect.top + y,
-            width,
-            height,
-          };
-          if (
-            current &&
-            current.left === next.left &&
-            current.top === next.top &&
-            current.width === next.width &&
-            current.height === next.height
-          ) {
-            return current;
-          }
-          return next;
-        });
-      }
-    }
-
-    if (costHoverAnimFrameRef.current !== null) {
-      return;
-    }
-
-    const tick = () => {
-      const target = costHoverTargetXRef.current;
-      if (target === null) {
-        costHoverAnimFrameRef.current = null;
-        return;
-      }
-
-      setCostHoverLineX((current) => {
-        if (current === null) return target;
-        const next = current + (target - current) * 0.22;
-        if (Math.abs(target - next) < 0.1) {
-          return target;
-        }
-        return next;
-      });
-
-      costHoverAnimFrameRef.current = window.requestAnimationFrame(tick);
-    };
-
-    costHoverAnimFrameRef.current = window.requestAnimationFrame(tick);
-  }, []);
-
-  useEffect(
-    () => () => {
-      if (costHoverAnimFrameRef.current !== null) {
-        window.cancelAnimationFrame(costHoverAnimFrameRef.current);
-      }
-    },
-    [],
-  );
   const visibleModelBreakdown = modelBreakdown.filter((row) => row.model !== "<synthetic>");
   const totalModelTokens = visibleModelBreakdown.reduce((sum, row) => sum + row.tokens, 0);
   const modelRows = visibleModelBreakdown.map((row, index) => ({
@@ -733,14 +720,19 @@ const DashboardCharts = ({
     return { model: sorted[0]?.[0] ?? "-", tokens: sorted[0]?.[1] ?? 0 };
   }, [dailyModelTokensByDate, dateTo]);
 
-  const costTimeline = useMemo<TimelinePoint[]>(() => {
-    if (costAgentFilter === "all") return timeline;
+  const continuousTimeline = useMemo<TimelinePoint[]>(
+    () => buildContinuousTimeline(timeline, dateFrom, dateTo),
+    [dateFrom, dateTo, timeline],
+  );
 
-    return timeline.map((point) => ({
+  const costTimeline = useMemo<TimelinePoint[]>(() => {
+    if (costAgentFilter === "all") return continuousTimeline;
+
+    return continuousTimeline.map((point) => ({
       ...point,
       costUsd: dailyAgentCostsByDate[point.date]?.[costAgentFilter] ?? 0,
     }));
-  }, [costAgentFilter, dailyAgentCostsByDate, timeline]);
+  }, [continuousTimeline, costAgentFilter, dailyAgentCostsByDate]);
 
   const selectedTotalCostUsd =
     costAgentFilter === "all"
@@ -777,7 +769,7 @@ const DashboardCharts = ({
 
   const groupedAgentTimeline = useMemo<CostSeriesPoint[]>(
     () =>
-      timeline.map((point) => {
+      continuousTimeline.map((point) => {
         const row: CostSeriesPoint = { date: point.date };
         const bySource = dailyAgentCostsByDate[point.date] ?? {};
         const sources = costAgentFilter === "all" ? SESSION_SOURCES : [costAgentFilter];
@@ -788,7 +780,7 @@ const DashboardCharts = ({
 
         return row;
       }),
-    [costAgentFilter, dailyAgentCostsByDate, timeline],
+    [continuousTimeline, costAgentFilter, dailyAgentCostsByDate],
   );
 
   const groupedModelSeries = useMemo<Array<{ key: string; label: string; color: string }>>(() => {
@@ -813,7 +805,7 @@ const DashboardCharts = ({
 
   const groupedModelTimeline = useMemo<CostSeriesPoint[]>(
     () =>
-      timeline.map((point) => {
+      continuousTimeline.map((point) => {
         const row: CostSeriesPoint = { date: point.date };
         const byModel = dailyModelCostsByDate[point.date] ?? {};
         let topModelCostTotal = 0;
@@ -831,7 +823,7 @@ const DashboardCharts = ({
 
         return row;
       }),
-    [dailyModelCostsByDate, groupedModelSeries, timeline],
+    [continuousTimeline, dailyModelCostsByDate, groupedModelSeries],
   );
 
   const effectiveCostGroupBy =
@@ -1102,112 +1094,87 @@ const DashboardCharts = ({
             </article>
           </div>
 
-          <div
-            ref={costChartHoverRef}
-            className={`relative mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}
-            onMouseMove={updateCostHoverLine}
-            onMouseLeave={clearCostHoverLine}
-          >
-            {effectiveCostGroupBy === "none" ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={costTimeline}>
-                  <defs>
-                    <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={themePalette.high} stopOpacity={0.55} />
-                      <stop offset="100%" stopColor={themePalette.high} stopOpacity={0.08} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
-                  <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    cursor={false}
-                    contentStyle={{
-                      background: "#000000",
-                      border: "1px solid rgba(148,163,184,0.35)",
-                      borderRadius: "12px",
-                    }}
-                    formatter={formatUsdTooltip}
-                    labelFormatter={(value) => formatDate(String(value))}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="costUsd"
-                    name="Cost"
-                    stroke={themePalette.medium}
-                    fill="url(#costFill)"
-                    strokeWidth={2.5}
-                    activeDot={false}
-                    isAnimationActive={animateCard6}
-                    animationDuration={CHART_ANIMATION_MS}
-                    animationBegin={0}
-                    animationEasing="ease-in-out"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={groupedCostTimeline}>
-                  <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
-                  <XAxis dataKey="date" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    cursor={false}
-                    contentStyle={{
-                      background: "#000000",
-                      border: "1px solid rgba(148,163,184,0.35)",
-                      borderRadius: "12px",
-                    }}
-                    formatter={(value: number | string | undefined, name?: string) => [
-                      formatUsd(typeof value === "number" ? value : Number(value ?? 0)),
-                      name ?? "Cost",
-                    ]}
-                    labelFormatter={(value) => formatDate(String(value))}
-                  />
-                  {groupedCostSeries.map((series) => (
-                    <Area
-                      key={series.key}
-                      type="monotone"
-                      dataKey={series.key}
-                      name={series.label}
-                      stackId="cost"
-                      stroke={series.color}
-                      fill={series.color}
-                      fillOpacity={0.22}
-                      strokeWidth={2}
-                      activeDot={false}
-                      isAnimationActive={animateCard6}
-                      animationDuration={CHART_ANIMATION_MS}
-                      animationBegin={0}
-                      animationEasing="ease-in-out"
-                    />
-                  ))}
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-            {costHoverLineX !== null && (
-              <div
-                className="pointer-events-none absolute z-10 border-l border-white"
-                style={
-                  costPlotOffset !== null
-                    ? {
-                        left: Math.max(
-                          costPlotOffset.left,
-                          Math.min(costPlotOffset.left + costPlotOffset.width, costHoverLineX),
-                        ),
-                        top: costPlotOffset.top,
-                        height: costPlotOffset.height,
-                        borderLeftWidth: "2.5px",
-                      }
-                    : {
-                        left: costHoverLineX,
-                        top: COST_LINE_FALLBACK_TOP_PX,
-                        bottom: COST_LINE_FALLBACK_BOTTOM_PX,
-                        borderLeftWidth: "2.5px",
-                      }
-                }
-              />
-            )}
+          <div className={`relative mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}>
+                {effectiveCostGroupBy === "none" ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={costTimeline}>
+                      <defs>
+                        <linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={themePalette.high} stopOpacity={0.55} />
+                          <stop offset="100%" stopColor={themePalette.high} stopOpacity={0.08} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "#cbd5e1", fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatShortDate(String(value))}
+                        minTickGap={18}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <ChartTooltip
+                        cursor={false}
+                        wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+                        content={<CostTooltipCard />}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="costUsd"
+                        name="Cost"
+                        stroke={themePalette.medium}
+                        fill="url(#costFill)"
+                        strokeWidth={2.5}
+                        activeDot={false}
+                        isAnimationActive={animateCard6}
+                        animationDuration={CHART_ANIMATION_MS}
+                        animationBegin={0}
+                        animationEasing="ease-in-out"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={groupedCostTimeline}>
+                      <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: "#cbd5e1", fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatShortDate(String(value))}
+                        minTickGap={18}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <ChartTooltip
+                        cursor={false}
+                        wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+                        content={<CostTooltipCard />}
+                      />
+                      {groupedCostSeries.map((series) => (
+                        <Area
+                          key={series.key}
+                          type="monotone"
+                          dataKey={series.key}
+                          name={series.label}
+                          stackId="cost"
+                          stroke={series.color}
+                          fill={series.color}
+                          fillOpacity={0.22}
+                          strokeWidth={2}
+                          activeDot={false}
+                          isAnimationActive={animateCard6}
+                          animationDuration={CHART_ANIMATION_MS}
+                          animationBegin={0}
+                          animationEasing="ease-in-out"
+                        />
+                      ))}
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
           </div>
         </section>
       </DownloadableCard>
@@ -1251,45 +1218,42 @@ const DashboardCharts = ({
                 ))}
               </div>
 
-              <div className={`${chartWrapperClass} ${animateCard7 ? chartRevealClass : ""} self-center lg:-translate-x-[15px]`}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topRepos} layout="vertical" margin={{ left: 12, right: 16 }}>
-                    <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
-                    <XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                    <YAxis
-                      dataKey="repo"
-                      type="category"
-                      tick={{ fill: "#e2e8f0", fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      width={140}
-                    />
-                    <Tooltip
-                      cursor={false}
-                      contentStyle={{
-                        background: "#000000",
-                        border: "1px solid rgba(148,163,184,0.35)",
-                        borderRadius: "12px",
-                      }}
-                      content={renderTopReposTooltip}
-                    />
-                    <Bar
-                      dataKey="tokens"
-                      radius={[0, 10, 10, 0]}
-                      isAnimationActive={animateCard7}
-                      animationDuration={CHART_ANIMATION_MS}
-                      animationBegin={0}
-                      animationEasing="ease-in-out"
-                      shape={renderBarShape}
-                      activeBar={renderActiveBarShape}
-                    >
-                      {topRepos.map((repo, index) => (
-                        <Cell key={repo.repo} fill={topRepoBarColors[Math.min(index, topRepoBarColors.length - 1)]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <ChartContainer
+                config={topReposChartConfig}
+                className={`${chartWrapperClass} ${animateCard7 ? chartRevealClass : ""} self-center lg:-translate-x-[15px]`}
+              >
+                <BarChart data={topRepos} layout="vertical" margin={{ left: 12, right: 16 }}>
+                  <CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
+                  <XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                  <YAxis
+                    dataKey="repo"
+                    type="category"
+                    tick={{ fill: "#e2e8f0", fontSize: 11 }}
+                    tickLine={false}
+                    axisLine={false}
+                    width={140}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+                    content={renderTopReposTooltip}
+                  />
+                  <Bar
+                    dataKey="tokens"
+                    radius={[0, 10, 10, 0]}
+                    isAnimationActive={animateCard7}
+                    animationDuration={CHART_ANIMATION_MS}
+                    animationBegin={0}
+                    animationEasing="ease-in-out"
+                    shape={renderBarShape}
+                    activeBar={renderActiveBarShape}
+                  >
+                    {topRepos.map((repo, index) => (
+                      <Cell key={repo.repo} fill={topRepoBarColors[Math.min(index, topRepoBarColors.length - 1)]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ChartContainer>
             </div>
           )}
         </section>
@@ -1316,48 +1280,55 @@ const DashboardCharts = ({
             const nightSessions = hourlyBreakdown
               .filter((h) => h.hour >= 0 && h.hour < 6)
               .reduce((sum, h) => sum + h.sessions, 0);
+            const hourlyChartConfig = {
+              tokens: {
+                label: "Tokens",
+                color: themePalette.medium,
+              },
+            };
 
             return (
               <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-                <div className={`${chartWrapperClass} ${animateCard8 ? chartRevealClass : ""} self-center`}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={hourlyBreakdown}>
-                      <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
-                      <XAxis
-                        dataKey="label"
-                        tick={{ fill: "#cbd5e1", fontSize: 10 }}
-                        tickLine={false}
-                        axisLine={false}
-                        interval={2}
-                      />
-                      <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        content={<HourlyBarTooltip />}
-                        cursor={false}
-                        allowEscapeViewBox={{ x: true, y: true }}
-                        wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
-                      />
-                      <Bar
-                        dataKey="tokens"
-                        name="Tokens"
-                        radius={[6, 6, 0, 0]}
-                        isAnimationActive={animateCard8}
-                        animationDuration={CHART_ANIMATION_MS}
-                        animationBegin={0}
-                        animationEasing="ease-in-out"
-                        shape={renderBarShape}
-                        activeBar={renderActiveBarShape}
-                      >
-                        {hourlyBreakdown.map((row) => (
-                          <Cell
-                            key={row.hour}
-                            fill={row.hour === peakHour ? themePalette.veryHigh : themePalette.slightlyLess}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <ChartContainer
+                  config={hourlyChartConfig}
+                  className={`${chartWrapperClass} ${animateCard8 ? chartRevealClass : ""} self-center`}
+                >
+                  <BarChart data={hourlyBreakdown}>
+                    <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
+                    <XAxis
+                      dataKey="label"
+                      tick={{ fill: "#cbd5e1", fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={false}
+                      interval={2}
+                    />
+                    <YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+                    <ChartTooltip
+                      cursor={false}
+                      allowEscapeViewBox={{ x: true, y: true }}
+                      wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+                      content={<HourlyTooltipCard />}
+                    />
+                    <Bar
+                      dataKey="tokens"
+                      name="Tokens"
+                      radius={[6, 6, 0, 0]}
+                      isAnimationActive={animateCard8}
+                      animationDuration={CHART_ANIMATION_MS}
+                      animationBegin={0}
+                      animationEasing="ease-in-out"
+                      shape={renderBarShape}
+                      activeBar={renderActiveBarShape}
+                    >
+                      {hourlyBreakdown.map((row) => (
+                        <Cell
+                          key={row.hour}
+                          fill={row.hour === peakHour ? themePalette.veryHigh : themePalette.slightlyLess}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
 
                 <div className="flex flex-col gap-3">
                   <article className="wrapped-tile py-6 text-left">
@@ -1384,7 +1355,7 @@ const DashboardCharts = ({
                     <p className="wrapped-label">Fun Stats</p>
                     <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[#A1A1A1]">
                       <li>{formatNumber(nightSessions)} sessions after midnight</li>
-                      <li>{weekendSessionPercent}% of coding on weekends</li>
+                      <li>{weekendTokenPercent}% of tokens on weekends</li>
                       {busiestDayOfWeek && <li>{busiestDayOfWeek}s are your power day</li>}
                       {busiestSingleDay && (
                         <li>

@@ -50,10 +50,35 @@ const AGGREGATION_META_PATH = join(DATA_DIR, "aggregation-meta.json");
 const SETTINGS_PATH = join(DATA_DIR, "settings.json");
 const AGGREGATION_META_VERSION = 3;
 
+const resolveDefaultTimeZone = (): string => {
+  const fallback = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  try {
+    void new Intl.DateTimeFormat("en-US", { timeZone: fallback });
+    return fallback;
+  } catch {
+    return "UTC";
+  }
+};
+
+const normalizeTimeZone = (value: unknown): string => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return resolveDefaultTimeZone();
+  }
+
+  const candidate = value.trim();
+  try {
+    void new Intl.DateTimeFormat("en-US", { timeZone: candidate });
+    return candidate;
+  } catch {
+    return resolveDefaultTimeZone();
+  }
+};
+
 const DEFAULT_SETTINGS: AppSettings = {
   scanOnLaunch: true,
   scanIntervalMinutes: 5,
   theme: "system",
+  aggregationTimeZone: resolveDefaultTimeZone(),
   customPaths: {},
 };
 
@@ -292,6 +317,7 @@ const normalizeSettings = (value: unknown): AppSettings => {
       value.theme === "system" || value.theme === "light" || value.theme === "dark"
         ? value.theme
         : DEFAULT_SETTINGS.theme,
+    aggregationTimeZone: normalizeTimeZone(value.aggregationTimeZone),
     customPaths,
   };
 };

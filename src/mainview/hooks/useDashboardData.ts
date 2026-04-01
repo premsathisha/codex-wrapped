@@ -519,16 +519,16 @@ export const useDashboardData = () => {
     }));
   }, [summary]);
 
-  const weekendSessionPercent = useMemo(() => {
+  const weekendTokenPercent = useMemo(() => {
     if (timelinePoints.length === 0) return 0;
-    const total = timelinePoints.reduce((s, p) => s + p.sessions, 0);
+    const total = timelinePoints.reduce((s, p) => s + p.tokens, 0);
     if (total === 0) return 0;
     const weekendTotal = timelinePoints
       .filter((p) => {
         const day = new Date(`${p.date}T00:00:00Z`).getUTCDay();
         return day === 0 || day === 6;
       })
-      .reduce((s, p) => s + p.sessions, 0);
+      .reduce((s, p) => s + p.tokens, 0);
     return Math.round((weekendTotal / total) * 100);
   }, [timelinePoints]);
 
@@ -537,7 +537,7 @@ export const useDashboardData = () => {
     const byDay = [0, 0, 0, 0, 0, 0, 0];
     for (const p of timelinePoints) {
       const day = new Date(`${p.date}T00:00:00Z`).getUTCDay();
-      byDay[day] += p.sessions;
+      byDay[day] += p.tokens;
     }
     const maxIdx = byDay.indexOf(Math.max(...byDay));
     return DAY_NAMES[maxIdx] ?? "";
@@ -571,7 +571,7 @@ export const useDashboardData = () => {
     modelBreakdown,
     topRepos,
     hourlyBreakdown,
-    weekendSessionPercent,
+    weekendTokenPercent,
     busiestDayOfWeek,
     busiestSingleDay,
   };

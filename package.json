@@ -47,7 +47,7 @@
     "concurrently": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "recharts": "latest",
+    "recharts": "3.8.0",
     "tailwindcss": "latest",
     "typescript": "latest",
     "vite": "latest"

@@ -7,6 +7,7 @@ import Sidebar from "./Sidebar";
 import StatsCards, { AnimatedNumber } from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
 import { useDashboardData, type DashboardDateRange } from "../hooks/useDashboardData";
+import { useRPC } from "../hooks/useRPC";
 import { SOURCE_LABELS } from "../lib/constants";
 import { THEME_OPTIONS, THEME_PALETTES, type ThemeName } from "../lib/themePalettes";
 import { formatDate, formatDuration, formatNumber } from "../lib/formatters";
@@ -32,7 +33,24 @@ const isThemeName = (value: string): value is ThemeName =>
   value === "pink" ||
   value === "purple";
 
+const TIME_ZONE_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "UTC", label: "UTC" },
+  { value: "America/Los_Angeles", label: "Los Angeles" },
+  { value: "America/Denver", label: "Denver" },
+  { value: "America/Phoenix", label: "Phoenix" },
+  { value: "America/Chicago", label: "Chicago" },
+  { value: "America/New_York", label: "New York" },
+  { value: "Europe/London", label: "London" },
+  { value: "Europe/Berlin", label: "Berlin" },
+  { value: "Asia/Dubai", label: "Dubai" },
+  { value: "Asia/Kolkata", label: "Kolkata" },
+  { value: "Asia/Singapore", label: "Singapore" },
+  { value: "Asia/Tokyo", label: "Tokyo" },
+  { value: "Australia/Sydney", label: "Sydney" },
+];
+
 const Dashboard = () => {
+  const rpc = useRPC();
   const {
     dateFrom,
     dateTo,
@@ -55,7 +73,7 @@ const Dashboard = () => {
     dailyModelCostsByDate,
     dailyModelTokensByDate,
     hourlyBreakdown,
-    weekendSessionPercent,
+    weekendTokenPercent,
     busiestDayOfWeek,
     busiestSingleDay,
   } = useDashboardData();
@@ -68,6 +86,7 @@ const Dashboard = () => {
   });
   const [activeCardIndex, setActiveCardIndex] = useState<number>(1);
   const [animatingCardIndices, setAnimatingCardIndices] = useState<Record<number, boolean>>({});
+  const [isUpdatingTimeZone, setIsUpdatingTimeZone] = useState(false);
   const activeCardRef = useRef<number>(1);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const animatedCardIndicesRef = useRef<Set<number>>(new Set());
@@ -94,8 +113,8 @@ const Dashboard = () => {
     }, CARD_ANIMATION_MS);
   }, []);
 
-  const handleRangeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const next = event.target.value as DashboardDateRange;
+  const handleRangeChange = (value: string) => {
+    const next = value as DashboardDateRange;
     if (!rangeOptions.some((option) => option.value === next)) return;
     setSelectedRange(next);
   };
@@ -132,11 +151,35 @@ const Dashboard = () => {
     }
   };
 
-  const handleThemeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-    const next = event.target.value;
+  const handleThemeChange = (value: string) => {
+    const next = value;
     if (!isThemeName(next)) return;
     setSelectedTheme(next);
   };
+
+  const timeZoneOptions = useMemo(() => {
+    if (TIME_ZONE_OPTIONS.some((option) => option.value === aggregationTimeZone)) {
+      return TIME_ZONE_OPTIONS;
+    }
+    const city = aggregationTimeZone.split("/").pop()?.replaceAll("_", " ") ?? aggregationTimeZone;
+    return [{ value: aggregationTimeZone, label: city }, ...TIME_ZONE_OPTIONS];
+  }, [aggregationTimeZone]);
+
+  const handleTimeZoneChange = useCallback((value: string) => {
+    if (!value || value === aggregationTimeZone || isUpdatingTimeZone) return;
+
+    setIsUpdatingTimeZone(true);
+
+    void (async () => {
+      try {
+        await rpc.request.updateSettings({ aggregationTimeZone: value });
+        await rpc.request.triggerScan({ fullScan: false });
+        await refresh();
+      } finally {
+        setIsUpdatingTimeZone(false);
+      }
+    })();
+  }, [aggregationTimeZone, isUpdatingTimeZone, refresh, rpc]);
   const themePalette = THEME_PALETTES[selectedTheme];
 
   useEffect(() => {
@@ -230,10 +273,13 @@ const Dashboard = () => {
       selectedTheme={selectedTheme}
       themeOptions={THEME_OPTIONS}
       onThemeChange={handleThemeChange}
-      themePalette={themePalette}
       selectedRange={selectedRange}
       rangeOptions={rangeOptions}
       onRangeChange={handleRangeChange}
+      selectedTimeZone={aggregationTimeZone}
+      timeZoneOptions={timeZoneOptions}
+      onTimeZoneChange={handleTimeZoneChange}
+      timeZoneDisabled={isScanning || isUpdatingTimeZone}
       isScanning={isScanning}
     />
   );
@@ -322,10 +368,6 @@ const Dashboard = () => {
               <header className="mb-6">
                 <p className="wrapped-kicker" style={{ color: themePalette.medium }}>{heroCopy.kicker}</p>
                 <h1 className="text-4xl font-semibold tracking-[-0.03em] text-[#FAFAFA] sm:text-6xl">{heroCopy.title}</h1>
-                <p className="mt-3 text-sm text-[#A1A1A1]">
-                  {formatDate(dateFrom)} - {formatDate(dateTo)}
-                </p>
-                <p className="mt-1 text-xs text-[#A1A1A1]">Date buckets: {aggregationTimeZone}</p>
               </header>
 
               <StatsCards
@@ -472,7 +514,7 @@ const Dashboard = () => {
             costGroupBy={costGroupBy}
             cardAnimations={animatingCardIndices}
             hourlyBreakdown={hourlyBreakdown}
-            weekendSessionPercent={weekendSessionPercent}
+            weekendTokenPercent={weekendTokenPercent}
             busiestDayOfWeek={busiestDayOfWeek}
             busiestSingleDay={busiestSingleDay}
           />

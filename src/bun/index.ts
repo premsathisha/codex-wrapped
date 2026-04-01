@@ -138,7 +138,10 @@ const getDashboardSummaryFromStore = async (
   dateTo?: string,
 ): Promise<DashboardSummary> => {
   const daily = await readDailyStore();
-  const aggregationTimeZone = await readAggregationTimeZone(resolveAggregationTimeZone());
+  const settings = await getSettings();
+  const aggregationTimeZone = await readAggregationTimeZone(
+    resolveAggregationTimeZone(settings.aggregationTimeZone),
+  );
   const byAgent = createEmptyByAgent();
   const byModelMap = new Map<string, DayStats>();
   const byRepoMap = new Map<string, DayStats>();
@@ -305,7 +308,10 @@ const getSessionCountFromStore = async (): Promise<number> => {
 };
 
 const getTrayStatsFromStore = async (): Promise<TrayStats> => {
-  const aggregationTimeZone = await readAggregationTimeZone(resolveAggregationTimeZone());
+  const settings = await getSettings();
+  const aggregationTimeZone = await readAggregationTimeZone(
+    resolveAggregationTimeZone(settings.aggregationTimeZone),
+  );
   const today = toISODateInTimeZone(new Date(), aggregationTimeZone);
   const daily = await readDailyStore();
   const todayStats = daily[today]?.totals ?? createEmptyDayStats();
@@ -590,7 +596,8 @@ const runScanWithNotifications = async (fullScan = false) => {
 
   try {
     emitEvent("scanStarted", {});
-    const aggregationTimeZone = resolveAggregationTimeZone();
+    const settings = await getSettings();
+    const aggregationTimeZone = resolveAggregationTimeZone(settings.aggregationTimeZone);
     const effectiveFullScan =
       fullScan || (await dailyStoreNeedsRepoBackfill()) || (await dailyStoreMissingHourDimension());
     const result = await runScan({ fullScan: effectiveFullScan, timeZone: aggregationTimeZone });

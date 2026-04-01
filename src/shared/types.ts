@@ -4,6 +4,7 @@ export interface AppSettings {
   scanOnLaunch: boolean;
   scanIntervalMinutes: number;
   theme: "system" | "light" | "dark";
+  aggregationTimeZone: string;
   customPaths: Partial<Record<SessionSource, string>>;
 }
 
