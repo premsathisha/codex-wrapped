@@ -8,8 +8,8 @@ describe("getHeatmapColor", () => {
   });
 
   test("never uses the empty color for active days", () => {
-    expect(getHeatmapColor(THEME_PALETTES.orange, 0.01, true)).toBe(THEME_PALETTES.orange.less);
-    expect(getHeatmapColor(THEME_PALETTES.orange, 0.01, true)).not.toBe(THEME_PALETTES.orange.none);
+    expect(getHeatmapColor(THEME_PALETTES.orange, 0.000001, true)).toBe(THEME_PALETTES.orange.less);
+    expect(getHeatmapColor(THEME_PALETTES.orange, 0.000001, true)).not.toBe(THEME_PALETTES.orange.none);
   });
 
   test("keeps the brightest color for the max-intensity day", () => {
@@ -23,5 +23,13 @@ describe("getHeatmapColor", () => {
 
     expect(low).not.toBe(mid);
     expect(mid).not.toBe(high);
+  });
+
+  test("does not collapse meaningful low activity into the same low bucket", () => {
+    const low = getHeatmapColor(THEME_PALETTES.blue, 0.02, true);
+    const high = getHeatmapColor(THEME_PALETTES.blue, 1, true);
+
+    expect(low).not.toBe(THEME_PALETTES.blue.less);
+    expect(low).not.toBe(high);
   });
 });

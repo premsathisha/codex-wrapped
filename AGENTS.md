@@ -47,6 +47,7 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 4. Never mutate or delete source session logs in `~/.codex` as part of normal feature/fix work.
 5. CSV import responses are backend-driven; frontend import toasts must preserve backend `message` text (including rejection reasons like overlap/similarity/already-shown outcomes).
 6. Import feedback is shown as popup alerts (`Backup imported` success, `Import rejected` amber/error) and should display again on repeated import attempts, even when the message text is identical.
+7. CSV backup format is stable: do not change import/export schema columns, meanings, or version behavior unless a PRE explicitly defines the migration plan and schema-version strategy.
 
 ## Coding Principles
 1. Prefer small, targeted changes over broad rewrites.

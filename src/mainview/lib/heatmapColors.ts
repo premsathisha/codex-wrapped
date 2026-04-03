@@ -12,7 +12,8 @@ const HEATMAP_COLOR_STOPS: HeatmapColorStop[] = [
   { stop: 0.78, color: "high" },
   { stop: 1, color: "veryHigh" },
 ];
-const MIN_ACTIVE_COLOR_STOP = 0.04;
+const MIN_ACTIVE_COLOR_STOP = 0.005;
+const HEATMAP_INTENSITY_GAMMA = 0.6;
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 
@@ -44,6 +45,11 @@ const mixHexColors = (from: string, to: string, amount: number): string => {
   );
 };
 
+const scaleHeatmapIntensity = (intensity: number): number => {
+  if (intensity <= 0) return 0;
+  return Math.pow(clamp01(intensity), HEATMAP_INTENSITY_GAMMA);
+};
+
 export const getHeatmapColor = (
   palette: ThemePalette,
   intensity: number,
@@ -51,7 +57,7 @@ export const getHeatmapColor = (
 ): string => {
   if (!hasActivity) return palette.none;
 
-  const normalized = clamp01(intensity);
+  const normalized = scaleHeatmapIntensity(intensity);
   if (normalized <= MIN_ACTIVE_COLOR_STOP) return palette.less;
   if (normalized >= 1) return palette.veryHigh;
 

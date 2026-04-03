@@ -53,7 +53,22 @@ describe("DashboardFooter", () => {
     const alert = getImportAlertState({
       recognized: true,
       duplicate: false,
-      backup: null,
+      backup: {
+        backupId: "backup-1",
+        exportId: "export-1",
+        originInstallId: "origin-12345678",
+        originalFilename: "wrapped.csv",
+        checksum: "abcdef1234567890",
+        importedAtUtc: "2026-03-05T00:00:00.000Z",
+        coverageStartDateUtc: "2026-03-01",
+        coverageEndDateUtc: "2026-03-04",
+        earliestKnownUsageDateUtc: "2026-03-01",
+        exportTimeZone: "UTC",
+        schemaVersion: 1,
+        factCount: 12,
+        isActive: true,
+        contributesData: true,
+      },
       activeCoverageStartDateUtc: "2026-03-01",
       activeCoverageEndDateUtc: "2026-03-05",
       newDateCount: 1,
@@ -65,8 +80,41 @@ describe("DashboardFooter", () => {
     expect(alert.title).toBe("Backup imported");
     expect(alert.variant).toBe("success");
     expect(alert.description).toContain("Imported wrapped.csv and added 1 new day.");
-    expect(alert.description).toContain("1 overlapping day were skipped");
+    expect(alert.description).toContain("1 overlapping day was skipped");
     expect(alert.description).toContain("Active coverage is 2026-03-01 to 2026-03-05.");
+  });
+
+  test("returns success import alert payload for covered-day refresh imports", () => {
+    const alert = getImportAlertState({
+      recognized: true,
+      duplicate: false,
+      backup: {
+        backupId: "backup-2",
+        exportId: "export-2",
+        originInstallId: "origin-12345678",
+        originalFilename: "wrapped.csv",
+        checksum: "abcdef1234567890",
+        importedAtUtc: "2026-03-06T00:00:00.000Z",
+        coverageStartDateUtc: "2026-03-01",
+        coverageEndDateUtc: "2026-03-05",
+        earliestKnownUsageDateUtc: "2026-03-01",
+        exportTimeZone: "UTC",
+        schemaVersion: 1,
+        factCount: 12,
+        isActive: true,
+        contributesData: true,
+      },
+      activeCoverageStartDateUtc: "2026-03-01",
+      activeCoverageEndDateUtc: "2026-03-05",
+      newDateCount: 0,
+      overlappingDateCount: 0,
+      skippedOverlappingDates: [],
+      message: "Imported wrapped.csv and refreshed existing covered days.",
+    });
+
+    expect(alert.title).toBe("Backup imported");
+    expect(alert.variant).toBe("success");
+    expect(alert.description).toContain("refreshed existing covered days");
   });
 
   test("returns rejected import alert payload with backend reason", () => {

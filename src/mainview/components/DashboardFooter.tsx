@@ -36,14 +36,14 @@ export const getImportAlertState = (
   description: string;
 } => {
   const skippedMessage = importResult.overlappingDateCount > 0
-    ? ` ${importResult.overlappingDateCount} overlapping day${importResult.overlappingDateCount === 1 ? "" : "s"} were skipped because local data already covers them.`
+    ? ` ${importResult.overlappingDateCount} overlapping day${importResult.overlappingDateCount === 1 ? " was" : "s were"} skipped because local data already covers them.`
     : "";
   const coverageMessage =
     importResult.activeCoverageStartDateUtc && importResult.activeCoverageEndDateUtc
       ? ` Active coverage is ${importResult.activeCoverageStartDateUtc} to ${importResult.activeCoverageEndDateUtc}.`
       : "";
 
-  if (importResult.recognized && !importResult.duplicate && importResult.newDateCount > 0) {
+  if (importResult.recognized && !importResult.duplicate && importResult.backup) {
     return {
       title: "Backup imported",
       variant: "success",

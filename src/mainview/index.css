@@ -203,6 +203,14 @@ textarea {
   text-align: center;
 }
 
+.wrapped-card-error {
+  max-width: 48rem;
+  margin: 1.5rem auto 0;
+  align-items: stretch;
+  text-align: left;
+  padding: 2rem;
+}
+
 .wrapped-kicker {
   margin: 0;
   font-size: 0.72rem;

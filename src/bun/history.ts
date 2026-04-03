@@ -57,6 +57,7 @@ export interface ImportedBackupManifest {
   originalFilename: string;
   checksum: string;
   importedAtUtc: string;
+  exportedAtUtc: string | null;
   coverageStartDateUtc: string | null;
   coverageEndDateUtc: string | null;
   earliestKnownUsageDateUtc: string | null;
@@ -416,6 +417,7 @@ const normalizeManifestStore = (value: unknown): ImportManifestStore => {
         const originalFilename = toNullableString(backup.originalFilename);
         const checksum = toNullableString(backup.checksum);
         const importedAtUtc = normalizeIsoTimestamp(backup.importedAtUtc);
+        const exportedAtUtc = normalizeIsoTimestamp(backup.exportedAtUtc);
         const exportTimeZone = toNullableString(backup.exportTimeZone) ?? DEFAULT_EXPORT_TIME_ZONE;
         if (!backupId || !exportId || !originInstallId || !originalFilename || !checksum || !importedAtUtc) {
           return null;
@@ -428,6 +430,7 @@ const normalizeManifestStore = (value: unknown): ImportManifestStore => {
           originalFilename,
           checksum,
           importedAtUtc,
+          exportedAtUtc,
           coverageStartDateUtc: toNullableString(backup.coverageStartDateUtc),
           coverageEndDateUtc: toNullableString(backup.coverageEndDateUtc),
           earliestKnownUsageDateUtc: toNullableString(backup.earliestKnownUsageDateUtc),
@@ -603,6 +606,11 @@ const compareBackupsForRecency = (
   const rightCoverage = right.coverageEndDateUtc ?? "";
   if (leftCoverage !== rightCoverage) {
     return leftCoverage.localeCompare(rightCoverage);
+  }
+  const leftExportedAt = left.exportedAtUtc ?? left.importedAtUtc;
+  const rightExportedAt = right.exportedAtUtc ?? right.importedAtUtc;
+  if (leftExportedAt !== rightExportedAt) {
+    return leftExportedAt.localeCompare(rightExportedAt);
   }
   if (left.importedAtUtc !== right.importedAtUtc) {
     return left.importedAtUtc.localeCompare(right.importedAtUtc);
@@ -805,6 +813,12 @@ const parseCsv = (csv: string): Array<Record<string, string>> => {
 };
 
 const parseBackupCsv = (csv: string): ParsedBackupCsv => {
+  const headerLine = csv.split(/\r?\n/, 1)[0]?.replace(/^\uFEFF/, "") ?? "";
+  const header = splitCsvLine(headerLine);
+  if (header.length !== CSV_COLUMNS.length || header.some((value, index) => value !== CSV_COLUMNS[index])) {
+    throw new Error("CSV header does not match the Codex Wrapped backup format.");
+  }
+
   const rows = parseCsv(csv);
   if (rows.length === 0) {
     throw new Error("CSV is empty.");
@@ -831,32 +845,98 @@ const parseBackupCsv = (csv: string): ParsedBackupCsv => {
     throw new Error("CSV manifest is missing required metadata.");
   }
 
+  const parseStrictNumber = (
+    rawValue: string,
+    field: string,
+    rowNumber: number,
+    options: { integer?: boolean } = {},
+  ): number => {
+    const value = rawValue.trim();
+    if (value.length === 0) {
+      throw new Error(`CSV fact row ${rowNumber} is missing ${field}.`);
+    }
+
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      throw new Error(`CSV fact row ${rowNumber} has invalid ${field}.`);
+    }
+    if (parsed < 0) {
+      throw new Error(`CSV fact row ${rowNumber} has negative ${field}.`);
+    }
+    if (options.integer && !Number.isInteger(parsed)) {
+      throw new Error(`CSV fact row ${rowNumber} has non-integer ${field}.`);
+    }
+    return parsed;
+  };
+
+  const parseStrictBucketStartUtc = (rawValue: string, rowNumber: number): string => {
+    const normalized = normalizeIsoTimestamp(rawValue);
+    if (!normalized) {
+      throw new Error(`CSV fact row ${rowNumber} has invalid bucket_start_utc.`);
+    }
+
+    if (startOfUtcHour(normalized) !== normalized) {
+      throw new Error(`CSV fact row ${rowNumber} has non-hour bucket_start_utc.`);
+    }
+
+    return normalized;
+  };
+
+  const parseOptionalIsoTimestamp = (rawValue: string): string | null => {
+    const value = rawValue.trim();
+    if (value.length === 0) return null;
+    return normalizeIsoTimestamp(value);
+  };
+
   const facts: CanonicalHistoryFact[] = [];
-  for (const row of rows.slice(1)) {
+  for (let rowIndex = 1; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex] as Record<string, string>;
     if (row.record_type !== "fact") {
       continue;
     }
 
+    const rowNumber = rowIndex + 2;
+    if (row.schema_id !== CSV_SCHEMA_ID) {
+      throw new Error(`CSV fact row ${rowNumber} has invalid schema_id.`);
+    }
+    const rowSchemaVersion = Math.floor(toFiniteNumber(row.schema_version));
+    if (rowSchemaVersion !== schemaVersion) {
+      throw new Error(`CSV fact row ${rowNumber} has inconsistent schema_version.`);
+    }
+    if (row.export_id && row.export_id !== exportId) {
+      throw new Error(`CSV fact row ${rowNumber} has inconsistent export_id.`);
+    }
+    if (row.origin_install_id && row.origin_install_id !== originInstallId) {
+      throw new Error(`CSV fact row ${rowNumber} has inconsistent origin_install_id.`);
+    }
+
+    const bucketStartUtc = parseStrictBucketStartUtc(row.bucket_start_utc, rowNumber);
+    const lastSeenAtUtc = parseOptionalIsoTimestamp(row.last_seen_at_utc);
+    if (row.last_seen_at_utc.trim().length > 0 && !lastSeenAtUtc) {
+      throw new Error(`CSV fact row ${rowNumber} has invalid last_seen_at_utc.`);
+    }
+
     const fact = normalizeFact({
-      bucketStartUtc: row.bucket_start_utc,
+      bucketStartUtc,
       dimensionKind: row.dimension_kind,
       dimensionKey: row.dimension_key,
-      sessions: row.sessions,
-      messages: row.messages,
-      toolCalls: row.tool_calls,
-      inputTokens: row.input_tokens,
-      outputTokens: row.output_tokens,
-      cacheReadTokens: row.cache_read_tokens,
-      cacheWriteTokens: row.cache_write_tokens,
-      reasoningTokens: row.reasoning_tokens,
-      costUsd: row.cost_usd,
-      durationMs: row.duration_ms,
-      lastSeenAtUtc: row.last_seen_at_utc,
+      sessions: parseStrictNumber(row.sessions, "sessions", rowNumber, { integer: true }),
+      messages: parseStrictNumber(row.messages, "messages", rowNumber, { integer: true }),
+      toolCalls: parseStrictNumber(row.tool_calls, "tool_calls", rowNumber, { integer: true }),
+      inputTokens: parseStrictNumber(row.input_tokens, "input_tokens", rowNumber, { integer: true }),
+      outputTokens: parseStrictNumber(row.output_tokens, "output_tokens", rowNumber, { integer: true }),
+      cacheReadTokens: parseStrictNumber(row.cache_read_tokens, "cache_read_tokens", rowNumber, { integer: true }),
+      cacheWriteTokens: parseStrictNumber(row.cache_write_tokens, "cache_write_tokens", rowNumber, { integer: true }),
+      reasoningTokens: parseStrictNumber(row.reasoning_tokens, "reasoning_tokens", rowNumber, { integer: true }),
+      costUsd: parseStrictNumber(row.cost_usd, "cost_usd", rowNumber),
+      durationMs: parseStrictNumber(row.duration_ms, "duration_ms", rowNumber, { integer: true }),
+      lastSeenAtUtc,
     });
 
-    if (fact) {
-      facts.push(fact);
+    if (!fact) {
+      throw new Error(`CSV fact row ${rowNumber} is invalid.`);
     }
+    facts.push(fact);
   }
 
   return {
@@ -1081,6 +1161,27 @@ export const importBackupCsv = async (
     };
   }
 
+  const activeImportedBackupBeforeImport = selectLatestBackup(manifestStore.backups);
+  const staleAgainstActiveImportBeforeSimulation =
+    Boolean(activeImportedBackupBeforeImport) &&
+    parsed.originInstallId === activeImportedBackupBeforeImport?.originInstallId &&
+    parsed.exportId !== activeImportedBackupBeforeImport?.exportId &&
+    parsed.exportedAtUtc <=
+      (activeImportedBackupBeforeImport?.exportedAtUtc ?? activeImportedBackupBeforeImport?.importedAtUtc ?? "");
+  if (staleAgainstActiveImportBeforeSimulation) {
+    return {
+      recognized: true,
+      duplicate: false,
+      backup: null,
+      activeCoverageStartDateUtc: beforeSelection.coverageStartDateUtc,
+      activeCoverageEndDateUtc: beforeSelection.coverageEndDateUtc,
+      newDateCount: 0,
+      overlappingDateCount: 0,
+      skippedOverlappingDates: [],
+      message: "This backup is older than the data currently shown in Codex Wrapped. No changes were made.",
+    };
+  }
+
   const candidateBackupId = randomUUID();
   const simulatedImportFactsByBackupId = {
     ...importStore.factsByBackupId,
@@ -1095,6 +1196,7 @@ export const importBackupCsv = async (
       originalFilename: filename || "backup.csv",
       checksum,
       importedAtUtc: new Date().toISOString(),
+      exportedAtUtc: parsed.exportedAtUtc,
       coverageStartDateUtc: parsed.coverageStartDateUtc,
       coverageEndDateUtc: parsed.coverageEndDateUtc,
       earliestKnownUsageDateUtc: parsed.earliestKnownUsageDateUtc,
@@ -1126,21 +1228,59 @@ export const importBackupCsv = async (
     };
   }
 
+  const activeImportedBackup = selectLatestBackup(manifestStore.backups);
+  const activeImportedFacts = activeImportedBackup
+    ? sortFacts(importStore.factsByBackupId[activeImportedBackup.backupId] ?? [])
+    : [];
   const newDates = [...simulatedSelection.effectiveDates]
     .filter((date) => !beforeSelection.effectiveDates.has(date))
     .sort();
+  const allowSameOriginCorrectionRefresh =
+    newDates.length === 0 &&
+    Boolean(activeImportedBackup) &&
+    parsed.originInstallId === activeImportedBackup?.originInstallId &&
+    parsed.exportId !== activeImportedBackup?.exportId &&
+    parsed.exportedAtUtc > (activeImportedBackup?.exportedAtUtc ?? activeImportedBackup?.importedAtUtc ?? "") &&
+    !factsEqual(activeImportedFacts, sortFacts(parsed.facts));
+
   if (newDates.length === 0) {
-    return {
-      recognized: true,
-      duplicate: false,
-      backup: null,
-      activeCoverageStartDateUtc: beforeSelection.coverageStartDateUtc,
-      activeCoverageEndDateUtc: beforeSelection.coverageEndDateUtc,
-      newDateCount: 0,
-      overlappingDateCount: 0,
-      skippedOverlappingDates: [],
-      message: "This backup only contains dates already shown in Codex Wrapped. No changes were made.",
-    };
+    const staleAgainstActiveImport =
+      Boolean(activeImportedBackup) &&
+      parsed.originInstallId === activeImportedBackup?.originInstallId &&
+      parsed.exportedAtUtc <= (activeImportedBackup?.exportedAtUtc ?? activeImportedBackup?.importedAtUtc ?? "");
+    const staleAgainstVisibleCoverage =
+      Boolean(beforeSelection.coverageEndDateUtc && parsed.coverageEndDateUtc) &&
+      (parsed.coverageEndDateUtc as string) < (beforeSelection.coverageEndDateUtc as string);
+
+    if (allowSameOriginCorrectionRefresh) {
+      // Continue and store this import as a same-origin correction refresh.
+    } else if (staleAgainstActiveImport || staleAgainstVisibleCoverage) {
+      return {
+        recognized: true,
+        duplicate: false,
+        backup: null,
+        activeCoverageStartDateUtc: beforeSelection.coverageStartDateUtc,
+        activeCoverageEndDateUtc: beforeSelection.coverageEndDateUtc,
+        newDateCount: 0,
+        overlappingDateCount: 0,
+        skippedOverlappingDates: [],
+        message: "This backup is older than the data currently shown in Codex Wrapped. No changes were made.",
+      };
+    }
+
+    if (!allowSameOriginCorrectionRefresh) {
+      return {
+        recognized: true,
+        duplicate: false,
+        backup: null,
+        activeCoverageStartDateUtc: beforeSelection.coverageStartDateUtc,
+        activeCoverageEndDateUtc: beforeSelection.coverageEndDateUtc,
+        newDateCount: 0,
+        overlappingDateCount: 0,
+        skippedOverlappingDates: [],
+        message: "This backup only contains dates already shown in Codex Wrapped. No changes were made.",
+      };
+    }
   }
 
   const backupId = candidateBackupId;
@@ -1157,6 +1297,7 @@ export const importBackupCsv = async (
     originalFilename: filename || "backup.csv",
     checksum,
     importedAtUtc,
+    exportedAtUtc: parsed.exportedAtUtc,
     coverageStartDateUtc: parsed.coverageStartDateUtc,
     coverageEndDateUtc: parsed.coverageEndDateUtc,
     earliestKnownUsageDateUtc: parsed.earliestKnownUsageDateUtc,
@@ -1198,7 +1339,7 @@ export const importBackupCsv = async (
     message:
       newDates.length > 0
         ? `Imported ${filename || "backup.csv"} and added ${newDates.length} new day${newDates.length === 1 ? "" : "s"}.`
-        : `Imported ${filename || "backup.csv"} with no new days added.`,
+        : `Imported ${filename || "backup.csv"} and refreshed existing covered days.`,
   };
 };
 

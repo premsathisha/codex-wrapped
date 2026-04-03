@@ -391,14 +391,22 @@ const Dashboard = () => {
       <>
         <div ref={scrollRef} className="wrapped-scroll">
           {sidebar}
-          <DownloadableCard title="Unable to build wrapped view">
-            <section data-card-index="1" className="wrapped-card wrapped-card-loading">
-              <EmptyState title="Unable to build wrapped view" description={error} />
-              <button type="button" onClick={() => void refresh()} className="wrapped-button mt-4">
-                Retry
-              </button>
+          <div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
+            <section data-card-index="1" className="wrapped-card wrapped-card-loading wrapped-card-error">
+              <div className="w-full">
+                <p className="wrapped-kicker">Something Went Wrong</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#FAFAFA] sm:text-4xl">
+                  Unable to build wrapped view
+                </h1>
+                <p className="mt-3 break-words text-sm text-[#A1A1A1]">{error}</p>
+                <div className="mt-5">
+                  <button type="button" onClick={() => void refresh()} className="export-btn">
+                    Retry
+                  </button>
+                </div>
+              </div>
             </section>
-          </DownloadableCard>
+          </div>
         </div>
       </>
     );

@@ -404,7 +404,7 @@ const buildActivityTooltip = (cell: HeatmapCell, dailyAgentTokensByDate: DailyAg
     );
 
   if (lines.length === 0) {
-    lines.push(`- All agents - ${formatTokens(cell.tokens)}`);
+    lines.push(`- ${SOURCE_LABELS.codex} - ${formatTokens(cell.tokens)}`);
   }
 
   return `${formatDate(cell.date)}\n${lines.join("\n")}`;
@@ -430,9 +430,9 @@ const buildHeatmapAgentTokenRows = (
 
   return [
     {
-      label: "All agents",
+      label: SOURCE_LABELS.codex,
       tokens: cell.tokens,
-      color: "#94a3b8",
+      color: sourceColorMap.codex ?? "#60a5fa",
     },
   ];
 };
@@ -628,7 +628,8 @@ const DashboardCharts = ({
     color: modelColors[index % modelColors.length],
     percentage: totalModelTokens > 0 ? (row.tokens / totalModelTokens) * 100 : 0,
   }));
-  const chartModelRows = modelRows.slice(0, 8);
+  const topModelRows = modelRows.slice(0, 5);
+  const chartModelRows = topModelRows;
 
   const totalAgentTokens = agentBreakdown.reduce((sum, row) => sum + row.tokens, 0);
   const agentRows: AgentChartRow[] = (() => {
@@ -840,13 +841,13 @@ const DashboardCharts = ({
             </div>
           </header>
 
-          {modelRows.length === 0 ? (
+          {topModelRows.length === 0 ? (
             <p className="text-sm text-[#A1A1A1]">No model activity found in this range.</p>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-              <div className={`${chartWrapperClass} ${animateCard3 ? chartRevealClass : ""} self-center lg:-translate-x-[43px]`}>
+            <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
+              <div className={`h-72 sm:h-80 ${animateCard3 ? chartRevealClass : ""} self-center lg:-translate-x-[60px]`}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartModelRows} layout="vertical" margin={{ left: 18, right: 16 }}>
+                  <BarChart data={chartModelRows} layout="vertical" margin={{ left: 12, right: 16 }}>
                     <CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
                     <XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
                     <YAxis
@@ -855,7 +856,7 @@ const DashboardCharts = ({
                       tick={{ fill: "#e2e8f0", fontSize: 12 }}
                       tickLine={false}
                       axisLine={false}
-                      width={188}
+                      width={208}
                     />
                     <Bar
                       dataKey="tokens"
@@ -874,8 +875,8 @@ const DashboardCharts = ({
                 </ResponsiveContainer>
               </div>
 
-              <div className="space-y-2 max-h-[28rem] overflow-y-auto pr-1" data-export-expand="vertical">
-                {modelRows.map((row) => (
+              <div className="space-y-2 pr-1" data-export-expand="vertical">
+                {topModelRows.map((row) => (
                   <article
                     key={row.model}
                     className="wrapped-tile"
@@ -1026,26 +1027,26 @@ const DashboardCharts = ({
 
                 <div className="mt-6 flex flex-col gap-y-6 sm:grid sm:grid-cols-2 sm:gap-y-6 lg:flex lg:flex-row lg:items-start lg:justify-between lg:gap-y-0">
                   <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-start">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Most Used Model</p>
-                    <p className="mt-1 text-2xl font-semibold leading-tight text-[#FAFAFA]">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Most Used Model</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
                       {mostUsedModel ? mostUsedModel.model : "-"}
                     </p>
                   </article>
                   <article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Recent Use (Last 30 Days)</p>
-                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-[#FAFAFA]">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Recent Use (Last 30 Days)</p>
+                    <p className="mt-1 w-full text-center text-2xl font-semibold text-[#FAFAFA]">
                       {recentModelUsage ? recentModelUsage.model : "-"}
                     </p>
                   </article>
                   <article className="min-w-0 flex flex-col items-center text-center">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Longest Streak</p>
-                    <p className="mt-1 w-full text-center text-2xl font-semibold leading-tight text-[#FAFAFA]">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Longest Streak</p>
+                    <p className="mt-1 w-full text-center text-2xl font-semibold text-[#FAFAFA]">
                       {formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
                     </p>
                   </article>
                   <article className="min-w-0 flex flex-col items-end">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Current Streak</p>
-                    <p className="mt-1 text-2xl font-semibold leading-tight text-[#FAFAFA]">
+                    <p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Current Streak</p>
+                    <p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
                       {formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
                     </p>
                   </article>

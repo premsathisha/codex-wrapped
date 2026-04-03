@@ -103,6 +103,10 @@ bun ./bin/cli.ts --help
 6. **Pricing enrichment**: pricing is resolved locally from built-in mappings, and if a model is missing there, pricing data is fetched from [models.dev](https://models.dev) and cached for later lookups.
 7. **UI rendering**: the local Bun server serves the dashboard, and the frontend queries local RPC endpoints to render cards/charts.
 
+### CSV Schema Stability
+
+Codex Wrapped treats the backup CSV schema as stable. Import/export column layout and semantics are intentionally fixed. Any future schema change must include an explicit migration/versioning plan before implementation.
+
 ## Architecture
 
 - `bin/cli.ts` — CLI entrypoint and Bun server bootstrap

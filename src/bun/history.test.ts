@@ -91,7 +91,22 @@ describe("history import/export", () => {
 
     const result = await importBackupCsv("bad.csv", "hello,world\n1,2\n", "UTC");
     expect(result.recognized).toBe(false);
-    expect(result.message).toBe("CSV is missing the manifest row.");
+    expect(result.message).toBe("CSV header does not match the Codex Wrapped backup format.");
+  });
+
+  test("import hard-rejects CSVs with malformed numeric fact values", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts(factsForBucket("2026-03-01T08:00:00.000Z"));
+    const exported = await exportBackupCsv("UTC");
+    const malformed = exported.csv.replace(",100,25,5,0,3,1.25,60000,", ",abc,25,5,0,3,1.25,60000,");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    const result = await importBackupCsv(exported.filename, malformed, "UTC");
+
+    expect(result.recognized).toBe(false);
+    expect(result.message).toContain("invalid input_tokens");
   });
 
   test("importing the same CSV twice is a no-op", async () => {
@@ -237,6 +252,7 @@ describe("history import/export", () => {
       ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 150, costUsd: 1.5 }, "AI Wrapped"),
       ...factsForBucket("2026-03-02T08:00:00.000Z", { inputTokens: 200, costUsd: 2 }, "AI Wrapped"),
     ]);
+    await new Promise((resolve) => setTimeout(resolve, 5));
     const exportedTwo = await exportBackupCsv("UTC");
 
     const importDir = await createTempDataDir();
@@ -259,6 +275,62 @@ describe("history import/export", () => {
     const reverted = await rematerializeDailyStoreFromHistory("UTC");
     expect(reverted["2026-03-01"]?.totals.inputTokens).toBe(100);
     expect(reverted["2026-03-02"]).toBeUndefined();
+  });
+
+  test("older backup from same origin is rejected with a stale message", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }, "AI Wrapped"),
+    ]);
+    const exportedOld = await exportBackupCsv("UTC");
+
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 200, costUsd: 2 }, "AI Wrapped"),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const exportedNew = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    const first = await importBackupCsv(exportedNew.filename, exportedNew.csv, "UTC");
+    const second = await importBackupCsv(exportedOld.filename, exportedOld.csv, "UTC");
+
+    expect(first.recognized).toBe(true);
+    expect(first.duplicate).toBe(false);
+    expect(second.recognized).toBe(true);
+    expect(second.duplicate).toBe(false);
+    expect(second.message).toContain("older than the data currently shown");
+  });
+
+  test("same-origin newer backup with covered dates refreshes facts even when no new days are added", async () => {
+    const exportDir = await createTempDataDir();
+    setDataDirOverrideForTests(exportDir);
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 100, costUsd: 1 }, "AI Wrapped"),
+    ]);
+    const exportedOne = await exportBackupCsv("UTC");
+
+    await writeScanHistoryFacts([
+      ...factsForBucket("2026-03-01T08:00:00.000Z", { inputTokens: 175, costUsd: 1.75 }, "AI Wrapped"),
+    ]);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const exportedTwo = await exportBackupCsv("UTC");
+
+    const importDir = await createTempDataDir();
+    setDataDirOverrideForTests(importDir);
+    const first = await importBackupCsv(exportedOne.filename, exportedOne.csv, "UTC");
+    const second = await importBackupCsv(exportedTwo.filename, exportedTwo.csv, "UTC");
+    const daily = await rematerializeDailyStoreFromHistory("UTC");
+
+    expect(first.newDateCount).toBe(1);
+    expect(second.recognized).toBe(true);
+    expect(second.duplicate).toBe(false);
+    expect(second.backup).not.toBeNull();
+    expect(second.newDateCount).toBe(0);
+    expect(second.message).toContain("refreshed existing covered days");
+    expect(daily["2026-03-01"]?.totals.inputTokens).toBe(175);
+    expect(daily["2026-03-01"]?.totals.costUsd).toBe(1.75);
   });
 
   test("latest imported backup is the only imported base and different-machine imports do not merge", async () => {
