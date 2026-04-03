@@ -29,7 +29,11 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 - HMR mode: `bun run dev:hmr`
 - Build frontend bundle: `bun run build`
 - Typecheck: `bun run typecheck`
+- Lint: `bun run lint`
+- Format check: `bun run format:check`
+- Format (write): `bun run format`
 - Tests: `bun test`
+- Set up git hooks (pre-commit + pre-push): `bun run prepare`
 - Clean artifacts: `bun run clean`
 - Default local URL: `http://127.0.0.1:3210`
 

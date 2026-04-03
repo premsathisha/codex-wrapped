@@ -1,50 +1,64 @@
 {
-  "name": "codex-wrapped",
-  "version": "0.0.1",
-  "description": "Your year in AI — a Spotify Wrapped-style dashboard for AI coding agents",
-  "license": "MIT",
-  "keywords": ["ai", "wrapped", "codex", "stats", "dashboard"],
-  "bin": {
-    "codex-wrapped": "bin/cli.ts"
-  },
-  "files": [
-    "bin/",
-    "src/bun/",
-    "src/shared/",
-    "dist/",
-    "tsconfig.json",
-    "README.md",
-    "AGENTS.md"
-  ],
-  "scripts": {
-    "dev": "bun run build && bun --hot ./src/bun/index.ts",
-    "dev:hmr": "concurrently \"vite --port 5173\" \"VITE_DEV_SERVER_URL=http://127.0.0.1:5173 bun --hot ./src/bun/index.ts\"",
-    "build": "vite build",
-    "build:prod": "vite build",
-    "prepack": "vite build",
-    "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
-    "clean": "rm -rf dist build .electrobun"
-  },
-  "dependencies": {
-    "@base-ui/react": "^1.3.0",
-    "clsx": "^2.1.1",
-    "html-to-image": "^1.11.13",
-    "lucide-react": "^1.7.0",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.5.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "latest",
-    "@types/bun": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
-    "concurrently": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "recharts": "3.8.0",
-    "tailwindcss": "latest",
-    "typescript": "latest",
-    "vite": "latest"
-  }
+	"name": "codex-wrapped",
+	"version": "0.0.1",
+	"description": "Your year in AI — a Spotify Wrapped-style dashboard for AI coding agents",
+	"license": "MIT",
+	"keywords": [
+		"ai",
+		"wrapped",
+		"codex",
+		"stats",
+		"dashboard"
+	],
+	"bin": {
+		"codex-wrapped": "bin/cli.ts"
+	},
+	"files": [
+		"bin/",
+		"src/bun/",
+		"src/shared/",
+		"dist/",
+		"tsconfig.json",
+		"README.md",
+		"AGENTS.md"
+	],
+	"scripts": {
+		"prepare": "git config core.hooksPath .githooks || true",
+		"dev": "bun run build && bun --hot ./src/bun/index.ts",
+		"dev:hmr": "concurrently \"vite --port 5173\" \"VITE_DEV_SERVER_URL=http://127.0.0.1:5173 bun --hot ./src/bun/index.ts\"",
+		"build": "vite build",
+		"build:prod": "vite build",
+		"prepack": "vite build",
+		"typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
+		"lint": "oxlint --quiet src bin scripts",
+		"format": "biome format --write .",
+		"format:check": "bun ./scripts/git-hooks/format-check.ts",
+		"check:precommit": "bun ./scripts/git-hooks/precommit.ts",
+		"check:prepush": "bun ./scripts/git-hooks/prepush.ts",
+		"clean": "rm -rf dist build .electrobun"
+	},
+	"dependencies": {
+		"@base-ui/react": "^1.3.0",
+		"clsx": "^2.1.1",
+		"html-to-image": "^1.11.13",
+		"lucide-react": "^1.7.0",
+		"sonner": "^2.0.7",
+		"tailwind-merge": "^3.5.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.4.10",
+		"@tailwindcss/vite": "latest",
+		"@types/bun": "latest",
+		"@types/react": "latest",
+		"@types/react-dom": "latest",
+		"@vitejs/plugin-react": "latest",
+		"concurrently": "latest",
+		"oxlint": "^1.58.0",
+		"react": "latest",
+		"react-dom": "latest",
+		"recharts": "3.8.0",
+		"tailwindcss": "latest",
+		"typescript": "latest",
+		"vite": "latest"
+	}
 }

@@ -69,11 +69,40 @@ Typecheck:
 bun run typecheck
 ```
 
+Lint:
+
+```bash
+bun run lint
+```
+
+Format check:
+
+```bash
+bun run format:check
+```
+
+Format (write):
+
+```bash
+bun run format
+```
+
 Run tests:
 
 ```bash
 bun test
 ```
+
+Set up repo-managed git hooks (pre-commit + pre-push):
+
+```bash
+bun run prepare
+```
+
+Git hook behavior:
+
+- `pre-commit`: runs `typecheck`, lint + format checks on staged files, and focused tests mapped from changed files.
+- `pre-push`: runs `typecheck`, lint + format checks on files changed since upstream, and full test suite.
 
 Clean build artifacts:
 
