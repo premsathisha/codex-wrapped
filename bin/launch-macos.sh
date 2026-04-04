@@ -7,7 +7,6 @@ HOST="127.0.0.1"
 PORT="${PORT:-3210}"
 URL="http://${HOST}:${PORT}"
 LOG_FILE="${TMPDIR:-/tmp}codex-wrapped-launch.log"
-LOG_FILE="/tmp/codex-wrapped-launch.log"
 
 find_bun() {
   if [[ -n "${BUN_BIN:-}" && -x "${BUN_BIN}" ]]; then

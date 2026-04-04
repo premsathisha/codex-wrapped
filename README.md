@@ -43,6 +43,9 @@ bun ./bin/cli.ts
 
    - Then open: `http://127.0.0.1:3210`
 
+Optional branding:
+- Set `VITE_PROJECT_REPO_URL` before `bun run build` if you want the footer to show a GitHub project link.
+
 ## Prerequisites
 
 - Bun (latest stable)
