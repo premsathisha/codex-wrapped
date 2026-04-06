@@ -4,21 +4,21 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 interface IsolatedScanResult {
-  result: { scanned: number; total: number; errors: number };
-  dailyExists: boolean;
-  totalSessions: number;
+	result: { scanned: number; total: number; errors: number };
+	dailyExists: boolean;
+	totalSessions: number;
 }
 
 const tempDirs: string[] = [];
 
 const makeTempDir = (prefix: string): string => {
-  const dir = mkdtempSync(join(tmpdir(), prefix));
-  tempDirs.push(dir);
-  return dir;
+	const dir = mkdtempSync(join(tmpdir(), prefix));
+	tempDirs.push(dir);
+	return dir;
 };
 
 const runIsolatedScan = (homeDir: string, codexHome: string): IsolatedScanResult => {
-  const script = `
+	const script = `
 const { runScan } = await import("./src/bun/scan.ts");
 const result = await runScan({ fullScan: true, sources: ["codex"] });
 const dailyPath = process.env.HOME + "/.codex-wrapped/daily.json";
@@ -37,126 +37,117 @@ if (dailyExists) {
 console.log(JSON.stringify({ result, dailyExists, totalSessions }));
 `;
 
-  const command = Bun.spawnSync(["bun", "-e", script], {
-    cwd: process.cwd(),
-    env: {
-      ...process.env,
-      HOME: homeDir,
-      CODEX_HOME: codexHome,
-    },
-  });
+	const command = Bun.spawnSync(["bun", "-e", script], {
+		cwd: process.cwd(),
+		env: {
+			...process.env,
+			HOME: homeDir,
+			CODEX_HOME: codexHome,
+		},
+	});
 
-  expect(command.exitCode).toBe(0);
-  const stdout = new TextDecoder().decode(command.stdout).trim();
-  return JSON.parse(stdout) as IsolatedScanResult;
+	expect(command.exitCode).toBe(0);
+	const stdout = new TextDecoder().decode(command.stdout).trim();
+	return JSON.parse(stdout) as IsolatedScanResult;
 };
 
 const writeGoodCodexSession = (filePath: string, sessionId: string) => {
-  const goodContent = `${JSON.stringify({
-    timestamp: "2026-03-12T00:00:00.000Z",
-    type: "session_meta",
-    payload: {
-      id: sessionId,
-      cwd: "/tmp/project",
-      model_provider: "gpt-5",
-    },
-  })}\n`;
-  writeFileSync(filePath, goodContent, "utf8");
+	const goodContent = `${JSON.stringify({
+		timestamp: "2026-03-12T00:00:00.000Z",
+		type: "session_meta",
+		payload: {
+			id: sessionId,
+			cwd: "/tmp/project",
+			model_provider: "gpt-5",
+		},
+	})}\n`;
+	writeFileSync(filePath, goodContent, "utf8");
 };
 
 const writeBadCodexSession = (filePath: string) => {
-  writeFileSync(filePath, "{bad json\n", "utf8");
+	writeFileSync(filePath, "{bad json\n", "utf8");
 };
 
 describe("runScan parse error resilience", () => {
-  afterEach(() => {
-    for (const dir of tempDirs.splice(0)) {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+	afterEach(() => {
+		for (const dir of tempDirs.splice(0)) {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 
-  test("persists partial rebuild when at least one session parses", () => {
-    const homeDir = makeTempDir("codexwrapped-home-");
-    const codexHome = makeTempDir("codexwrapped-codex-");
+	test("persists partial rebuild when at least one session parses", () => {
+		const homeDir = makeTempDir("codexwrapped-home-");
+		const codexHome = makeTempDir("codexwrapped-codex-");
 
-    const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
-    mkdirSync(sessionsDir, { recursive: true });
+		const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
+		mkdirSync(sessionsDir, { recursive: true });
 
-    writeGoodCodexSession(join(sessionsDir, "rollout-2026-03-12T00-00-00-good.jsonl"), "session-good");
-    writeBadCodexSession(join(sessionsDir, "rollout-2026-03-12T00-00-01-bad.jsonl"));
+		writeGoodCodexSession(join(sessionsDir, "rollout-2026-03-12T00-00-00-good.jsonl"), "session-good");
+		writeBadCodexSession(join(sessionsDir, "rollout-2026-03-12T00-00-01-bad.jsonl"));
 
-    const run = runIsolatedScan(homeDir, codexHome);
-    expect(run.result.errors).toBe(1);
-    expect(run.result.scanned).toBe(1);
-    expect(run.dailyExists).toBe(true);
-    expect(run.totalSessions).toBe(1);
-  });
+		const run = runIsolatedScan(homeDir, codexHome);
+		expect(run.result.errors).toBe(1);
+		expect(run.result.scanned).toBe(1);
+		expect(run.dailyExists).toBe(true);
+		expect(run.totalSessions).toBe(1);
+	});
 
-  test("keeps previous aggregates when all parses fail", () => {
-    const homeDir = makeTempDir("codexwrapped-home-");
-    const codexHome = makeTempDir("codexwrapped-codex-");
+	test("keeps previous aggregates when all parses fail", () => {
+		const homeDir = makeTempDir("codexwrapped-home-");
+		const codexHome = makeTempDir("codexwrapped-codex-");
 
-    const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
-    mkdirSync(sessionsDir, { recursive: true });
+		const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
+		mkdirSync(sessionsDir, { recursive: true });
 
-    const sessionPath = join(sessionsDir, "rollout-2026-03-12T00-00-00-good.jsonl");
-    writeGoodCodexSession(sessionPath, "session-initial");
+		const sessionPath = join(sessionsDir, "rollout-2026-03-12T00-00-00-good.jsonl");
+		writeGoodCodexSession(sessionPath, "session-initial");
 
-    const first = runIsolatedScan(homeDir, codexHome);
-    expect(first.dailyExists).toBe(true);
-    expect(first.totalSessions).toBe(1);
+		const first = runIsolatedScan(homeDir, codexHome);
+		expect(first.dailyExists).toBe(true);
+		expect(first.totalSessions).toBe(1);
 
-    writeBadCodexSession(sessionPath);
+		writeBadCodexSession(sessionPath);
 
-    const second = runIsolatedScan(homeDir, codexHome);
-    expect(second.result.errors).toBe(1);
-    expect(second.result.scanned).toBe(0);
-    expect(second.dailyExists).toBe(true);
-    expect(second.totalSessions).toBe(1);
-  });
+		const second = runIsolatedScan(homeDir, codexHome);
+		expect(second.result.errors).toBe(1);
+		expect(second.result.scanned).toBe(0);
+		expect(second.dailyExists).toBe(true);
+		expect(second.totalSessions).toBe(1);
+	});
 
-  test("discovers sessions from archived Codex logs", () => {
-    const homeDir = makeTempDir("codexwrapped-home-");
-    const codexHome = makeTempDir("codexwrapped-codex-");
+	test("discovers sessions from archived Codex logs", () => {
+		const homeDir = makeTempDir("codexwrapped-home-");
+		const codexHome = makeTempDir("codexwrapped-codex-");
 
-    const archivedDir = join(codexHome, "archived_sessions");
-    mkdirSync(archivedDir, { recursive: true });
+		const archivedDir = join(codexHome, "archived_sessions");
+		mkdirSync(archivedDir, { recursive: true });
 
-    writeGoodCodexSession(
-      join(archivedDir, "rollout-2026-03-12T00-00-00-archived.jsonl"),
-      "session-archived",
-    );
+		writeGoodCodexSession(join(archivedDir, "rollout-2026-03-12T00-00-00-archived.jsonl"), "session-archived");
 
-    const run = runIsolatedScan(homeDir, codexHome);
-    expect(run.result.errors).toBe(0);
-    expect(run.result.scanned).toBe(1);
-    expect(run.dailyExists).toBe(true);
-    expect(run.totalSessions).toBe(1);
-  });
+		const run = runIsolatedScan(homeDir, codexHome);
+		expect(run.result.errors).toBe(0);
+		expect(run.result.scanned).toBe(1);
+		expect(run.dailyExists).toBe(true);
+		expect(run.totalSessions).toBe(1);
+	});
 
-  test("deduplicates sessions copied across active and archived logs", () => {
-    const homeDir = makeTempDir("codexwrapped-home-");
-    const codexHome = makeTempDir("codexwrapped-codex-");
+	test("deduplicates sessions copied across active and archived logs", () => {
+		const homeDir = makeTempDir("codexwrapped-home-");
+		const codexHome = makeTempDir("codexwrapped-codex-");
 
-    const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
-    const archivedDir = join(codexHome, "archived_sessions");
-    mkdirSync(sessionsDir, { recursive: true });
-    mkdirSync(archivedDir, { recursive: true });
+		const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
+		const archivedDir = join(codexHome, "archived_sessions");
+		mkdirSync(sessionsDir, { recursive: true });
+		mkdirSync(archivedDir, { recursive: true });
 
-    writeGoodCodexSession(
-      join(sessionsDir, "rollout-2026-03-12T00-00-00-duplicate.jsonl"),
-      "session-duplicate",
-    );
-    writeGoodCodexSession(
-      join(archivedDir, "rollout-2026-03-12T00-00-00-duplicate-copy.jsonl"),
-      "session-duplicate",
-    );
+		writeGoodCodexSession(join(sessionsDir, "rollout-2026-03-12T00-00-00-duplicate.jsonl"), "session-duplicate");
+		writeGoodCodexSession(join(archivedDir, "rollout-2026-03-12T00-00-00-duplicate-copy.jsonl"), "session-duplicate");
 
-    const run = runIsolatedScan(homeDir, codexHome);
-    expect(run.result.errors).toBe(0);
-    expect(run.result.total).toBe(2);
-    expect(run.result.scanned).toBe(2);
-    expect(run.dailyExists).toBe(true);
-    expect(run.totalSessions).toBe(1);
-  });
+		const run = runIsolatedScan(homeDir, codexHome);
+		expect(run.result.errors).toBe(0);
+		expect(run.result.total).toBe(2);
+		expect(run.result.scanned).toBe(1);
+		expect(run.dailyExists).toBe(true);
+		expect(run.totalSessions).toBe(1);
+	});
 });

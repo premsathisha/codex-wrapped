@@ -106,7 +106,7 @@ interface CodingPersonality {
 }
 
 const classifyCodingPersonality = (peakHour: number): CodingPersonality => {
-	if (peakHour >= 22 || peakHour <= 3) {
+	if (peakHour >= 22 || peakHour <= 4) {
 		return { label: "Night Owl", emoji: "\uD83E\uDD89", description: "You do your best work when the world sleeps." };
 	}
 	if (peakHour <= 8) {
@@ -469,9 +469,9 @@ const DashboardCharts = ({
 		themePalette.medium,
 		themePalette.slightlyLess,
 		themePalette.less,
-		themePalette.slightlyLess,
-		themePalette.medium,
-		themePalette.high,
+		lightenHexColor(themePalette.less, 0.18),
+		lightenHexColor(themePalette.slightlyLess, 0.24),
+		lightenHexColor(themePalette.medium, 0.3),
 	];
 	const topRepoBarColors = [
 		themePalette.veryHigh,
@@ -479,7 +479,9 @@ const DashboardCharts = ({
 		themePalette.medium,
 		themePalette.slightlyLess,
 		themePalette.less,
-		themePalette.none,
+		lightenHexColor(themePalette.less, 0.18),
+		lightenHexColor(themePalette.slightlyLess, 0.24),
+		lightenHexColor(themePalette.medium, 0.3),
 	];
 	const topReposChartConfig = {
 		tokens: {

@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DashboardSummary, DailyAggregate, SessionSource, TokenUsage } from "@shared/schema";
 import { SESSION_SOURCES } from "@shared/schema";
 import {
-  calculateCurrentStreakFromDates,
-  calculateLongestStreakFromDates,
-  shiftISODate,
-  toISODateInTimeZone,
+	calculateCurrentStreakFromDates,
+	calculateLongestStreakFromDates,
+	shiftISODate,
+	toISODateInTimeZone,
 } from "@shared/localDate";
 import { SOURCE_LABELS } from "../lib/constants";
 import { hasTimelineActivity } from "../lib/activity";
@@ -16,10 +16,10 @@ import { rpcRequest, useRPC } from "./useRPC";
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const MIN_SELECTABLE_YEAR = 2024;
 const LOOKBACK_DAYS_BY_RANGE = {
-  last7: 7,
-  last30: 30,
-  last90: 90,
-  last365: 365,
+	last7: 7,
+	last30: 30,
+	last90: 90,
+	last365: 365,
 } as const;
 
 const resolveClientTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -27,135 +27,128 @@ const resolveClientTimeZone = (): string => Intl.DateTimeFormat().resolvedOption
 const todayISO = (timeZone: string, now = new Date()): string => toISODateInTimeZone(now, timeZone);
 
 const tokenTotal = (tokens: TokenUsage): number =>
-  tokens.inputTokens +
-  tokens.outputTokens +
-  tokens.cacheReadTokens +
-  tokens.cacheWriteTokens +
-  tokens.reasoningTokens;
+	tokens.inputTokens + tokens.outputTokens + tokens.cacheReadTokens + tokens.cacheWriteTokens + tokens.reasoningTokens;
 
 const rangeLengthDays = (dateFrom: string, dateTo: string): number => {
-  const from = Date.parse(`${dateFrom}T00:00:00Z`);
-  const to = Date.parse(`${dateTo}T00:00:00Z`);
-  if (Number.isNaN(from) || Number.isNaN(to) || to < from) return 0;
-  return Math.floor((to - from) / ONE_DAY_MS) + 1;
+	const from = Date.parse(`${dateFrom}T00:00:00Z`);
+	const to = Date.parse(`${dateTo}T00:00:00Z`);
+	if (Number.isNaN(from) || Number.isNaN(to) || to < from) return 0;
+	return Math.floor((to - from) / ONE_DAY_MS) + 1;
 };
 
 export const getCurrentYearInTimeZone = (timeZone: string, now = new Date()): number => {
-  const isoDate = todayISO(timeZone, now);
-  const parsed = Number(isoDate.slice(0, 4));
-  return Number.isInteger(parsed) ? parsed : now.getUTCFullYear();
+	const isoDate = todayISO(timeZone, now);
+	const parsed = Number(isoDate.slice(0, 4));
+	return Number.isInteger(parsed) ? parsed : now.getUTCFullYear();
 };
 
 type LookbackRange = keyof typeof LOOKBACK_DAYS_BY_RANGE;
 export type DashboardDateRange = LookbackRange | `year:${number}`;
 
 export interface DashboardDateRangeOption {
-  value: DashboardDateRange;
-  label: string;
+	value: DashboardDateRange;
+	label: string;
 }
 
 const parseYearSelection = (selection: DashboardDateRange): number | null => {
-  if (!selection.startsWith("year:")) return null;
-  const parsed = Number(selection.slice(5));
-  return Number.isInteger(parsed) ? parsed : null;
+	if (!selection.startsWith("year:")) return null;
+	const parsed = Number(selection.slice(5));
+	return Number.isInteger(parsed) ? parsed : null;
 };
 
-export const buildRangeOptions = (
-  timeZone: string,
-  now = new Date(),
-): DashboardDateRangeOption[] => {
-  const thisYear = getCurrentYearInTimeZone(timeZone, now);
-  const options: DashboardDateRangeOption[] = [
-    { value: "last7", label: "Last 7 days" },
-    { value: "last30", label: "Last 30 days" },
-    { value: "last90", label: "Last 90 days" },
-    { value: "last365", label: "Last 365 days" },
-  ];
-  for (let year = thisYear; year >= MIN_SELECTABLE_YEAR; year -= 1) {
-    options.push({
-      value: `year:${year}` as DashboardDateRange,
-      label: year === thisYear ? `${year} (Current year)` : String(year),
-    });
-  }
-  return options;
+export const buildRangeOptions = (timeZone: string, now = new Date()): DashboardDateRangeOption[] => {
+	const thisYear = getCurrentYearInTimeZone(timeZone, now);
+	const options: DashboardDateRangeOption[] = [
+		{ value: "last7", label: "Last 7 days" },
+		{ value: "last30", label: "Last 30 days" },
+		{ value: "last90", label: "Last 90 days" },
+		{ value: "last365", label: "Last 365 days" },
+	];
+	for (let year = thisYear; year >= MIN_SELECTABLE_YEAR; year -= 1) {
+		options.push({
+			value: `year:${year}` as DashboardDateRange,
+			label: year === thisYear ? `${year} (Current year)` : String(year),
+		});
+	}
+	return options;
 };
 
 export const resolveDateRange = (
-  selection: DashboardDateRange,
-  timeZone: string,
-  now = new Date(),
+	selection: DashboardDateRange,
+	timeZone: string,
+	now = new Date(),
 ): { dateFrom: string; dateTo: string } => {
-  const today = todayISO(timeZone, now);
-  const currentYear = getCurrentYearInTimeZone(timeZone, now);
-  const lookbackDays = LOOKBACK_DAYS_BY_RANGE[selection as LookbackRange];
-  if (typeof lookbackDays === "number") {
-    return {
-      dateFrom: shiftISODate(today, -(lookbackDays - 1)),
-      dateTo: today,
-    };
-  }
+	const today = todayISO(timeZone, now);
+	const currentYear = getCurrentYearInTimeZone(timeZone, now);
+	const lookbackDays = LOOKBACK_DAYS_BY_RANGE[selection as LookbackRange];
+	if (typeof lookbackDays === "number") {
+		return {
+			dateFrom: shiftISODate(today, -(lookbackDays - 1)),
+			dateTo: today,
+		};
+	}
 
-  const selectedYear = parseYearSelection(selection);
+	const selectedYear = parseYearSelection(selection);
 
-  if (selectedYear === null) {
-    return {
-      dateFrom: shiftISODate(today, -364),
-      dateTo: today,
-    };
-  }
+	if (selectedYear === null) {
+		return {
+			dateFrom: shiftISODate(today, -364),
+			dateTo: today,
+		};
+	}
 
-  return {
-    dateFrom: `${selectedYear}-01-01`,
-    dateTo: selectedYear === currentYear ? today : `${selectedYear}-12-31`,
-  };
+	return {
+		dateFrom: `${selectedYear}-01-01`,
+		dateTo: selectedYear === currentYear ? today : `${selectedYear}-12-31`,
+	};
 };
 
 export interface TimelinePoint {
-  date: string;
-  sessions: number;
-  tokens: number;
-  costUsd: number;
-  durationMs: number;
-  messages: number;
-  toolCalls: number;
+	date: string;
+	sessions: number;
+	tokens: number;
+	costUsd: number;
+	durationMs: number;
+	messages: number;
+	toolCalls: number;
 }
 
 export interface AgentBreakdown {
-  source: SessionSource;
-  label: string;
-  sessions: number;
-  tokens: number;
-  costUsd: number;
+	source: SessionSource;
+	label: string;
+	sessions: number;
+	tokens: number;
+	costUsd: number;
 }
 
 export interface ModelBreakdown {
-  model: string;
-  sessions: number;
-  tokens: number;
-  costUsd: number;
+	model: string;
+	sessions: number;
+	tokens: number;
+	costUsd: number;
 }
 
 export interface HourlyAgentDataPoint {
-  source: SessionSource;
-  label: string;
-  sessions: number;
-  tokens: number;
-  costUsd: number;
+	source: SessionSource;
+	label: string;
+	sessions: number;
+	tokens: number;
+	costUsd: number;
 }
 
 export interface HourlyDataPoint {
-  hour: number;
-  label: string;
-  sessions: number;
-  tokens: number;
-  costUsd: number;
-  durationMs: number;
-  byAgent: HourlyAgentDataPoint[];
+	hour: number;
+	label: string;
+	sessions: number;
+	tokens: number;
+	costUsd: number;
+	durationMs: number;
+	byAgent: HourlyAgentDataPoint[];
 }
 
 export interface BusiestSingleDay {
-  date: string;
-  tokens: number;
+	date: string;
+	tokens: number;
 }
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
@@ -166,413 +159,401 @@ export type DailyModelCostsByDate = Record<string, Record<string, number>>;
 export type DailyModelTokensByDate = Record<string, Record<string, number>>;
 
 export interface DashboardTotals {
-  totalSessions: number;
-  totalTokens: number;
-  totalCostUsd: number;
-  totalDurationMs: number;
-  averageSessionDurationMs: number;
-  longestSessionEstimateMs: number;
-  activeDays: number;
-  currentStreakDays: number;
-  longestStreakDays: number;
-  currentStreakStartDate: string | null;
-  dateSpanDays: number;
-  dailyAverageCostUsd: number;
-  mostExpensiveDay: TimelinePoint | null;
+	totalSessions: number;
+	totalTokens: number;
+	totalCostUsd: number;
+	totalDurationMs: number;
+	averageSessionDurationMs: number;
+	longestSessionDurationMs: number;
+	activeDays: number;
+	currentStreakDays: number;
+	longestStreakDays: number;
+	currentStreakStartDate: string | null;
+	dateSpanDays: number;
+	dailyAverageCostUsd: number;
+	mostExpensiveDay: TimelinePoint | null;
 }
 
 const emptyTotals: DashboardTotals = {
-  totalSessions: 0,
-  totalTokens: 0,
-  totalCostUsd: 0,
-  totalDurationMs: 0,
-  averageSessionDurationMs: 0,
-  longestSessionEstimateMs: 0,
-  activeDays: 0,
-  currentStreakDays: 0,
-  longestStreakDays: 0,
-  currentStreakStartDate: null,
-  dateSpanDays: 0,
-  dailyAverageCostUsd: 0,
-  mostExpensiveDay: null,
+	totalSessions: 0,
+	totalTokens: 0,
+	totalCostUsd: 0,
+	totalDurationMs: 0,
+	averageSessionDurationMs: 0,
+	longestSessionDurationMs: 0,
+	activeDays: 0,
+	currentStreakDays: 0,
+	longestStreakDays: 0,
+	currentStreakStartDate: null,
+	dateSpanDays: 0,
+	dailyAverageCostUsd: 0,
+	mostExpensiveDay: null,
 };
 
 const createEmptySourceTokenMap = (): Record<SessionSource, number> => ({
-  codex: 0,
+	codex: 0,
 });
 
 const createEmptySourceCostMap = (): Record<SessionSource, number> => ({
-  codex: 0,
+	codex: 0,
 });
 
 const buildDailyAgentTokensByDate = (
-  rowsBySource: Array<{ source: SessionSource; rows: DailyAggregate[] }>,
+	rowsBySource: Array<{ source: SessionSource; rows: DailyAggregate[] }>,
 ): DailyAgentTokensByDate => {
-  const byDate: DailyAgentTokensByDate = {};
+	const byDate: DailyAgentTokensByDate = {};
 
-  for (const { source, rows } of rowsBySource) {
-    for (const row of rows) {
-      const current = byDate[row.date] ?? createEmptySourceTokenMap();
-      current[source] = tokenTotal(row.tokens);
-      byDate[row.date] = current;
-    }
-  }
+	for (const { source, rows } of rowsBySource) {
+		for (const row of rows) {
+			const current = byDate[row.date] ?? createEmptySourceTokenMap();
+			current[source] = tokenTotal(row.tokens);
+			byDate[row.date] = current;
+		}
+	}
 
-  return byDate;
+	return byDate;
 };
 
 const buildDailyAgentCostsByDate = (
-  rowsBySource: Array<{ source: SessionSource; rows: DailyAggregate[] }>,
+	rowsBySource: Array<{ source: SessionSource; rows: DailyAggregate[] }>,
 ): DailyAgentCostsByDate => {
-  const byDate: DailyAgentCostsByDate = {};
+	const byDate: DailyAgentCostsByDate = {};
 
-  for (const { source, rows } of rowsBySource) {
-    for (const row of rows) {
-      const current = byDate[row.date] ?? createEmptySourceCostMap();
-      current[source] = row.costUsd;
-      byDate[row.date] = current;
-    }
-  }
+	for (const { source, rows } of rowsBySource) {
+		for (const row of rows) {
+			const current = byDate[row.date] ?? createEmptySourceCostMap();
+			current[source] = row.costUsd;
+			byDate[row.date] = current;
+		}
+	}
 
-  return byDate;
+	return byDate;
 };
 
 const buildDailyModelCostsByDate = (
-  rowsByModel: Array<{ model: string; rows: DailyAggregate[] }>,
+	rowsByModel: Array<{ model: string; rows: DailyAggregate[] }>,
 ): DailyModelCostsByDate => {
-  const byDate: DailyModelCostsByDate = {};
+	const byDate: DailyModelCostsByDate = {};
 
-  for (const { model, rows } of rowsByModel) {
-    for (const row of rows) {
-      const current = byDate[row.date] ?? {};
-      current[model] = row.costUsd;
-      byDate[row.date] = current;
-    }
-  }
+	for (const { model, rows } of rowsByModel) {
+		for (const row of rows) {
+			const current = byDate[row.date] ?? {};
+			current[model] = row.costUsd;
+			byDate[row.date] = current;
+		}
+	}
 
-  return byDate;
+	return byDate;
 };
 
 const buildDailyModelTokensByDate = (
-  rowsByModel: Array<{ model: string; rows: DailyAggregate[] }>,
+	rowsByModel: Array<{ model: string; rows: DailyAggregate[] }>,
 ): DailyModelTokensByDate => {
-  const byDate: DailyModelTokensByDate = {};
+	const byDate: DailyModelTokensByDate = {};
 
-  for (const { model, rows } of rowsByModel) {
-    for (const row of rows) {
-      const current = byDate[row.date] ?? {};
-      current[model] = tokenTotal(row.tokens);
-      byDate[row.date] = current;
-    }
-  }
+	for (const { model, rows } of rowsByModel) {
+		for (const row of rows) {
+			const current = byDate[row.date] ?? {};
+			current[model] = tokenTotal(row.tokens);
+			byDate[row.date] = current;
+		}
+	}
 
-  return byDate;
+	return byDate;
 };
 
 export const useDashboardData = () => {
-  const rpc = useRPC();
-  const refreshRequestIdRef = useRef(0);
-  const [selectedRange, setSelectedRange] = useState<DashboardDateRange>("last365");
-  const [aggregationTimeZone, setAggregationTimeZone] = useState<string>(resolveClientTimeZone);
-  const rangeOptions = useMemo<DashboardDateRangeOption[]>(
-    () => buildRangeOptions(aggregationTimeZone),
-    [aggregationTimeZone],
-  );
-  const { dateFrom, dateTo } = useMemo(
-    () => resolveDateRange(selectedRange, aggregationTimeZone),
-    [aggregationTimeZone, selectedRange],
-  );
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [timeline, setTimeline] = useState<DailyAggregate[]>([]);
-  const [dailyAgentTokensByDate, setDailyAgentTokensByDate] = useState<DailyAgentTokensByDate>({});
-  const [dailyAgentCostsByDate, setDailyAgentCostsByDate] = useState<DailyAgentCostsByDate>({});
-  const [dailyModelCostsByDate, setDailyModelCostsByDate] = useState<DailyModelCostsByDate>({});
-  const [dailyModelTokensByDate, setDailyModelTokensByDate] = useState<DailyModelTokensByDate>({});
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState<boolean>(false);
+	const rpc = useRPC();
+	const refreshRequestIdRef = useRef(0);
+	const [selectedRange, setSelectedRange] = useState<DashboardDateRange>("last365");
+	const [aggregationTimeZone, setAggregationTimeZone] = useState<string>(resolveClientTimeZone);
+	const rangeOptions = useMemo<DashboardDateRangeOption[]>(
+		() => buildRangeOptions(aggregationTimeZone),
+		[aggregationTimeZone],
+	);
+	const { dateFrom, dateTo } = useMemo(
+		() => resolveDateRange(selectedRange, aggregationTimeZone),
+		[aggregationTimeZone, selectedRange],
+	);
+	const [summary, setSummary] = useState<DashboardSummary | null>(null);
+	const [timeline, setTimeline] = useState<DailyAggregate[]>([]);
+	const [dailyAgentTokensByDate, setDailyAgentTokensByDate] = useState<DailyAgentTokensByDate>({});
+	const [dailyAgentCostsByDate, setDailyAgentCostsByDate] = useState<DailyAgentCostsByDate>({});
+	const [dailyModelCostsByDate, setDailyModelCostsByDate] = useState<DailyModelCostsByDate>({});
+	const [dailyModelTokensByDate, setDailyModelTokensByDate] = useState<DailyModelTokensByDate>({});
+	const [loading, setLoading] = useState<boolean>(true);
+	const [error, setError] = useState<string | null>(null);
+	const [isScanning, setIsScanning] = useState<boolean>(false);
 
-  const refresh = useCallback(async () => {
-    const requestId = ++refreshRequestIdRef.current;
-    setLoading(true);
-    setError(null);
+	const refresh = useCallback(async () => {
+		const requestId = ++refreshRequestIdRef.current;
+		setLoading(true);
+		setError(null);
 
-    try {
-      const [summaryResult, timelineResult, ...timelineBySourceResults] = await Promise.all([
-        rpcRequest("getDashboardSummary", { dateFrom, dateTo }),
-        rpcRequest("getDailyTimeline", { dateFrom, dateTo }),
-        ...SESSION_SOURCES.map((source) => rpcRequest("getDailyTimeline", { dateFrom, dateTo, source })),
-      ]);
+		try {
+			const [summaryResult, timelineResult, ...timelineBySourceResults] = await Promise.all([
+				rpcRequest("getDashboardSummary", { dateFrom, dateTo }),
+				rpcRequest("getDailyTimeline", { dateFrom, dateTo }),
+				...SESSION_SOURCES.map((source) => rpcRequest("getDailyTimeline", { dateFrom, dateTo, source })),
+			]);
 
-      if (requestId !== refreshRequestIdRef.current) {
-        return;
-      }
+			if (requestId !== refreshRequestIdRef.current) {
+				return;
+			}
 
-      setSummary(summaryResult);
-      if (summaryResult.aggregationTimeZone && summaryResult.aggregationTimeZone !== aggregationTimeZone) {
-        setAggregationTimeZone(summaryResult.aggregationTimeZone);
-      }
-      setTimeline(timelineResult);
+			setSummary(summaryResult);
+			if (summaryResult.aggregationTimeZone && summaryResult.aggregationTimeZone !== aggregationTimeZone) {
+				setAggregationTimeZone(summaryResult.aggregationTimeZone);
+			}
+			setTimeline(timelineResult);
 
-      const rowsBySource = timelineBySourceResults.map((rows, index) => ({
-        source: SESSION_SOURCES[index] as SessionSource,
-        rows,
-      }));
+			const rowsBySource = timelineBySourceResults.map((rows, index) => ({
+				source: SESSION_SOURCES[index] as SessionSource,
+				rows,
+			}));
 
-      setDailyAgentTokensByDate(
-        buildDailyAgentTokensByDate(rowsBySource),
-      );
-      setDailyAgentCostsByDate(
-        buildDailyAgentCostsByDate(rowsBySource),
-      );
+			setDailyAgentTokensByDate(buildDailyAgentTokensByDate(rowsBySource));
+			setDailyAgentCostsByDate(buildDailyAgentCostsByDate(rowsBySource));
 
-      const modelKeys = collectModelKeys(summaryResult.byModel);
-      const timelineByModelResults =
-        modelKeys.length > 0
-          ? await Promise.all(
-              modelKeys.map((model) =>
-                rpcRequest("getDailyTimeline", {
-                  dateFrom,
-                  dateTo,
-                  model,
-                }),
-              ),
-            )
-          : [];
+			const modelKeys = collectModelKeys(summaryResult.byModel);
+			const timelineByModelResults =
+				modelKeys.length > 0
+					? await Promise.all(
+							modelKeys.map((model) =>
+								rpcRequest("getDailyTimeline", {
+									dateFrom,
+									dateTo,
+									model,
+								}),
+							),
+						)
+					: [];
 
-      if (requestId !== refreshRequestIdRef.current) {
-        return;
-      }
+			if (requestId !== refreshRequestIdRef.current) {
+				return;
+			}
 
-      setDailyModelCostsByDate(
-        buildDailyModelCostsByDate(
-          timelineByModelResults.map((rows, index) => ({
-            model: modelKeys[index] as string,
-            rows,
-          })),
-        ),
-      );
-      setDailyModelTokensByDate(
-        buildDailyModelTokensByDate(
-          timelineByModelResults.map((rows, index) => ({
-            model: modelKeys[index] as string,
-            rows,
-          })),
-        ),
-      );
-    } catch (caught) {
-      if (requestId !== refreshRequestIdRef.current) {
-        return;
-      }
-      const message = caught instanceof Error ? caught.message : "Failed to load dashboard";
-      setError(message);
-    } finally {
-      if (requestId === refreshRequestIdRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [aggregationTimeZone, dateFrom, dateTo]);
+			setDailyModelCostsByDate(
+				buildDailyModelCostsByDate(
+					timelineByModelResults.map((rows, index) => ({
+						model: modelKeys[index] as string,
+						rows,
+					})),
+				),
+			);
+			setDailyModelTokensByDate(
+				buildDailyModelTokensByDate(
+					timelineByModelResults.map((rows, index) => ({
+						model: modelKeys[index] as string,
+						rows,
+					})),
+				),
+			);
+		} catch (caught) {
+			if (requestId !== refreshRequestIdRef.current) {
+				return;
+			}
+			const message = caught instanceof Error ? caught.message : "Failed to load dashboard";
+			setError(message);
+		} finally {
+			if (requestId === refreshRequestIdRef.current) {
+				setLoading(false);
+			}
+		}
+	}, [aggregationTimeZone, dateFrom, dateTo]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+	useEffect(() => {
+		void refresh();
+	}, [refresh]);
 
-  useEffect(() => {
-    const onScanStarted = () => {
-      setIsScanning(true);
-    };
+	useEffect(() => {
+		const onScanStarted = () => {
+			setIsScanning(true);
+		};
 
-    const onScanDone = () => {
-      setIsScanning(false);
-      void refresh();
-    };
+		const onScanCompleted = () => {
+			setIsScanning(false);
+			void refresh();
+		};
 
-    rpc.addMessageListener("scanStarted", onScanStarted);
-    rpc.addMessageListener("sessionsUpdated", onScanDone);
-    rpc.addMessageListener("scanCompleted", onScanDone);
+		rpc.addMessageListener("scanStarted", onScanStarted);
+		rpc.addMessageListener("scanCompleted", onScanCompleted);
 
-    return () => {
-      rpc.removeMessageListener("scanStarted", onScanStarted);
-      rpc.removeMessageListener("sessionsUpdated", onScanDone);
-      rpc.removeMessageListener("scanCompleted", onScanDone);
-    };
-  }, [refresh, rpc]);
+		return () => {
+			rpc.removeMessageListener("scanStarted", onScanStarted);
+			rpc.removeMessageListener("scanCompleted", onScanCompleted);
+		};
+	}, [refresh, rpc]);
 
-  const timelinePoints = useMemo<TimelinePoint[]>(
-    () =>
-      timeline
-        .map((entry) => ({
-          date: entry.date,
-          sessions: entry.sessionCount,
-          tokens: tokenTotal(entry.tokens),
-          costUsd: entry.costUsd,
-          durationMs: entry.totalDurationMs,
-          messages: entry.messageCount,
-          toolCalls: entry.toolCallCount,
-        }))
-        .sort((left, right) => left.date.localeCompare(right.date)),
-    [timeline],
-  );
+	const timelinePoints = useMemo<TimelinePoint[]>(
+		() =>
+			timeline
+				.map((entry) => ({
+					date: entry.date,
+					sessions: entry.sessionCount,
+					tokens: tokenTotal(entry.tokens),
+					costUsd: entry.costUsd,
+					durationMs: entry.totalDurationMs,
+					messages: entry.messageCount,
+					toolCalls: entry.toolCallCount,
+				}))
+				.sort((left, right) => left.date.localeCompare(right.date)),
+		[timeline],
+	);
 
-  const totals = useMemo<DashboardTotals>(() => {
-    if (!summary) return emptyTotals;
+	const totals = useMemo<DashboardTotals>(() => {
+		if (!summary) return emptyTotals;
 
-    const spanDays = rangeLengthDays(dateFrom, dateTo);
-    const activeDates = new Set(
-      timelinePoints.filter(hasTimelineActivity).map((entry) => entry.date),
-    );
-    const activeDays = activeDates.size;
-    const currentStreak = calculateCurrentStreakFromDates(activeDates, dateFrom, dateTo);
-    const longestStreak = calculateLongestStreakFromDates(activeDates, dateFrom, dateTo);
-    const mostExpensiveDay =
-      timelinePoints.length === 0
-        ? null
-        : timelinePoints.reduce((max, entry) => (entry.costUsd > max.costUsd ? entry : max), timelinePoints[0]);
+		const spanDays = rangeLengthDays(dateFrom, dateTo);
+		const activeDates = new Set(timelinePoints.filter(hasTimelineActivity).map((entry) => entry.date));
+		const activeDays = activeDates.size;
+		const currentStreak = calculateCurrentStreakFromDates(activeDates, dateFrom, dateTo);
+		const longestStreak = calculateLongestStreakFromDates(activeDates, dateFrom, dateTo);
+		const mostExpensiveDay =
+			timelinePoints.length === 0
+				? null
+				: timelinePoints.reduce((max, entry) => (entry.costUsd > max.costUsd ? entry : max), timelinePoints[0]);
 
-    return {
-      totalSessions: summary.totals.sessions,
-      totalTokens: tokenTotal(summary.totals.tokens),
-      totalCostUsd: summary.totals.costUsd,
-      totalDurationMs: summary.totals.durationMs,
-      averageSessionDurationMs:
-        summary.totals.sessions > 0 ? summary.totals.durationMs / summary.totals.sessions : 0,
-      longestSessionEstimateMs: timelinePoints.reduce((max, entry) => {
-        if (entry.sessions <= 0) return max;
-        return Math.max(max, entry.durationMs / entry.sessions);
-      }, 0),
-      activeDays,
-      currentStreakDays: currentStreak.days,
-      longestStreakDays: longestStreak,
-      currentStreakStartDate: currentStreak.startDate,
-      dateSpanDays: spanDays,
-      dailyAverageCostUsd: spanDays > 0 ? summary.totals.costUsd / spanDays : 0,
-      mostExpensiveDay,
-    };
-  }, [dateFrom, dateTo, summary, timelinePoints]);
+		return {
+			totalSessions: summary.totals.sessions,
+			totalTokens: tokenTotal(summary.totals.tokens),
+			totalCostUsd: summary.totals.costUsd,
+			totalDurationMs: summary.totals.durationMs,
+			averageSessionDurationMs: summary.totals.sessions > 0 ? summary.totals.durationMs / summary.totals.sessions : 0,
+			longestSessionDurationMs: summary.totals.longestSessionDurationMs,
+			activeDays,
+			currentStreakDays: currentStreak.days,
+			longestStreakDays: longestStreak,
+			currentStreakStartDate: currentStreak.startDate,
+			dateSpanDays: spanDays,
+			dailyAverageCostUsd: spanDays > 0 ? summary.totals.costUsd / spanDays : 0,
+			mostExpensiveDay,
+		};
+	}, [dateFrom, dateTo, summary, timelinePoints]);
 
-  const agentBreakdown = useMemo<AgentBreakdown[]>(() => {
-    if (!summary) return [];
+	const agentBreakdown = useMemo<AgentBreakdown[]>(() => {
+		if (!summary) return [];
 
-    return SESSION_SOURCES.map((source) => ({
-      source,
-      label: SOURCE_LABELS[source],
-      sessions: summary.byAgent[source].sessions,
-      tokens: tokenTotal(summary.byAgent[source].tokens),
-      costUsd: summary.byAgent[source].costUsd,
-    })).filter((entry) => entry.sessions > 0 || entry.tokens > 0 || entry.costUsd > 0);
-  }, [summary]);
+		return SESSION_SOURCES.map((source) => ({
+			source,
+			label: SOURCE_LABELS[source],
+			sessions: summary.byAgent[source].sessions,
+			tokens: tokenTotal(summary.byAgent[source].tokens),
+			costUsd: summary.byAgent[source].costUsd,
+		})).filter((entry) => entry.sessions > 0 || entry.tokens > 0 || entry.costUsd > 0);
+	}, [summary]);
 
-  const modelBreakdown = useMemo<ModelBreakdown[]>(() => {
-    if (!summary) return [];
+	const modelBreakdown = useMemo<ModelBreakdown[]>(() => {
+		if (!summary) return [];
 
-    return summary.byModel
-      .map((entry) => ({
-        model: entry.model,
-        sessions: entry.sessions,
-        tokens: tokenTotal(entry.tokens),
-        costUsd: entry.costUsd,
-      }))
-      .filter((entry) => entry.sessions > 0 || entry.tokens > 0 || entry.costUsd > 0)
-      .sort((left, right) => {
-        if (right.tokens !== left.tokens) return right.tokens - left.tokens;
-        if (right.sessions !== left.sessions) return right.sessions - left.sessions;
-        return right.costUsd - left.costUsd;
-      });
-  }, [summary]);
+		return summary.byModel
+			.map((entry) => ({
+				model: entry.model,
+				sessions: entry.sessions,
+				tokens: tokenTotal(entry.tokens),
+				costUsd: entry.costUsd,
+			}))
+			.filter((entry) => entry.sessions > 0 || entry.tokens > 0 || entry.costUsd > 0)
+			.sort((left, right) => {
+				if (right.tokens !== left.tokens) return right.tokens - left.tokens;
+				if (right.sessions !== left.sessions) return right.sessions - left.sessions;
+				return right.costUsd - left.costUsd;
+			});
+	}, [summary]);
 
-  const topRepos = useMemo(
-    () =>
-      (summary?.topRepos ?? [])
-        .map((entry) => ({
-          repo: entry.repo,
-          sessions: entry.sessions,
-          tokens: entry.tokens,
-          costUsd: entry.costUsd,
-          durationMs: entry.durationMs,
-        }))
-        .sort((left, right) => {
-          if (right.tokens !== left.tokens) return right.tokens - left.tokens;
-          if (right.sessions !== left.sessions) return right.sessions - left.sessions;
-          return right.costUsd - left.costUsd;
-        })
-        .slice(0, 8),
-    [summary],
-  );
+	const topRepos = useMemo(
+		() =>
+			(summary?.topRepos ?? [])
+				.map((entry) => ({
+					repo: entry.repo,
+					sessions: entry.sessions,
+					tokens: entry.tokens,
+					costUsd: entry.costUsd,
+					durationMs: entry.durationMs,
+				}))
+				.sort((left, right) => {
+					if (right.tokens !== left.tokens) return right.tokens - left.tokens;
+					if (right.sessions !== left.sessions) return right.sessions - left.sessions;
+					return right.costUsd - left.costUsd;
+				})
+				.slice(0, 8),
+		[summary],
+	);
 
-  const hourlyBreakdown = useMemo<HourlyDataPoint[]>(() => {
-    if (!summary?.hourlyBreakdown) return [];
+	const hourlyBreakdown = useMemo<HourlyDataPoint[]>(() => {
+		if (!summary?.hourlyBreakdown) return [];
 
-    return summary.hourlyBreakdown.map((entry) => ({
-      hour: entry.hour,
-      label: formatHourLabel(entry.hour),
-      sessions: entry.sessions,
-      tokens: tokenTotal(entry.tokens),
-      costUsd: entry.costUsd,
-      durationMs: entry.durationMs,
-      byAgent: entry.byAgent.map((a) => ({
-        source: a.source,
-        label: SOURCE_LABELS[a.source],
-        sessions: a.sessions,
-        tokens: tokenTotal(a.tokens),
-        costUsd: a.costUsd,
-      })),
-    }));
-  }, [summary]);
+		return summary.hourlyBreakdown.map((entry) => ({
+			hour: entry.hour,
+			label: formatHourLabel(entry.hour),
+			sessions: entry.sessions,
+			tokens: tokenTotal(entry.tokens),
+			costUsd: entry.costUsd,
+			durationMs: entry.durationMs,
+			byAgent: entry.byAgent.map((a) => ({
+				source: a.source,
+				label: SOURCE_LABELS[a.source],
+				sessions: a.sessions,
+				tokens: tokenTotal(a.tokens),
+				costUsd: a.costUsd,
+			})),
+		}));
+	}, [summary]);
 
-  const weekendTokenPercent = useMemo(() => {
-    if (timelinePoints.length === 0) return 0;
-    const total = timelinePoints.reduce((s, p) => s + p.tokens, 0);
-    if (total === 0) return 0;
-    const weekendTotal = timelinePoints
-      .filter((p) => {
-        const day = new Date(`${p.date}T00:00:00Z`).getUTCDay();
-        return day === 0 || day === 6;
-      })
-      .reduce((s, p) => s + p.tokens, 0);
-    return Math.round((weekendTotal / total) * 100);
-  }, [timelinePoints]);
+	const weekendTokenPercent = useMemo(() => {
+		if (timelinePoints.length === 0) return 0;
+		const total = timelinePoints.reduce((s, p) => s + p.tokens, 0);
+		if (total === 0) return 0;
+		const weekendTotal = timelinePoints
+			.filter((p) => {
+				const day = new Date(`${p.date}T00:00:00Z`).getUTCDay();
+				return day === 0 || day === 6;
+			})
+			.reduce((s, p) => s + p.tokens, 0);
+		return Math.round((weekendTotal / total) * 100);
+	}, [timelinePoints]);
 
-  const busiestDayOfWeek = useMemo<string>(() => {
-    if (timelinePoints.length === 0) return "";
-    const byDay = [0, 0, 0, 0, 0, 0, 0];
-    for (const p of timelinePoints) {
-      const day = new Date(`${p.date}T00:00:00Z`).getUTCDay();
-      byDay[day] += p.tokens;
-    }
-    const maxIdx = byDay.indexOf(Math.max(...byDay));
-    return DAY_NAMES[maxIdx] ?? "";
-  }, [timelinePoints]);
+	const busiestDayOfWeek = useMemo<string>(() => {
+		if (timelinePoints.length === 0) return "";
+		const byDay = [0, 0, 0, 0, 0, 0, 0];
+		for (const p of timelinePoints) {
+			const day = new Date(`${p.date}T00:00:00Z`).getUTCDay();
+			byDay[day] += p.tokens;
+		}
+		const maxIdx = byDay.indexOf(Math.max(...byDay));
+		return DAY_NAMES[maxIdx] ?? "";
+	}, [timelinePoints]);
 
-  const busiestSingleDay = useMemo<BusiestSingleDay | null>(() => {
-    if (timelinePoints.length === 0) return null;
-    const best = timelinePoints.reduce((max, p) => (p.tokens > max.tokens ? p : max), timelinePoints[0]);
-    return best && best.tokens > 0 ? { date: best.date, tokens: best.tokens } : null;
-  }, [timelinePoints]);
+	const busiestSingleDay = useMemo<BusiestSingleDay | null>(() => {
+		if (timelinePoints.length === 0) return null;
+		const best = timelinePoints.reduce((max, p) => (p.tokens > max.tokens ? p : max), timelinePoints[0]);
+		return best && best.tokens > 0 ? { date: best.date, tokens: best.tokens } : null;
+	}, [timelinePoints]);
 
-  return {
-    aggregationTimeZone,
-    dateFrom,
-    dateTo,
-    selectedRange,
-    setSelectedRange,
-    rangeOptions,
-    dailyAgentTokensByDate,
-    dailyAgentCostsByDate,
-    dailyModelCostsByDate,
-    dailyModelTokensByDate,
-    summary,
-    timeline: timelinePoints,
-    loading,
-    error,
-    refresh,
-    isScanning,
-    totals,
-    agentBreakdown,
-    modelBreakdown,
-    topRepos,
-    hourlyBreakdown,
-    weekendTokenPercent,
-    busiestDayOfWeek,
-    busiestSingleDay,
-  };
+	return {
+		aggregationTimeZone,
+		dateFrom,
+		dateTo,
+		selectedRange,
+		setSelectedRange,
+		rangeOptions,
+		dailyAgentTokensByDate,
+		dailyAgentCostsByDate,
+		dailyModelCostsByDate,
+		dailyModelTokensByDate,
+		summary,
+		timeline: timelinePoints,
+		loading,
+		error,
+		refresh,
+		isScanning,
+		totals,
+		agentBreakdown,
+		modelBreakdown,
+		topRepos,
+		hourlyBreakdown,
+		weekendTokenPercent,
+		busiestDayOfWeek,
+		busiestSingleDay,
+	};
 };

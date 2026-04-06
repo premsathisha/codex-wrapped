@@ -18,9 +18,11 @@ import { resolveAggregationTimeZone } from "./aggregator";
 import {
 	deleteImportedBackup as deleteImportedBackupFromHistory,
 	exportBackupCsv as exportHistoryBackupCsv,
+	getLongestSessionDurationInRange,
 	importBackupCsv as importHistoryBackupCsv,
 	listImportedBackups as listHistoryImportedBackups,
 	rematerializeDailyStoreFromHistory,
+	sessionDurationIndexNeedsBackfill,
 } from "./history";
 import { buildTopRepos, buildTopTools } from "./dashboardSummary";
 import { getOpenExternalCommand, tryResolveAllowedExternalUrl } from "./external";
@@ -145,6 +147,7 @@ const getDashboardSummaryFromStore = async (dateFrom?: string, dateTo?: string):
 	const daily = await readDailyStore();
 	const settings = await getSettings();
 	const aggregationTimeZone = await readAggregationTimeZone(resolveAggregationTimeZone(settings.aggregationTimeZone));
+	const longestSessionDurationMs = await getLongestSessionDurationInRange(dateFrom, dateTo, aggregationTimeZone);
 	const byAgent = createEmptyByAgent();
 	const byModelMap = new Map<string, DayStats>();
 	const byRepoMap = new Map<string, DayStats>();
@@ -282,6 +285,7 @@ const getDashboardSummaryFromStore = async (dateFrom?: string, dateTo?: string):
 			tokens: toTokenUsage(totals),
 			costUsd: totals.costUsd,
 			durationMs: totals.durationMs,
+			longestSessionDurationMs,
 		},
 		byAgent,
 		byModel,
@@ -517,12 +521,7 @@ const tryRenderSharePdfWithBrowser = async (
 };
 
 const exportFullSharePdf = async (url: string): Promise<{ path: string; browser: string }> => {
-	const resolvedUrl = tryResolveAllowedExternalUrl(url);
-	if (!resolvedUrl || !resolvedUrl.startsWith("http")) {
-		throw new Error("Rejected PDF export for invalid share URL.");
-	}
-
-	const parsed = new URL(resolvedUrl);
+	const parsed = new URL(url);
 	const isSharePath = parsed.pathname === "/share" || parsed.pathname === "/share/";
 	if (!isSharePath) {
 		throw new Error("PDF export only supports codex-wrapped.com/share URLs.");
@@ -548,7 +547,7 @@ const exportFullSharePdf = async (url: string): Promise<{ path: string; browser:
 			} catch {
 				// no-op
 			}
-			const attempt = await tryRenderSharePdfWithBrowser(candidate, outputPath, resolvedUrl, userDataDir);
+			const attempt = await tryRenderSharePdfWithBrowser(candidate, outputPath, parsed.href, userDataDir);
 			if (attempt.ok) {
 				return {
 					path: outputPath,
@@ -609,29 +608,37 @@ const runScanWithNotifications = async (fullScan = false) => {
 	}
 
 	isScanning = true;
+	let result = { scanned: 0, total: 0, errors: 0 };
+	let shouldEmitSessionRefresh = false;
 
 	try {
 		emitEvent("scanStarted", {});
 		const settings = await getSettings();
 		const aggregationTimeZone = resolveAggregationTimeZone(settings.aggregationTimeZone);
 		const effectiveFullScan =
-			fullScan || (await dailyStoreNeedsRepoBackfill()) || (await dailyStoreMissingHourDimension());
-		const result = await runScan({ fullScan: effectiveFullScan, timeZone: aggregationTimeZone });
+			fullScan ||
+			(await dailyStoreNeedsRepoBackfill()) ||
+			(await dailyStoreMissingHourDimension()) ||
+			(await sessionDurationIndexNeedsBackfill());
+		result = await runScan({ fullScan: effectiveFullScan, timeZone: aggregationTimeZone });
 		lastScanAt = new Date().toISOString();
-
-		emitEvent("scanCompleted", { scanned: result.scanned, total: result.total });
-		emitEvent("sessionsUpdated", {
-			scanResult: {
-				scanned: result.scanned,
-				total: result.total,
-			},
-		});
+		shouldEmitSessionRefresh = true;
 
 		return result;
 	} catch (error) {
 		console.error("[scan] Failed", error);
-		return { scanned: 0, total: 0, errors: 1 };
+		result = { scanned: 0, total: 0, errors: 1 };
+		return result;
 	} finally {
+		emitEvent("scanCompleted", { scanned: result.scanned, total: result.total });
+		if (shouldEmitSessionRefresh) {
+			emitEvent("sessionsUpdated", {
+				scanResult: {
+					scanned: result.scanned,
+					total: result.total,
+				},
+			});
+		}
 		isScanning = false;
 	}
 };

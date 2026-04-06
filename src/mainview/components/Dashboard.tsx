@@ -86,6 +86,7 @@ const Dashboard = () => {
 	const animatedCardIndicesRef = useRef<Set<number>>(new Set());
 	const animationTimeoutByCardRef = useRef<Record<number, number>>({});
 	const prefersReducedMotionRef = useRef<boolean>(false);
+	const isUpdatingTimeZoneRef = useRef(false);
 
 	const startCardAnimation = useCallback((index: number) => {
 		if (index <= 0 || prefersReducedMotionRef.current) return;
@@ -134,8 +135,9 @@ const Dashboard = () => {
 
 	const handleTimeZoneChange = useCallback(
 		(value: string) => {
-			if (!value || value === aggregationTimeZone || isUpdatingTimeZone) return;
+			if (!value || value === aggregationTimeZone || isUpdatingTimeZoneRef.current) return;
 
+			isUpdatingTimeZoneRef.current = true;
 			setIsUpdatingTimeZone(true);
 
 			void (async () => {
@@ -144,17 +146,38 @@ const Dashboard = () => {
 					await rpc.request.triggerScan({ fullScan: false });
 					await Promise.all([refresh(), loadImportedBackups()]);
 				} finally {
+					isUpdatingTimeZoneRef.current = false;
 					setIsUpdatingTimeZone(false);
 				}
 			})();
 		},
-		[aggregationTimeZone, isUpdatingTimeZone, loadImportedBackups, refresh, rpc],
+		[aggregationTimeZone, loadImportedBackups, refresh, rpc],
 	);
 	const themePalette = THEME_PALETTES[selectedTheme];
 
 	useEffect(() => {
-		prefersReducedMotionRef.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+		const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+		const updateReducedMotionPreference = (matches: boolean) => {
+			prefersReducedMotionRef.current = matches;
+		};
+		const onPreferenceChange = (event: MediaQueryListEvent) => {
+			updateReducedMotionPreference(event.matches);
+		};
+
+		updateReducedMotionPreference(mediaQuery.matches);
+
+		if (typeof mediaQuery.addEventListener === "function") {
+			mediaQuery.addEventListener("change", onPreferenceChange);
+		} else {
+			mediaQuery.addListener(onPreferenceChange);
+		}
+
 		return () => {
+			if (typeof mediaQuery.removeEventListener === "function") {
+				mediaQuery.removeEventListener("change", onPreferenceChange);
+			} else {
+				mediaQuery.removeListener(onPreferenceChange);
+			}
 			for (const timeoutId of Object.values(animationTimeoutByCardRef.current)) {
 				window.clearTimeout(timeoutId);
 			}
@@ -301,7 +324,9 @@ const Dashboard = () => {
 				document.body.append(anchor);
 				anchor.click();
 				anchor.remove();
-				window.URL.revokeObjectURL(url);
+				window.setTimeout(() => {
+					window.URL.revokeObjectURL(url);
+				}, 0);
 			} catch (error) {
 				await rpc.send.log({
 					level: "error",
@@ -480,13 +505,13 @@ const Dashboard = () => {
 									<article className="wrapped-tile sm:col-span-2">
 										<p className="wrapped-label">Longest Session Highlight</p>
 										<AnimatedNumber
-											value={totals.longestSessionEstimateMs}
+											value={totals.longestSessionDurationMs}
 											animate={animateCard2}
 											durationMs={CARD_ANIMATION_MS}
 											format={(value) => formatDuration(Math.max(0, Math.round(value)))}
 											className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
 										/>
-										<p className="mt-2 text-xs text-[#A1A1A1]">Estimated from daily totals and session counts</p>
+										<p className="mt-2 text-xs text-[#A1A1A1]">Your longest single coding session in this range</p>
 									</article>
 
 									<article className="wrapped-tile sm:col-span-2">

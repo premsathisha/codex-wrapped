@@ -33,6 +33,12 @@ export interface CanonicalHistoryFact {
 	lastSeenAtUtc: string | null;
 }
 
+export interface SessionDurationIndexEntry {
+	sessionKey: string;
+	startedAtUtc: string;
+	durationMs: number;
+}
+
 interface ScanHistoryStore {
 	version: number;
 	facts: CanonicalHistoryFact[];
@@ -47,6 +53,11 @@ interface ImportManifestStore {
 	version: number;
 	installId: string;
 	backups: ImportedBackupManifest[];
+}
+
+interface SessionDurationStore {
+	version: number;
+	sessions: SessionDurationIndexEntry[];
 }
 
 export interface ImportedBackupManifest {
@@ -95,11 +106,13 @@ interface EffectiveHistorySelection {
 const HISTORY_SCAN_VERSION = 1;
 const HISTORY_IMPORT_VERSION = 1;
 const IMPORT_MANIFEST_VERSION = 1;
+const HISTORY_SESSION_DURATION_VERSION = 1;
 const CSV_SCHEMA_ID = "codex_wrapped_backup";
 const CSV_SCHEMA_VERSION = 1;
 const HISTORY_SCAN_FILE = "history-scan-v1.json";
 const HISTORY_IMPORT_FILE = "history-import-v1.json";
 const IMPORT_MANIFEST_FILE = "import-manifest.json";
+const HISTORY_SESSION_DURATION_FILE = "history-session-durations-v1.json";
 const IMPORTS_DIR_NAME = "imports";
 
 const CSV_COLUMNS = [
@@ -137,6 +150,8 @@ const getHistoryImportPath = (): string => join(paths.dataDir, HISTORY_IMPORT_FI
 
 const getImportManifestPath = (): string => join(paths.dataDir, IMPORT_MANIFEST_FILE);
 
+const getSessionDurationPath = (): string => join(paths.dataDir, HISTORY_SESSION_DURATION_FILE);
+
 const getBackupDir = (backupId: string): string => join(paths.dataDir, IMPORTS_DIR_NAME, backupId);
 
 const getBackupCsvPath = (backupId: string): string => join(getBackupDir(backupId), "backup.csv");
@@ -163,6 +178,23 @@ const normalizeIsoTimestamp = (value: unknown): string | null => {
 
 	const parsed = new Date(value);
 	return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+};
+
+const normalizeSessionDurationIndexEntry = (value: unknown): SessionDurationIndexEntry | null => {
+	if (!isRecord(value)) return null;
+
+	const sessionKey = toNullableString(value.sessionKey);
+	const startedAtUtc = normalizeIsoTimestamp(value.startedAtUtc);
+	const durationMs = Math.max(0, Math.floor(toFiniteNumber(value.durationMs)));
+	if (!sessionKey || !startedAtUtc || durationMs <= 0) {
+		return null;
+	}
+
+	return {
+		sessionKey,
+		startedAtUtc,
+		durationMs,
+	};
 };
 
 const startOfUtcHour = (value: string | null | undefined): string | null => {
@@ -436,6 +468,26 @@ const normalizeManifestStore = (value: unknown): ImportManifestStore => {
 	};
 };
 
+const normalizeSessionDurationStore = (value: unknown): SessionDurationStore => {
+	if (!isRecord(value)) {
+		return { version: HISTORY_SESSION_DURATION_VERSION, sessions: [] };
+	}
+
+	const rawSessions = Array.isArray(value.sessions) ? value.sessions : [];
+	return {
+		version: HISTORY_SESSION_DURATION_VERSION,
+		sessions: rawSessions
+			.map(normalizeSessionDurationIndexEntry)
+			.filter((entry): entry is SessionDurationIndexEntry => entry !== null)
+			.sort((left, right) => {
+				if (left.startedAtUtc !== right.startedAtUtc) {
+					return left.startedAtUtc.localeCompare(right.startedAtUtc);
+				}
+				return left.sessionKey.localeCompare(right.sessionKey);
+			}),
+	};
+};
+
 const readScanHistoryStore = async (): Promise<ScanHistoryStore> =>
 	normalizeScanHistoryStore(await readJson<unknown>(getHistoryScanPath(), null));
 
@@ -459,12 +511,22 @@ const writeImportHistoryStore = async (store: ImportHistoryStore): Promise<void>
 const readImportManifestStore = async (): Promise<ImportManifestStore> =>
 	normalizeManifestStore(await readJson<unknown>(getImportManifestPath(), null));
 
+const readSessionDurationStore = async (): Promise<SessionDurationStore> =>
+	normalizeSessionDurationStore(await readJson<unknown>(getSessionDurationPath(), null));
+
 const writeImportManifestStore = async (store: ImportManifestStore): Promise<void> => {
 	await writeJson(getImportManifestPath(), {
 		version: IMPORT_MANIFEST_VERSION,
 		installId: store.installId,
 		backups: store.backups,
 	} satisfies ImportManifestStore);
+};
+
+const writeSessionDurationStore = async (store: SessionDurationStore): Promise<void> => {
+	await writeJson(getSessionDurationPath(), {
+		version: HISTORY_SESSION_DURATION_VERSION,
+		sessions: store.sessions,
+	} satisfies SessionDurationStore);
 };
 
 const sortFacts = (facts: CanonicalHistoryFact[]): CanonicalHistoryFact[] =>
@@ -1055,11 +1117,72 @@ export const aggregateNormalizedSessionsToHistoryFacts = (
 	return sortFacts([...facts.values()]);
 };
 
+export const buildSessionDurationIndexFromSessions = (sessions: Session[]): SessionDurationIndexEntry[] =>
+	sessions
+		.map((session) => {
+			const startedAtUtc = parseSessionTimestamp(session);
+			const durationMs = session.isSubagent ? 0 : Math.max(0, session.durationMs ?? 0);
+			if (!startedAtUtc || durationMs <= 0) {
+				return null;
+			}
+
+			return {
+				sessionKey: `${session.source}:${session.id}`,
+				startedAtUtc,
+				durationMs,
+			} satisfies SessionDurationIndexEntry;
+		})
+		.filter((entry): entry is SessionDurationIndexEntry => entry !== null)
+		.sort((left, right) => {
+			if (left.startedAtUtc !== right.startedAtUtc) {
+				return left.startedAtUtc.localeCompare(right.startedAtUtc);
+			}
+			return left.sessionKey.localeCompare(right.sessionKey);
+		});
+
 export const writeScanHistoryFacts = async (facts: CanonicalHistoryFact[]): Promise<void> => {
 	await writeScanHistoryStore({
 		version: HISTORY_SCAN_VERSION,
 		facts: sortFacts(facts),
 	});
+};
+
+export const writeScanSessionDurationIndex = async (sessions: SessionDurationIndexEntry[]): Promise<void> => {
+	await writeSessionDurationStore({
+		version: HISTORY_SESSION_DURATION_VERSION,
+		sessions,
+	});
+};
+
+export const getLongestSessionDurationInRange = async (
+	dateFrom: string | undefined,
+	dateTo: string | undefined,
+	timeZone: string,
+): Promise<number> => {
+	const sessionStore = await readSessionDurationStore();
+	let longestDurationMs = 0;
+
+	for (const session of sessionStore.sessions) {
+		const localDate = toISODateInTimeZone(new Date(session.startedAtUtc), timeZone);
+		if (dateFrom && localDate < dateFrom) continue;
+		if (dateTo && localDate > dateTo) continue;
+		if (session.durationMs > longestDurationMs) {
+			longestDurationMs = session.durationMs;
+		}
+	}
+
+	return longestDurationMs;
+};
+
+export const sessionDurationIndexNeedsBackfill = async (): Promise<boolean> => {
+	const scanStore = await readScanHistoryStore();
+	const hasRecordedDurations = scanStore.facts.some((fact) => fact.dimensionKind === "all" && fact.durationMs > 0);
+	if (!hasRecordedDurations) {
+		return false;
+	}
+
+	const sessionStore = await readSessionDurationStore();
+	return sessionStore.sessions.length === 0;
 };
 
 export const rematerializeDailyStoreFromHistory = async (timeZone: string): Promise<DailyStore> => {
