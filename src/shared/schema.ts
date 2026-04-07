@@ -64,8 +64,6 @@ export interface DashboardSummary {
 		toolCalls: number;
 		tokens: TokenUsage;
 		costUsd: number;
-		durationMs: number;
-		longestSessionDurationMs: number;
 	};
 	byAgent: Record<
 		SessionSource,

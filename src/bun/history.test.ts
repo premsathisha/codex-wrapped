@@ -5,11 +5,9 @@ import { tmpdir } from "node:os";
 import {
 	deleteImportedBackup,
 	exportBackupCsv,
-	getLongestSessionDurationInRange,
 	importBackupCsv,
 	listImportedBackups,
 	rematerializeDailyStoreFromHistory,
-	writeScanSessionDurationIndex,
 	writeScanHistoryFacts,
 	type CanonicalHistoryFact,
 } from "./history";
@@ -429,41 +427,17 @@ describe("history import/export", () => {
 				body: JSON.stringify({ dateFrom: "2026-03-01", dateTo: "2026-03-03" }),
 			});
 			const summary = (await response.json()) as {
-				totals: { sessions: number; costUsd: number; durationMs: number; longestSessionDurationMs: number };
+				totals: { sessions: number; costUsd: number };
 				topRepos: Array<{ repo: string; tokens: number }>;
 			};
 
 			expect(summary.totals.sessions).toBe(3);
 			expect(summary.totals.costUsd).toBeCloseTo(6.9, 10);
-			expect(summary.totals.durationMs).toBe(21_600_000);
-			expect(summary.totals.longestSessionDurationMs).toBe(0);
 			const wrappedRepo = summary.topRepos.find((repo) => repo.repo === "Codex Wrapped");
 			expect(wrappedRepo).toBeDefined();
 			expect(wrappedRepo?.tokens).toBe(619);
 		} finally {
 			server.stop(true);
 		}
-	});
-
-	test("longest session duration respects local-date filtering", async () => {
-		const dir = await createTempDataDir();
-		setDataDirOverrideForTests(dir);
-
-		await writeScanSessionDurationIndex([
-			{
-				sessionKey: "codex:overnight",
-				startedAtUtc: "2026-03-02T06:30:00.000Z",
-				durationMs: 7_200_000,
-			},
-			{
-				sessionKey: "codex:daytime",
-				startedAtUtc: "2026-03-02T18:00:00.000Z",
-				durationMs: 3_600_000,
-			},
-		]);
-
-		expect(await getLongestSessionDurationInRange("2026-03-01", "2026-03-01", "America/Phoenix")).toBe(7_200_000);
-		expect(await getLongestSessionDurationInRange("2026-03-02", "2026-03-02", "America/Phoenix")).toBe(3_600_000);
-		expect(await getLongestSessionDurationInRange("2026-03-02", "2026-03-02", "UTC")).toBe(7_200_000);
 	});
 });

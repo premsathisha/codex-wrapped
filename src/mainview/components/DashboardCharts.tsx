@@ -17,7 +17,7 @@ import type { TooltipContentProps } from "recharts";
 import { AnimatedNumber } from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
 import { ChartContainer, ChartTooltip } from "@shared/components/ui/chart";
-import { formatDate, formatDuration, formatNumber, formatTokens, formatUsd } from "../lib/formatters";
+import { formatDate, formatNumber, formatTokens, formatUsd } from "../lib/formatters";
 import { getHeatmapColor } from "../lib/heatmapColors";
 import { formatHourLabel, hasHourlyActivity } from "../lib/hourly";
 import { HEATMAP_GAP_PX, computeHeatmapCellSizePx } from "../lib/heatmap";
@@ -99,13 +99,13 @@ interface TopRepoRow {
 	durationMs: number;
 }
 
-interface CodingPersonality {
+export interface CodingPersonality {
 	label: string;
 	emoji: string;
 	description: string;
 }
 
-const classifyCodingPersonality = (peakHour: number): CodingPersonality => {
+export const classifyCodingPersonality = (peakHour: number): CodingPersonality => {
 	if (peakHour >= 22 || peakHour <= 4) {
 		return { label: "Night Owl", emoji: "\uD83E\uDD89", description: "You do your best work when the world sleeps." };
 	}
@@ -123,6 +123,46 @@ const classifyCodingPersonality = (peakHour: number): CodingPersonality => {
 	}
 	return { label: "Night Owl", emoji: "\uD83E\uDD89", description: "You do your best work when the world sleeps." };
 };
+
+export const buildModelColors = (themePalette: ThemePalette): string[] => [
+	themePalette.veryHigh,
+	themePalette.high,
+	themePalette.medium,
+	themePalette.slightlyLess,
+	themePalette.less,
+	lightenHexColor(themePalette.less, 0.18),
+	lightenHexColor(themePalette.slightlyLess, 0.24),
+	lightenHexColor(themePalette.medium, 0.3),
+];
+
+const blendHexColors = (fromHex: string, targetHex: string, ratio: number): string => {
+	const fromMatch = /^#([0-9a-f]{6})$/i.exec(fromHex.trim());
+	const toMatch = /^#([0-9a-f]{6})$/i.exec(targetHex.trim());
+	if (!fromMatch || !toMatch) return fromHex;
+
+	const clampRatio = Math.min(Math.max(ratio, 0), 1);
+	const from = fromMatch[1];
+	const to = toMatch[1];
+	const blendChannel = (offset: number) => {
+		const fromValue = Number.parseInt(from.slice(offset, offset + 2), 16);
+		const toValue = Number.parseInt(to.slice(offset, offset + 2), 16);
+		return Math.round(fromValue + (toValue - fromValue) * clampRatio);
+	};
+	const toHexChannel = (value: number) => value.toString(16).padStart(2, "0");
+
+	return `#${toHexChannel(blendChannel(0))}${toHexChannel(blendChannel(2))}${toHexChannel(blendChannel(4))}`.toUpperCase();
+};
+
+export const buildTopRepoBarColors = (themePalette: ThemePalette): string[] => [
+	themePalette.veryHigh,
+	themePalette.high,
+	themePalette.medium,
+	themePalette.slightlyLess,
+	themePalette.less,
+	blendHexColors(themePalette.less, themePalette.none, 0.3),
+	blendHexColors(themePalette.less, themePalette.none, 0.55),
+	blendHexColors(themePalette.less, themePalette.none, 0.78),
+];
 
 const formatShortDate = (value: string): string => {
 	const parsed = Date.parse(`${value}T00:00:00Z`);
@@ -283,7 +323,7 @@ const HourlyTooltipCard = ({
 						<p key={a.source} className="flex items-center justify-between gap-3 text-xs text-[#A1A1A1]">
 							<span className="text-[#A1A1A1]">{a.label}</span>
 							<span className="text-[#A1A1A1]">
-								{formatTokens(a.tokens)} · {formatUsd(a.costUsd)} · {formatNumber(a.sessions)}s
+								{formatTokens(a.tokens)} · {formatUsd(a.costUsd)} · {formatNumber(a.sessions)} sessions
 							</span>
 						</p>
 					))}
@@ -414,7 +454,6 @@ const buildRepoHoverDetails = (repo: TopRepoRow): string =>
 		`Sessions: ${formatNumber(repo.sessions)}`,
 		`Tokens: ${formatTokens(repo.tokens)} (${formatNumber(repo.tokens)})`,
 		`Spend: ${formatUsd(repo.costUsd)}`,
-		`Time active: ${formatDuration(repo.durationMs)}`,
 	].join("\n");
 
 const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<any, any>) => {
@@ -429,7 +468,6 @@ const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<a
 				Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})
 			</p>
 			<p>Spend: {formatUsd(row.costUsd)}</p>
-			<p>Time active: {formatDuration(row.durationMs)}</p>
 		</div>
 	);
 };
@@ -463,26 +501,8 @@ const DashboardCharts = ({
 	const animateCard6 = Boolean(cardAnimations[6]);
 	const animateCard7 = Boolean(cardAnimations[7]);
 	const animateCard8 = Boolean(cardAnimations[8]);
-	const modelColors = [
-		themePalette.veryHigh,
-		themePalette.high,
-		themePalette.medium,
-		themePalette.slightlyLess,
-		themePalette.less,
-		lightenHexColor(themePalette.less, 0.18),
-		lightenHexColor(themePalette.slightlyLess, 0.24),
-		lightenHexColor(themePalette.medium, 0.3),
-	];
-	const topRepoBarColors = [
-		themePalette.veryHigh,
-		themePalette.high,
-		themePalette.medium,
-		themePalette.slightlyLess,
-		themePalette.less,
-		lightenHexColor(themePalette.less, 0.18),
-		lightenHexColor(themePalette.slightlyLess, 0.24),
-		lightenHexColor(themePalette.medium, 0.3),
-	];
+	const modelColors = buildModelColors(themePalette);
+	const topRepoBarColors = buildTopRepoBarColors(themePalette);
 	const topReposChartConfig = {
 		tokens: {
 			label: "Tokens",

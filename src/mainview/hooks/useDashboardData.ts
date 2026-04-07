@@ -162,9 +162,6 @@ export interface DashboardTotals {
 	totalSessions: number;
 	totalTokens: number;
 	totalCostUsd: number;
-	totalDurationMs: number;
-	averageSessionDurationMs: number;
-	longestSessionDurationMs: number;
 	activeDays: number;
 	currentStreakDays: number;
 	longestStreakDays: number;
@@ -178,9 +175,6 @@ const emptyTotals: DashboardTotals = {
 	totalSessions: 0,
 	totalTokens: 0,
 	totalCostUsd: 0,
-	totalDurationMs: 0,
-	averageSessionDurationMs: 0,
-	longestSessionDurationMs: 0,
 	activeDays: 0,
 	currentStreakDays: 0,
 	longestStreakDays: 0,
@@ -418,9 +412,6 @@ export const useDashboardData = () => {
 			totalSessions: summary.totals.sessions,
 			totalTokens: tokenTotal(summary.totals.tokens),
 			totalCostUsd: summary.totals.costUsd,
-			totalDurationMs: summary.totals.durationMs,
-			averageSessionDurationMs: summary.totals.sessions > 0 ? summary.totals.durationMs / summary.totals.sessions : 0,
-			longestSessionDurationMs: summary.totals.longestSessionDurationMs,
 			activeDays,
 			currentStreakDays: currentStreak.days,
 			longestStreakDays: longestStreak,

@@ -4,14 +4,12 @@ import DashboardCharts from "./DashboardCharts";
 import DashboardFooter from "./DashboardFooter";
 import EmptyState from "./EmptyState";
 import Sidebar from "./Sidebar";
-import StatsCards, { AnimatedNumber } from "./StatsCards";
+import StatsCards from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
 import { useDashboardData, type DashboardDateRange } from "../hooks/useDashboardData";
 import { useRPC } from "../hooks/useRPC";
 import { THEME_OPTIONS, THEME_PALETTES, type ThemeName } from "../lib/themePalettes";
-import { formatDate, formatDuration, formatNumber } from "../lib/formatters";
 
-const clampPercentage = (value: number): number => Math.max(0, Math.min(100, value));
 const CARD_ANIMATION_MS = 2000;
 const THEME_STORAGE_KEY = "codex-wrapped-theme";
 const isThemeName = (value: string): value is ThemeName =>
@@ -401,13 +399,6 @@ const Dashboard = () => {
 		);
 	}
 
-	const activeDayCoverage =
-		totals.dateSpanDays > 0 ? clampPercentage((totals.activeDays / totals.dateSpanDays) * 100) : 0;
-	const totalHours = totals.totalDurationMs / (60 * 60 * 1000);
-	const totalDays = totals.totalDurationMs / (24 * 60 * 60 * 1000);
-	const ringRadius = 58;
-	const ringCircumference = 2 * Math.PI * ringRadius;
-	const ringOffset = ringCircumference - (activeDayCoverage / 100) * ringCircumference;
 	const heroCopy = (() => {
 		if (selectedRange === "last7") {
 			return { kicker: "Your Last 7 Days In Code", title: "Your AI Coding Week" };
@@ -440,7 +431,6 @@ const Dashboard = () => {
 		return { kicker: "Your Time In Code", title: "Your AI Coding Story" };
 	})();
 	const animateCard1 = Boolean(animatingCardIndices[1]);
-	const animateCard2 = Boolean(animatingCardIndices[2]);
 
 	return (
 		<>
@@ -465,118 +455,6 @@ const Dashboard = () => {
 								totalToolCalls={summary?.totals.toolCalls ?? 0}
 								animateOnMount={animateCard1}
 							/>
-						</section>
-					</DownloadableCard>
-
-					<DownloadableCard title="Time Spent Coding with AI">
-						<section data-card-index="2" className="wrapped-card wrapped-card-time">
-							<header className="mb-6 flex flex-wrap items-end justify-between gap-3">
-								<div>
-									<h2 className="wrapped-title">Time Spent Coding with AI</h2>
-								</div>
-							</header>
-
-							<div className="grid gap-6 lg:grid-cols-[1.3fr_1fr]">
-								<div className="grid gap-3 sm:grid-cols-2">
-									<article className="wrapped-tile">
-										<p className="wrapped-label">Total Hours</p>
-										<AnimatedNumber
-											value={totalHours}
-											animate={animateCard2}
-											durationMs={CARD_ANIMATION_MS}
-											format={(value) => `${value.toFixed(1)}h`}
-											className="mt-2 block text-4xl font-semibold text-[#FAFAFA]"
-										/>
-										<p className="mt-2 text-xs text-[#A1A1A1]">{totalDays.toFixed(1)} total days of coding time</p>
-									</article>
-
-									<article className="wrapped-tile">
-										<p className="wrapped-label">Average Session</p>
-										<AnimatedNumber
-											value={totals.averageSessionDurationMs}
-											animate={animateCard2}
-											durationMs={CARD_ANIMATION_MS}
-											format={(value) => formatDuration(Math.max(0, Math.round(value)))}
-											className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
-										/>
-										<p className="mt-2 text-xs text-[#A1A1A1]">Per session across the full range</p>
-									</article>
-
-									<article className="wrapped-tile sm:col-span-2">
-										<p className="wrapped-label">Longest Session Highlight</p>
-										<AnimatedNumber
-											value={totals.longestSessionDurationMs}
-											animate={animateCard2}
-											durationMs={CARD_ANIMATION_MS}
-											format={(value) => formatDuration(Math.max(0, Math.round(value)))}
-											className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
-										/>
-										<p className="mt-2 text-xs text-[#A1A1A1]">Your longest single coding session in this range</p>
-									</article>
-
-									<article className="wrapped-tile sm:col-span-2">
-										<p className="wrapped-label">Current Streak</p>
-										<p className="mt-2 text-3xl font-semibold text-[#FAFAFA]">
-											<AnimatedNumber
-												value={totals.currentStreakDays}
-												animate={animateCard2}
-												durationMs={CARD_ANIMATION_MS}
-												format={(value) => formatNumber(Math.max(0, Math.round(value)))}
-											/>{" "}
-											{totals.currentStreakDays === 1 ? "day" : "days"}
-										</p>
-										<p className="mt-2 text-xs text-[#A1A1A1]">
-											{totals.currentStreakStartDate
-												? `Started ${formatDate(totals.currentStreakStartDate)}`
-												: "No active streak in this range"}
-										</p>
-									</article>
-								</div>
-
-								<article className="wrapped-tile flex flex-col items-center justify-center text-center">
-									<svg width="152" height="152" viewBox="0 0 152 152" className="overflow-visible">
-										<circle
-											cx="76"
-											cy="76"
-											r={ringRadius}
-											fill="none"
-											stroke="rgba(148,163,184,0.25)"
-											strokeWidth="12"
-										/>
-										<circle
-											cx="76"
-											cy="76"
-											r={ringRadius}
-											fill="none"
-											stroke="url(#ringGradient)"
-											strokeWidth="12"
-											strokeLinecap="round"
-											strokeDasharray={ringCircumference}
-											strokeDashoffset={ringOffset}
-											style={{
-												transition: "stroke-dashoffset 1000ms cubic-bezier(0.22, 1, 0.36, 1)",
-												transformOrigin: "50% 50%",
-												transform: "rotate(-90deg)",
-											}}
-										/>
-										<defs>
-											<linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-												<stop offset="0%" stopColor={themePalette.veryHigh} />
-												<stop offset="100%" stopColor={themePalette.high} />
-											</linearGradient>
-										</defs>
-									</svg>
-
-									<AnimatedNumber
-										value={activeDayCoverage}
-										animate={animateCard2}
-										durationMs={CARD_ANIMATION_MS}
-										format={(value) => `${value.toFixed(1)}%`}
-										className="mt-4 block text-4xl font-semibold text-[#FAFAFA]"
-									/>
-									<p className="mt-1 text-xs uppercase tracking-[0.18em] text-[#A1A1A1]">Days with activity</p>
-								</article>
-							</div>
 						</section>
 					</DownloadableCard>
 

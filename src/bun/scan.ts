@@ -3,9 +3,7 @@ import { resolveAggregationTimeZone } from "./aggregator";
 import { discoverAll } from "./discovery";
 import {
 	aggregateNormalizedSessionsToHistoryFacts,
-	buildSessionDurationIndexFromSessions,
 	rematerializeDailyStoreFromHistory,
-	writeScanSessionDurationIndex,
 	writeScanHistoryFacts,
 } from "./history";
 import { normalizeSession } from "./normalizer";
@@ -138,9 +136,6 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
 	if (shouldPersistRebuild) {
 		await writeScanHistoryFacts(
 			aggregateNormalizedSessionsToHistoryFacts(normalizedSessions.map(({ session, events }) => ({ session, events }))),
-		);
-		await writeScanSessionDurationIndex(
-			buildSessionDurationIndexFromSessions(normalizedSessions.map(({ session }) => session)),
 		);
 		await writeScanState(nextScanState);
 	}

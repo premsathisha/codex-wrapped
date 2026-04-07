@@ -18,11 +18,9 @@ import { resolveAggregationTimeZone } from "./aggregator";
 import {
 	deleteImportedBackup as deleteImportedBackupFromHistory,
 	exportBackupCsv as exportHistoryBackupCsv,
-	getLongestSessionDurationInRange,
 	importBackupCsv as importHistoryBackupCsv,
 	listImportedBackups as listHistoryImportedBackups,
 	rematerializeDailyStoreFromHistory,
-	sessionDurationIndexNeedsBackfill,
 } from "./history";
 import { buildTopRepos, buildTopTools } from "./dashboardSummary";
 import { getOpenExternalCommand, tryResolveAllowedExternalUrl } from "./external";
@@ -147,7 +145,6 @@ const getDashboardSummaryFromStore = async (dateFrom?: string, dateTo?: string):
 	const daily = await readDailyStore();
 	const settings = await getSettings();
 	const aggregationTimeZone = await readAggregationTimeZone(resolveAggregationTimeZone(settings.aggregationTimeZone));
-	const longestSessionDurationMs = await getLongestSessionDurationInRange(dateFrom, dateTo, aggregationTimeZone);
 	const byAgent = createEmptyByAgent();
 	const byModelMap = new Map<string, DayStats>();
 	const byRepoMap = new Map<string, DayStats>();
@@ -284,8 +281,6 @@ const getDashboardSummaryFromStore = async (dateFrom?: string, dateTo?: string):
 			toolCalls: totals.toolCalls,
 			tokens: toTokenUsage(totals),
 			costUsd: totals.costUsd,
-			durationMs: totals.durationMs,
-			longestSessionDurationMs,
 		},
 		byAgent,
 		byModel,
@@ -616,10 +611,7 @@ const runScanWithNotifications = async (fullScan = false) => {
 		const settings = await getSettings();
 		const aggregationTimeZone = resolveAggregationTimeZone(settings.aggregationTimeZone);
 		const effectiveFullScan =
-			fullScan ||
-			(await dailyStoreNeedsRepoBackfill()) ||
-			(await dailyStoreMissingHourDimension()) ||
-			(await sessionDurationIndexNeedsBackfill());
+			fullScan || (await dailyStoreNeedsRepoBackfill()) || (await dailyStoreMissingHourDimension());
 		result = await runScan({ fullScan: effectiveFullScan, timeZone: aggregationTimeZone });
 		lastScanAt = new Date().toISOString();
 		shouldEmitSessionRefresh = true;
@@ -877,9 +869,17 @@ export interface StartWebServerOptions {
 	enableBackgroundScan?: boolean;
 }
 
+const resolveRequestedPort = async (portOption?: number): Promise<number> => {
+	if (typeof portOption !== "number" || !Number.isFinite(portOption)) {
+		return Number(Bun.env.PORT ?? DEFAULT_PORT);
+	}
+
+	return portOption;
+};
+
 export const startWebServer = async (options: StartWebServerOptions = {}): Promise<Bun.Server<unknown>> => {
 	const host = options.host ?? DEFAULT_HOST;
-	const port = Number.isFinite(options.port) ? (options.port as number) : Number(Bun.env.PORT ?? DEFAULT_PORT);
+	const port = await resolveRequestedPort(options.port);
 	const staticDir = options.staticDir ?? join(import.meta.dir, "..", "..", "dist");
 	const viteUrl = Bun.env.VITE_DEV_SERVER_URL;
 

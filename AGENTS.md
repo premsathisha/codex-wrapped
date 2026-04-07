@@ -83,3 +83,11 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 6. For card export changes, validate save/share behavior from the card download button against the live local UI.
 7. For import/export footer changes, validate popup import alert behavior for both success and rejection paths, including repeated identical retries.
 8. Keep the Codex heatmap card static on load/reload (no reveal/count-up intro animation), while preserving existing animations on other cards/charts.
+
+## Regression Guardrails
+1. For scan lifecycle changes, verify start/failure/success all terminate loading state (`scanStarted`/`scanCompleted`) and only one refresh path is active per scan.
+2. For timezone/date changes, add or update tests that cover midnight boundary behavior and fallback code paths (formatter fallback must stay timezone-consistent).
+3. For chart series/count changes, verify color arrays cover the rendered item count and stay visible/unique at boundary indexes (especially top repos and top models).
+4. For session metrics, ensure `scanned` reflects unique ingested sessions, not raw processed candidates, and add tests for duplicate-file scenarios.
+5. For download/export handlers, avoid synchronous object URL revocation immediately after click; use deferred cleanup.
+6. For accessibility settings (`prefers-reduced-motion`), treat media query changes as live updates, not mount-time snapshots.
