@@ -158,6 +158,9 @@ export type DailyAgentCostsByDate = Record<string, Record<SessionSource, number>
 export type DailyModelCostsByDate = Record<string, Record<string, number>>;
 export type DailyModelTokensByDate = Record<string, Record<string, number>>;
 
+export const selectTopRepos = (topRepos: DashboardSummary["topRepos"]): DashboardSummary["topRepos"] =>
+	topRepos.slice(0, 8);
+
 export interface DashboardTotals {
 	totalSessions: number;
 	totalTokens: number;
@@ -452,24 +455,7 @@ export const useDashboardData = () => {
 			});
 	}, [summary]);
 
-	const topRepos = useMemo(
-		() =>
-			(summary?.topRepos ?? [])
-				.map((entry) => ({
-					repo: entry.repo,
-					sessions: entry.sessions,
-					tokens: entry.tokens,
-					costUsd: entry.costUsd,
-					durationMs: entry.durationMs,
-				}))
-				.sort((left, right) => {
-					if (right.tokens !== left.tokens) return right.tokens - left.tokens;
-					if (right.sessions !== left.sessions) return right.sessions - left.sessions;
-					return right.costUsd - left.costUsd;
-				})
-				.slice(0, 8),
-		[summary],
-	);
+	const topRepos = useMemo(() => selectTopRepos(summary?.topRepos ?? []), [summary]);
 
 	const hourlyBreakdown = useMemo<HourlyDataPoint[]>(() => {
 		if (!summary?.hourlyBreakdown) return [];

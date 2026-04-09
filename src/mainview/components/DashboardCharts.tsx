@@ -96,7 +96,6 @@ interface TopRepoRow {
 	sessions: number;
 	tokens: number;
 	costUsd: number;
-	durationMs: number;
 }
 
 export interface CodingPersonality {
@@ -1301,7 +1300,7 @@ const DashboardCharts = ({
 											<ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[#A1A1A1]">
 												<li>{formatNumber(nightSessions)} sessions after midnight</li>
 												<li>{weekendTokenPercent}% of tokens on weekends</li>
-												{busiestDayOfWeek && <li>{busiestDayOfWeek}s are your power day</li>}
+												{busiestDayOfWeek && <li>{busiestDayOfWeek} is your power day</li>}
 												{busiestSingleDay && (
 													<li>
 														Busiest day: {formatDate(busiestSingleDay.date)} ({formatTokens(busiestSingleDay.tokens)})

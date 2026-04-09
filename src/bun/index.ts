@@ -22,7 +22,7 @@ import {
 	listImportedBackups as listHistoryImportedBackups,
 	rematerializeDailyStoreFromHistory,
 } from "./history";
-import { buildTopRepos, buildTopTools } from "./dashboardSummary";
+import { buildModelSummary, buildTopRepos, buildTopTools } from "./dashboardSummary";
 import { getOpenExternalCommand, tryResolveAllowedExternalUrl } from "./external";
 import { runScan } from "./scan";
 import {
@@ -225,18 +225,7 @@ const getDashboardSummaryFromStore = async (dateFrom?: string, dateTo?: string):
 		}
 	}
 
-	const byModel = [...byModelMap.entries()]
-		.map(([model, stats]) => ({
-			model,
-			sessions: stats.sessions,
-			tokens: toTokenUsage(stats),
-			costUsd: stats.costUsd,
-		}))
-		.sort((left, right) => {
-			if (right.sessions !== left.sessions) return right.sessions - left.sessions;
-			return right.costUsd - left.costUsd;
-		})
-		.slice(0, 100);
+	const byModel = buildModelSummary(byModelMap);
 
 	const dailyTimeline = dateFrom && dateTo ? await getDailyTimelineFromStore(dateFrom, dateTo) : [];
 	const topRepos = buildTopRepos(byRepoMap, byRepoLastSeenDateMap);
@@ -597,13 +586,15 @@ const emitEvent = (event: EventName, payload: unknown): void => {
 	}
 };
 
-const runScanWithNotifications = async (fullScan = false) => {
+const runScanWithNotifications = async (
+	fullScan = false,
+): Promise<{ scanned: number; total: number; errors: number; started: boolean }> => {
 	if (isScanning) {
-		return { scanned: 0, total: 0, errors: 0 };
+		return { scanned: 0, total: 0, errors: 0, started: false };
 	}
 
 	isScanning = true;
-	let result = { scanned: 0, total: 0, errors: 0 };
+	let result = { scanned: 0, total: 0, errors: 0, started: true };
 	let shouldEmitSessionRefresh = false;
 
 	try {
@@ -612,14 +603,15 @@ const runScanWithNotifications = async (fullScan = false) => {
 		const aggregationTimeZone = resolveAggregationTimeZone(settings.aggregationTimeZone);
 		const effectiveFullScan =
 			fullScan || (await dailyStoreNeedsRepoBackfill()) || (await dailyStoreMissingHourDimension());
-		result = await runScan({ fullScan: effectiveFullScan, timeZone: aggregationTimeZone });
+		const scanResult = await runScan({ fullScan: effectiveFullScan, timeZone: aggregationTimeZone });
+		result = { ...scanResult, started: true };
 		lastScanAt = new Date().toISOString();
 		shouldEmitSessionRefresh = true;
 
 		return result;
 	} catch (error) {
 		console.error("[scan] Failed", error);
-		result = { scanned: 0, total: 0, errors: 1 };
+		result = { scanned: 0, total: 0, errors: 1, started: true };
 		return result;
 	} finally {
 		emitEvent("scanCompleted", { scanned: result.scanned, total: result.total });
@@ -766,7 +758,7 @@ const handleApi = async (request: Request): Promise<Response> => {
 	if (request.method === "POST" && pathname === "/api/triggerScan") {
 		const payload = await readJsonBody<{ fullScan?: boolean }>(request);
 		const result = await runScanWithNotifications(Boolean(payload.fullScan));
-		return toJsonResponse({ scanned: result.scanned, total: result.total });
+		return toJsonResponse({ scanned: result.scanned, total: result.total, started: result.started });
 	}
 	if (request.method === "GET" && pathname === "/api/getScanStatus") {
 		return toJsonResponse({

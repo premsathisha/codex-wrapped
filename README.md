@@ -162,19 +162,19 @@ Codex Wrapped is local-first.
 
 ## FAQ
 
-### Why Is Only One of My Similar Repositories Shown?
+### Why is only one of my similar repositories shown?
 
 Codex Wrapped consolidates similar repository names to avoid duplicate-looking entries in the Top Repos view. It groups names that share meaningful tokens and displays one canonical name. The card also shows only the top 8 repositories, so lower-ranked entries may not appear.
 
-### How Are Most Active Hour and Busiest Day of Week Calculated?
+### How are most active hour and busiest day of week calculated?
 
 Most active hour is calculated from the selected date range by summing activity per hour of day (0-23) and selecting the hour with the highest token total. Busiest day of week is calculated by summing tokens by weekday across the selected range and selecting the highest total. There is currently no separate "most active week" metric; weekly patterns are represented through the heatmap.
 
-### What Counts as a Session?
+### What counts as a session?
 
 A session is one parsed Codex session record (source + session ID) from your local logs. During scanning, duplicate copies of the same session ID are deduplicated, and the preferred/latest copy is used for aggregation.
 
-### Why Don’t Input and Output Tokens Add Up to Total Tokens?
+### Why don’t input and output tokens add up to total tokens?
 
 Total tokens include more than input and output. Codex Wrapped totals:
 - input tokens
@@ -185,7 +185,7 @@ Total tokens include more than input and output. Codex Wrapped totals:
 
 Because of this, `input + output` will be lower than total whenever cache or reasoning tokens are present.
 
-### Why Was My Import Rejected?
+### Why was my import rejected?
 
 Imports are validated by the backend and can be rejected when:
 - the same backup file was already imported (checksum duplicate)

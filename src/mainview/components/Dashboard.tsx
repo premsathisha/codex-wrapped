@@ -9,6 +9,7 @@ import DownloadableCard from "./DownloadableCard";
 import { useDashboardData, type DashboardDateRange } from "../hooks/useDashboardData";
 import { useRPC } from "../hooks/useRPC";
 import { THEME_OPTIONS, THEME_PALETTES, type ThemeName } from "../lib/themePalettes";
+import { getHeroCopy } from "../lib/heroCopy";
 
 const CARD_ANIMATION_MS = 2000;
 const THEME_STORAGE_KEY = "codex-wrapped-theme";
@@ -141,8 +142,11 @@ const Dashboard = () => {
 			void (async () => {
 				try {
 					await rpc.request.updateSettings({ aggregationTimeZone: value });
-					await rpc.request.triggerScan({ fullScan: false });
-					await Promise.all([refresh(), loadImportedBackups()]);
+					const scanResult = await rpc.request.triggerScan({ fullScan: false });
+					if (!scanResult.started) {
+						await refresh();
+					}
+					await loadImportedBackups();
 				} finally {
 					isUpdatingTimeZoneRef.current = false;
 					setIsUpdatingTimeZone(false);
@@ -399,37 +403,7 @@ const Dashboard = () => {
 		);
 	}
 
-	const heroCopy = (() => {
-		if (selectedRange === "last7") {
-			return { kicker: "Your Last 7 Days In Code", title: "Your AI Coding Week" };
-		}
-
-		if (selectedRange === "last30") {
-			return { kicker: "Your Last 30 Days In Code", title: "Your AI Coding Month" };
-		}
-
-		if (selectedRange === "last90") {
-			return { kicker: "Your Last 90 Days In Code", title: "Your AI Coding Quarter" };
-		}
-
-		if (selectedRange === "last365") {
-			return { kicker: "Your Last 365 Days In Code", title: "Your AI Coding Year" };
-		}
-
-		if (selectedRange.startsWith("year:")) {
-			const year = Number(selectedRange.slice(5));
-			if (Number.isInteger(year)) {
-				const currentYear = new Date().getFullYear();
-				if (year === currentYear) {
-					return { kicker: "This Year In Code", title: "Your AI Coding Year" };
-				}
-
-				return { kicker: `${year} In Code`, title: `Your AI Coding ${year}` };
-			}
-		}
-
-		return { kicker: "Your Time In Code", title: "Your AI Coding Story" };
-	})();
+	const heroCopy = getHeroCopy(selectedRange, aggregationTimeZone);
 	const animateCard1 = Boolean(animatingCardIndices[1]);
 
 	return (

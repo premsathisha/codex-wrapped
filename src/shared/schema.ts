@@ -81,7 +81,7 @@ export interface DashboardSummary {
 		costUsd: number;
 	}>;
 	dailyTimeline: DailyAggregate[];
-	topRepos: Array<{ repo: string; sessions: number; tokens: number; costUsd: number; durationMs: number }>;
+	topRepos: Array<{ repo: string; sessions: number; tokens: number; costUsd: number }>;
 	topTools: Array<{ tool: string; count: number }>;
 	hourlyBreakdown: HourlyBreakdownEntry[];
 }
