@@ -56,7 +56,7 @@ test("web API endpoints expose dashboard and scan status contracts", async () =>
 		const triggerScanResponse = await fetch(`${baseUrl}/api/triggerScan`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ fullScan: false }),
+			body: JSON.stringify({ fullScan: true }),
 		});
 		expect(triggerScanResponse.status).toBe(200);
 		const scanResult = (await triggerScanResponse.json()) as {

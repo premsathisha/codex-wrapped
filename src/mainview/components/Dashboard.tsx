@@ -119,6 +119,24 @@ const Dashboard = () => {
 		setSelectedTheme(next);
 	};
 
+	const handleHardRefresh = useCallback(() => {
+		if (isScanning || isUpdatingTimeZoneRef.current) return;
+
+		void (async () => {
+			try {
+				const scanResult = await rpc.request.triggerScan({ fullScan: true });
+				if (!scanResult.started) {
+					await refresh();
+				}
+			} catch (error) {
+				await rpc.send.log({
+					level: "error",
+					msg: error instanceof Error ? error.message : "Hard refresh failed.",
+				});
+			}
+		})();
+	}, [isScanning, refresh, rpc]);
+
 	const timeZoneOptions = useMemo(() => {
 		if (TIME_ZONE_OPTIONS.some((option) => option.value === aggregationTimeZone)) {
 			return TIME_ZONE_OPTIONS;
@@ -277,6 +295,8 @@ const Dashboard = () => {
 			selectedTimeZone={aggregationTimeZone}
 			timeZoneOptions={timeZoneOptions}
 			onTimeZoneChange={handleTimeZoneChange}
+			onHardRefresh={handleHardRefresh}
+			hardRefreshDisabled={isScanning || isUpdatingTimeZone}
 			timeZoneDisabled={isScanning || isUpdatingTimeZone}
 			isScanning={isScanning}
 		/>

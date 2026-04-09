@@ -17,7 +17,14 @@ import type { TooltipContentProps } from "recharts";
 import { AnimatedNumber } from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
 import { ChartContainer, ChartTooltip } from "@shared/components/ui/chart";
-import { formatDate, formatNumber, formatTokens, formatUsd } from "../lib/formatters";
+import {
+	formatCompactNumber,
+	formatDate,
+	formatNumber,
+	formatSpendUsd,
+	formatTokens,
+	formatUsd,
+} from "../lib/formatters";
 import { getHeatmapColor } from "../lib/heatmapColors";
 import { formatHourLabel, hasHourlyActivity } from "../lib/hourly";
 import { HEATMAP_GAP_PX, computeHeatmapCellSizePx } from "../lib/heatmap";
@@ -452,7 +459,7 @@ const buildRepoHoverDetails = (repo: TopRepoRow): string =>
 		repo.repo,
 		`Sessions: ${formatNumber(repo.sessions)}`,
 		`Tokens: ${formatTokens(repo.tokens)} (${formatNumber(repo.tokens)})`,
-		`Spend: ${formatUsd(repo.costUsd)}`,
+		`Spend: ${formatSpendUsd(repo.costUsd)}`,
 	].join("\n");
 
 const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<any, any>) => {
@@ -466,7 +473,7 @@ const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<a
 			<p>
 				Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})
 			</p>
-			<p>Spend: {formatUsd(row.costUsd)}</p>
+			<p>Spend: {formatSpendUsd(row.costUsd)}</p>
 		</div>
 	);
 };
@@ -773,7 +780,13 @@ const DashboardCharts = ({
 								<ResponsiveContainer width="100%" height="100%">
 									<BarChart data={chartModelRows} layout="vertical" margin={{ left: 12, right: 16 }}>
 										<CartesianGrid stroke="rgba(148,163,184,0.22)" strokeDasharray="2 5" />
-										<XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+										<XAxis
+											type="number"
+											tickFormatter={formatCompactNumber}
+											tick={{ fill: "#cbd5e1", fontSize: 11 }}
+											tickLine={false}
+											axisLine={false}
+										/>
 										<YAxis
 											dataKey="model"
 											type="category"
@@ -827,7 +840,7 @@ const DashboardCharts = ({
 				</section>
 			</DownloadableCard>
 
-			<DownloadableCard title="Codex">
+			<DownloadableCard title="Codex" filenamePart="heatmap">
 				<section data-card-index="5" className="wrapped-card wrapped-card-activity">
 					<div className="rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7">
 						<div className="mb-5 flex flex-wrap items-start justify-between gap-4">
@@ -942,7 +955,7 @@ const DashboardCharts = ({
 											<p className="text-xs text-[#A1A1A1]">
 												Sessions: {formatNumber(heatmapHoverState.cell.sessions)}
 											</p>
-											<p className="text-xs text-[#A1A1A1]">Spend: {formatUsd(heatmapHoverState.cell.costUsd)}</p>
+											<p className="text-xs text-[#A1A1A1]">Spend: {formatSpendUsd(heatmapHoverState.cell.costUsd)}</p>
 											<div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
 												{heatmapTooltipAgentRows.map((entry) => (
 													<p
@@ -1015,7 +1028,7 @@ const DashboardCharts = ({
 								value={selectedTotalCostUsd}
 								animate={animateCard6}
 								durationMs={CHART_ANIMATION_MS}
-								format={formatUsd}
+								format={formatSpendUsd}
 								className="mt-2 block text-4xl font-semibold text-[#FAFAFA]"
 							/>
 						</article>
@@ -1167,7 +1180,13 @@ const DashboardCharts = ({
 							>
 								<BarChart data={topRepos} layout="vertical" margin={{ left: 12, right: 16 }}>
 									<CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
-									<XAxis type="number" tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
+									<XAxis
+										type="number"
+										tickFormatter={formatCompactNumber}
+										tick={{ fill: "#cbd5e1", fontSize: 11 }}
+										tickLine={false}
+										axisLine={false}
+									/>
 									<YAxis
 										dataKey="repo"
 										type="category"
