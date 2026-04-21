@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { EMPTY_TOKEN_USAGE } from "../shared/schema";
+import type { Session, SessionEvent } from "./session-schema";
 import {
+	aggregateNormalizedSessionsToHistoryFacts,
 	deleteImportedBackup,
 	exportBackupCsv,
 	importBackupCsv,
@@ -42,6 +45,57 @@ const factsForBucket = (
 	makeFact({ bucketStartUtc, dimensionKind: "model", dimensionKey: "gpt-5", ...stats }),
 	makeFact({ bucketStartUtc, dimensionKind: "repo", dimensionKey: repo, ...stats }),
 ];
+
+const makeSession = (overrides: Partial<Session>): Session => ({
+	id: "session-1",
+	source: "codex",
+	filePath: "/tmp/session-1.jsonl",
+	fileSizeBytes: 100,
+	startTime: "2026-04-13T12:00:00.000Z",
+	endTime: "2026-04-13T12:01:00.000Z",
+	durationMs: 60_000,
+	title: "Test session",
+	model: "gpt-5",
+	cwd: "/tmp/project",
+	repoName: "project",
+	gitBranch: "main",
+	cliVersion: "1.0.0",
+	eventCount: 0,
+	messageCount: 0,
+	totalTokens: { ...EMPTY_TOKEN_USAGE },
+	totalCostUsd: null,
+	toolCallCount: 0,
+	isSubagent: false,
+	lineageParentId: null,
+	isHousekeeping: false,
+	parsedAt: "2026-04-13T12:02:00.000Z",
+	...overrides,
+});
+
+const makeTokenEvent = (
+	sessionId: string,
+	fingerprint: string,
+	timestamp: string,
+	tokens: NonNullable<SessionEvent["tokens"]>,
+	costUsd: number,
+): SessionEvent => ({
+	id: `${sessionId}:${fingerprint}`,
+	sessionId,
+	kind: "meta",
+	timestamp,
+	role: "meta",
+	text: null,
+	toolName: null,
+	toolInput: null,
+	toolOutput: null,
+	model: "gpt-5",
+	parentId: null,
+	messageId: null,
+	isDelta: false,
+	tokens,
+	costUsd,
+	tokenCountFingerprint: fingerprint,
+});
 
 let tempDirs: string[] = [];
 
@@ -439,5 +493,188 @@ describe("history import/export", () => {
 		} finally {
 			server.stop(true);
 		}
+	});
+});
+
+describe("aggregateNormalizedSessionsToHistoryFacts", () => {
+	test("dedupes mirrored parent and subagent token_count fingerprints while keeping both sessions", async () => {
+		const dir = await createTempDataDir();
+		setDataDirOverrideForTests(dir);
+
+		const parent = {
+			session: makeSession({
+				id: "parent",
+				startTime: "2026-04-13T12:00:00.000Z",
+				parsedAt: "2026-04-13T12:02:00.000Z",
+			}),
+			events: [
+				makeTokenEvent(
+					"parent",
+					"shared-a",
+					"2026-04-13T12:05:00.000Z",
+					{ inputTokens: 120, outputTokens: 20, cacheReadTokens: 400, cacheWriteTokens: 0, reasoningTokens: 10 },
+					1.2,
+				),
+				makeTokenEvent(
+					"parent",
+					"shared-b",
+					"2026-04-13T12:10:00.000Z",
+					{ inputTokens: 80, outputTokens: 10, cacheReadTokens: 150, cacheWriteTokens: 0, reasoningTokens: 5 },
+					0.8,
+				),
+			],
+		};
+		const child = {
+			session: makeSession({
+				id: "child",
+				startTime: "2026-04-13T12:30:00.000Z",
+				parsedAt: "2026-04-13T12:31:00.000Z",
+				isSubagent: true,
+				lineageParentId: "parent",
+			}),
+			events: [
+				makeTokenEvent(
+					"child",
+					"shared-a",
+					"2026-04-13T12:30:30.000Z",
+					{ inputTokens: 120, outputTokens: 20, cacheReadTokens: 400, cacheWriteTokens: 0, reasoningTokens: 10 },
+					1.2,
+				),
+				makeTokenEvent(
+					"child",
+					"shared-b",
+					"2026-04-13T12:31:00.000Z",
+					{ inputTokens: 80, outputTokens: 10, cacheReadTokens: 150, cacheWriteTokens: 0, reasoningTokens: 5 },
+					0.8,
+				),
+				makeTokenEvent(
+					"child",
+					"child-only",
+					"2026-04-13T12:32:00.000Z",
+					{ inputTokens: 45, outputTokens: 15, cacheReadTokens: 90, cacheWriteTokens: 0, reasoningTokens: 3 },
+					0.45,
+				),
+			],
+		};
+
+		const facts = aggregateNormalizedSessionsToHistoryFacts([parent, child]);
+		const reversedFacts = aggregateNormalizedSessionsToHistoryFacts([child, parent]);
+		expect(facts).toEqual(reversedFacts);
+
+		await writeScanHistoryFacts(facts);
+		const daily = await rematerializeDailyStoreFromHistory("UTC");
+		const entry = daily["2026-04-13"];
+		expect(entry?.totals.sessions).toBe(2);
+		expect(entry?.totals.inputTokens).toBe(245);
+		expect(entry?.totals.outputTokens).toBe(45);
+		expect(entry?.totals.cacheReadTokens).toBe(640);
+		expect(entry?.totals.reasoningTokens).toBe(18);
+		expect(entry?.totals.costUsd).toBeCloseTo(2.45, 10);
+	});
+
+	test("does not dedupe identical fingerprints across unrelated sessions", async () => {
+		const dir = await createTempDataDir();
+		setDataDirOverrideForTests(dir);
+
+		const first = {
+			session: makeSession({ id: "first", startTime: "2026-04-13T12:00:00.000Z" }),
+			events: [
+				makeTokenEvent(
+					"first",
+					"same-fingerprint",
+					"2026-04-13T12:05:00.000Z",
+					{ inputTokens: 100, outputTokens: 20, cacheReadTokens: 300, cacheWriteTokens: 0, reasoningTokens: 5 },
+					1,
+				),
+			],
+		};
+		const second = {
+			session: makeSession({ id: "second", startTime: "2026-04-13T13:00:00.000Z" }),
+			events: [
+				makeTokenEvent(
+					"second",
+					"same-fingerprint",
+					"2026-04-13T13:05:00.000Z",
+					{ inputTokens: 100, outputTokens: 20, cacheReadTokens: 300, cacheWriteTokens: 0, reasoningTokens: 5 },
+					1,
+				),
+			],
+		};
+
+		await writeScanHistoryFacts(aggregateNormalizedSessionsToHistoryFacts([first, second]));
+		const daily = await rematerializeDailyStoreFromHistory("UTC");
+		const entry = daily["2026-04-13"];
+		expect(entry?.totals.sessions).toBe(2);
+		expect(entry?.totals.inputTokens).toBe(200);
+		expect(entry?.totals.costUsd).toBeCloseTo(2, 10);
+	});
+
+	test("keeps the unique child tail and fixes the April 9 versus April 13 ordering pattern", async () => {
+		const dir = await createTempDataDir();
+		setDataDirOverrideForTests(dir);
+
+		const april9 = {
+			session: makeSession({
+				id: "april-9",
+				startTime: "2026-04-09T12:00:00.000Z",
+				parsedAt: "2026-04-09T12:01:00.000Z",
+			}),
+			events: [
+				makeTokenEvent(
+					"april-9",
+					"april-9-usage",
+					"2026-04-09T12:05:00.000Z",
+					{ inputTokens: 1000, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 },
+					1,
+				),
+			],
+		};
+		const april13Parent = {
+			session: makeSession({
+				id: "april-13-parent",
+				startTime: "2026-04-13T12:00:00.000Z",
+				parsedAt: "2026-04-13T12:01:00.000Z",
+			}),
+			events: [
+				makeTokenEvent(
+					"april-13-parent",
+					"shared-april-13",
+					"2026-04-13T12:05:00.000Z",
+					{ inputTokens: 600, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 },
+					0.6,
+				),
+			],
+		};
+		const april13Child = {
+			session: makeSession({
+				id: "april-13-child",
+				startTime: "2026-04-13T12:30:00.000Z",
+				parsedAt: "2026-04-13T12:31:00.000Z",
+				isSubagent: true,
+				lineageParentId: "april-13-parent",
+			}),
+			events: [
+				makeTokenEvent(
+					"april-13-child",
+					"shared-april-13",
+					"2026-04-13T12:31:00.000Z",
+					{ inputTokens: 600, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 },
+					0.6,
+				),
+				makeTokenEvent(
+					"april-13-child",
+					"unique-april-13",
+					"2026-04-13T12:32:00.000Z",
+					{ inputTokens: 200, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, reasoningTokens: 0 },
+					0.2,
+				),
+			],
+		};
+
+		await writeScanHistoryFacts(aggregateNormalizedSessionsToHistoryFacts([april9, april13Parent, april13Child]));
+		const daily = await rematerializeDailyStoreFromHistory("America/Phoenix");
+		expect(daily["2026-04-09"]?.totals.inputTokens).toBe(1000);
+		expect(daily["2026-04-13"]?.totals.inputTokens).toBe(800);
+		expect((daily["2026-04-09"]?.totals.inputTokens ?? 0) > (daily["2026-04-13"]?.totals.inputTokens ?? 0)).toBe(true);
 	});
 });

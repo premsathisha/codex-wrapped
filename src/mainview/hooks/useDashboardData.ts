@@ -161,6 +161,25 @@ export type DailyModelTokensByDate = Record<string, Record<string, number>>;
 export const selectTopRepos = (topRepos: DashboardSummary["topRepos"]): DashboardSummary["topRepos"] =>
 	topRepos.slice(0, 8);
 
+export const selectMostExpensiveDay = (timelinePoints: TimelinePoint[]): TimelinePoint | null => {
+	if (timelinePoints.length === 0) return null;
+	const best = timelinePoints.reduce((max, entry) => (entry.costUsd > max.costUsd ? entry : max), timelinePoints[0]);
+	return best.costUsd > 0 ? best : null;
+};
+
+export const selectBusiestDayOfWeek = (timelinePoints: TimelinePoint[]): string => {
+	if (timelinePoints.length === 0) return "";
+	const byDay = [0, 0, 0, 0, 0, 0, 0];
+	for (const point of timelinePoints) {
+		const day = new Date(`${point.date}T00:00:00Z`).getUTCDay();
+		byDay[day] += point.tokens;
+	}
+	const maxTokens = Math.max(...byDay);
+	if (maxTokens <= 0) return "";
+	const maxIdx = byDay.indexOf(maxTokens);
+	return DAY_NAMES[maxIdx] ?? "";
+};
+
 export interface DashboardTotals {
 	totalSessions: number;
 	totalTokens: number;
@@ -406,10 +425,7 @@ export const useDashboardData = () => {
 		const activeDays = activeDates.size;
 		const currentStreak = calculateCurrentStreakFromDates(activeDates, dateFrom, dateTo);
 		const longestStreak = calculateLongestStreakFromDates(activeDates, dateFrom, dateTo);
-		const mostExpensiveDay =
-			timelinePoints.length === 0
-				? null
-				: timelinePoints.reduce((max, entry) => (entry.costUsd > max.costUsd ? entry : max), timelinePoints[0]);
+		const mostExpensiveDay = selectMostExpensiveDay(timelinePoints);
 
 		return {
 			totalSessions: summary.totals.sessions,
@@ -491,14 +507,7 @@ export const useDashboardData = () => {
 	}, [timelinePoints]);
 
 	const busiestDayOfWeek = useMemo<string>(() => {
-		if (timelinePoints.length === 0) return "";
-		const byDay = [0, 0, 0, 0, 0, 0, 0];
-		for (const p of timelinePoints) {
-			const day = new Date(`${p.date}T00:00:00Z`).getUTCDay();
-			byDay[day] += p.tokens;
-		}
-		const maxIdx = byDay.indexOf(Math.max(...byDay));
-		return DAY_NAMES[maxIdx] ?? "";
+		return selectBusiestDayOfWeek(timelinePoints);
 	}, [timelinePoints]);
 
 	const busiestSingleDay = useMemo<BusiestSingleDay | null>(() => {

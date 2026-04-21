@@ -1015,10 +1015,73 @@ const stringifyBackupCsv = (
 	};
 };
 
+const buildMirroredTokenCountFingerprintsBySession = (
+	inputs: Array<{ session: Session; events: SessionEvent[] }>,
+): Map<string, Set<string>> => {
+	const inputBySessionId = new Map(inputs.map((input) => [input.session.id, input] as const));
+	const mirroredBySessionId = new Map<string, Set<string>>();
+	const effectiveFingerprintsBySessionId = new Map<string, Set<string>>();
+	const visiting = new Set<string>();
+
+	const getEffectiveFingerprints = (sessionId: string): Set<string> => {
+		const cached = effectiveFingerprintsBySessionId.get(sessionId);
+		if (cached) {
+			return cached;
+		}
+
+		if (visiting.has(sessionId)) {
+			return new Set();
+		}
+
+		const input = inputBySessionId.get(sessionId);
+		if (!input) {
+			return new Set();
+		}
+
+		visiting.add(sessionId);
+
+		let mirroredFingerprints = new Set<string>();
+		const parentSessionId = input.session.lineageParentId?.trim() || null;
+		if (input.session.isSubagent && parentSessionId) {
+			const parentFingerprints = getEffectiveFingerprints(parentSessionId);
+			if (parentFingerprints.size > 0) {
+				mirroredFingerprints = new Set(
+					input.events
+						.map((event) => event.tokenCountFingerprint ?? null)
+						.filter((fingerprint): fingerprint is string =>
+							Boolean(fingerprint && parentFingerprints.has(fingerprint)),
+						),
+				);
+			}
+		}
+
+		const effectiveFingerprints = new Set(
+			input.events
+				.map((event) => event.tokenCountFingerprint ?? null)
+				.filter(
+					(fingerprint): fingerprint is string =>
+						Boolean(fingerprint) && !mirroredFingerprints.has(fingerprint as string),
+				),
+		);
+
+		visiting.delete(sessionId);
+		mirroredBySessionId.set(sessionId, mirroredFingerprints);
+		effectiveFingerprintsBySessionId.set(sessionId, effectiveFingerprints);
+		return effectiveFingerprints;
+	};
+
+	for (const { session } of inputs) {
+		getEffectiveFingerprints(session.id);
+	}
+
+	return mirroredBySessionId;
+};
+
 export const aggregateNormalizedSessionsToHistoryFacts = (
 	inputs: Array<{ session: Session; events: SessionEvent[] }>,
 ): CanonicalHistoryFact[] => {
 	const facts = new Map<string, CanonicalHistoryFact>();
+	const mirroredTokenCountFingerprintsBySession = buildMirroredTokenCountFingerprintsBySession(inputs);
 
 	for (const { session, events } of inputs) {
 		const sessionTimestamp = parseSessionTimestamp(session);
@@ -1032,7 +1095,12 @@ export const aggregateNormalizedSessionsToHistoryFacts = (
 		updateFact(facts, sessionBucket, "model", modelKey, sessionStats, sessionTimestamp);
 		updateFact(facts, sessionBucket, "repo", repoKey, sessionStats, sessionTimestamp);
 
+		const mirroredFingerprints = mirroredTokenCountFingerprintsBySession.get(session.id) ?? new Set<string>();
 		for (const event of events) {
+			if (event.tokenCountFingerprint && mirroredFingerprints.has(event.tokenCountFingerprint)) {
+				continue;
+			}
+
 			const stats = toEventStats(event);
 			if (!hasTrackedActivity(stats)) {
 				continue;

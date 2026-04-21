@@ -1,5 +1,24 @@
 import { describe, expect, test } from "bun:test";
-import { buildRangeOptions, getCurrentYearInTimeZone, resolveDateRange, selectTopRepos } from "./useDashboardData";
+import {
+	buildRangeOptions,
+	getCurrentYearInTimeZone,
+	resolveDateRange,
+	selectBusiestDayOfWeek,
+	selectMostExpensiveDay,
+	selectTopRepos,
+	type TimelinePoint,
+} from "./useDashboardData";
+
+const point = (overrides: Partial<TimelinePoint>): TimelinePoint => ({
+	date: "2026-01-01",
+	sessions: 0,
+	tokens: 0,
+	costUsd: 0,
+	durationMs: 0,
+	messages: 0,
+	toolCalls: 0,
+	...overrides,
+});
 
 describe("useDashboardData date ranges", () => {
 	test("uses the aggregation timezone year around New Year's", () => {
@@ -49,5 +68,43 @@ describe("useDashboardData date ranges", () => {
 			"repo-7",
 			"repo-8",
 		]);
+	});
+});
+
+describe("useDashboardData timeline selectors", () => {
+	test("does not report Sunday as busiest day when every timeline entry has zero tokens", () => {
+		expect(
+			selectBusiestDayOfWeek([
+				point({ date: "2026-01-04", tokens: 0 }),
+				point({ date: "2026-01-05", tokens: 0 }),
+				point({ date: "2026-01-06", tokens: 0 }),
+			]),
+		).toBe("");
+	});
+
+	test("preserves existing weekday tie ordering for busiest day", () => {
+		expect(
+			selectBusiestDayOfWeek([
+				point({ date: "2026-01-05", tokens: 10 }),
+				point({ date: "2026-01-06", tokens: 10 }),
+				point({ date: "2026-01-07", tokens: 5 }),
+			]),
+		).toBe("Monday");
+	});
+
+	test("does not report a most expensive day when every timeline entry has zero spend", () => {
+		expect(
+			selectMostExpensiveDay([point({ date: "2026-01-05", costUsd: 0 }), point({ date: "2026-01-06", costUsd: 0 })]),
+		).toBeNull();
+	});
+
+	test("preserves first-day ordering for tied most expensive days", () => {
+		expect(
+			selectMostExpensiveDay([
+				point({ date: "2026-01-05", costUsd: 4.25 }),
+				point({ date: "2026-01-06", costUsd: 4.25 }),
+				point({ date: "2026-01-07", costUsd: 1 }),
+			])?.date,
+		).toBe("2026-01-05");
 	});
 });

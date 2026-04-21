@@ -3,23 +3,24 @@ import type { SessionEvent } from "../session-schema";
 import type { FileCandidate } from "../discovery";
 
 export interface RawParsedSession {
-  sessionId: string;
-  source: SessionSource;
-  filePath: string;
-  fileSizeBytes: number;
-  fileMtimeMs: number;
-  metadata: {
-    cwd: string | null;
-    gitBranch: string | null;
-    model: string | null;
-    cliVersion: string | null;
-    title: string | null;
-    isSubagent: boolean;
-  };
-  events: SessionEvent[];
+	sessionId: string;
+	source: SessionSource;
+	filePath: string;
+	fileSizeBytes: number;
+	fileMtimeMs: number;
+	metadata: {
+		cwd: string | null;
+		gitBranch: string | null;
+		model: string | null;
+		cliVersion: string | null;
+		title: string | null;
+		isSubagent: boolean;
+		lineageParentId: string | null;
+	};
+	events: SessionEvent[];
 }
 
 export interface SessionParser {
-  source: SessionSource;
-  parse(candidate: FileCandidate): Promise<RawParsedSession | null>;
+	source: SessionSource;
+	parse(candidate: FileCandidate): Promise<RawParsedSession | null>;
 }
