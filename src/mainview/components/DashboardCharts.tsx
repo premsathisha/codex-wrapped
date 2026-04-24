@@ -8,12 +8,15 @@ import {
 	type BarShapeProps,
 	CartesianGrid,
 	Cell,
+	Line,
+	LineChart,
 	Rectangle,
 	ResponsiveContainer,
 	XAxis,
 	YAxis,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
+import { Coffee, Moon, Sunrise, Sun, type LucideIcon } from "lucide-react";
 import { AnimatedNumber } from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
 import { ChartContainer, ChartTooltip } from "@shared/components/ui/chart";
@@ -96,7 +99,8 @@ interface HeatmapAgentTokenRow {
 }
 
 type HeatmapWeek = Array<HeatmapCell | null>;
-type CostSeriesPoint = { date: string } & Record<string, string | number>;
+type CostChartPoint = Omit<TimelinePoint, "costUsd"> & { costUsd: number | null; chartCostUsd: number | null };
+type CostSeriesPoint = { date: string } & Record<string, string | number | null>;
 
 interface TopRepoRow {
 	repo: string;
@@ -107,27 +111,27 @@ interface TopRepoRow {
 
 export interface CodingPersonality {
 	label: string;
-	emoji: string;
+	Icon: LucideIcon;
 	description: string;
 }
 
 export const classifyCodingPersonality = (peakHour: number): CodingPersonality => {
 	if (peakHour >= 22 || peakHour <= 4) {
-		return { label: "Night Owl", emoji: "\uD83E\uDD89", description: "You do your best work when the world sleeps." };
+		return { label: "Night Owl", Icon: Moon, description: "You do your best work when the world sleeps." };
 	}
 	if (peakHour <= 8) {
-		return { label: "Early Bird", emoji: "\uD83C\uDF05", description: "You catch bugs before others catch coffee." };
+		return { label: "Early Bird", Icon: Sunrise, description: "You catch bugs before others catch coffee." };
 	}
 	if (peakHour <= 11) {
-		return { label: "Morning Grinder", emoji: "\u2600\uFE0F", description: "Peak productivity in the morning hours." };
+		return { label: "Morning Grinder", Icon: Sun, description: "Peak productivity in the morning hours." };
 	}
 	if (peakHour <= 17) {
-		return { label: "Afternoon Warrior", emoji: "\u2615", description: "Post-lunch is when your focus peaks." };
+		return { label: "Afternoon Warrior", Icon: Coffee, description: "Post-lunch is when your focus peaks." };
 	}
 	if (peakHour <= 21) {
-		return { label: "Evening Hacker", emoji: "\uD83C\uDF19", description: "Sunset coding sessions are your thing." };
+		return { label: "Evening Hacker", Icon: Moon, description: "Sunset coding sessions are your thing." };
 	}
-	return { label: "Night Owl", emoji: "\uD83E\uDD89", description: "You do your best work when the world sleeps." };
+	return { label: "Night Owl", Icon: Moon, description: "You do your best work when the world sleeps." };
 };
 
 export const buildModelColors = (themePalette: ThemePalette): string[] => [
@@ -346,14 +350,17 @@ const CostTooltipCard = ({
 }: {
 	active?: boolean;
 	label?: string | number;
-	payload?: Array<{ name?: string | number; value?: unknown }>;
+	payload?: Array<{ name?: string | number; value?: unknown; payload?: { costUsd?: unknown } }>;
 }) => {
 	if (!active || !label || !payload || payload.length === 0) return null;
 
 	const entries = payload
 		.map((entry) => ({
 			label: String(entry.name ?? "Cost"),
-			value: toNumericTooltipValue(entry.value),
+			value:
+				entry.name === "Cost" && typeof entry.payload?.costUsd === "number"
+					? entry.payload.costUsd
+					: toNumericTooltipValue(entry.value),
 		}))
 		.filter((entry) => Number.isFinite(entry.value));
 
@@ -672,6 +679,16 @@ const DashboardCharts = ({
 			costUsd: dailyAgentCostsByDate[point.date]?.[costAgentFilter] ?? 0,
 		}));
 	}, [continuousTimeline, costAgentFilter, dailyAgentCostsByDate]);
+	const costChartTimeline = useMemo<CostChartPoint[]>(() => {
+		const maxCost = costTimeline.reduce((max, point) => Math.max(max, point.costUsd), 0);
+		const activeCostFloor = maxCost > 0 ? maxCost * 0.035 : 0;
+
+		return costTimeline.map((point) => ({
+			...point,
+			costUsd: point.costUsd > 0 ? point.costUsd : null,
+			chartCostUsd: point.costUsd > 0 ? Math.max(point.costUsd, activeCostFloor) : null,
+		}));
+	}, [costTimeline]);
 
 	const selectedTotalCostUsd =
 		costAgentFilter === "all" ? totalCostUsd : costTimeline.reduce((sum, point) => sum + point.costUsd, 0);
@@ -705,7 +722,8 @@ const DashboardCharts = ({
 				const sources = costAgentFilter === "all" ? SESSION_SOURCES : [costAgentFilter];
 
 				for (const source of sources) {
-					row[source] = bySource[source] ?? 0;
+					const costValue = bySource[source] ?? 0;
+					row[source] = costValue > 0 ? costValue : null;
 				}
 
 				return row;
@@ -743,12 +761,13 @@ const DashboardCharts = ({
 				for (const series of groupedModelSeries) {
 					if (series.key === "Others") continue;
 					const costValue = byModel[series.key] ?? 0;
-					row[series.key] = costValue;
+					row[series.key] = costValue > 0 ? costValue : null;
 					topModelCostTotal += costValue;
 				}
 
 				if (groupedModelSeries.some((series) => series.key === "Others")) {
-					row.Others = Math.max(0, point.costUsd - topModelCostTotal);
+					const otherCost = Math.max(0, point.costUsd - topModelCostTotal);
+					row.Others = otherCost > 0 ? otherCost : null;
 				}
 
 				return row;
@@ -1053,13 +1072,7 @@ const DashboardCharts = ({
 					<div className={`relative mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}>
 						{effectiveCostGroupBy === "none" ? (
 							<ResponsiveContainer width="100%" height="100%">
-								<AreaChart data={costTimeline}>
-									<defs>
-										<linearGradient id="costFill" x1="0" y1="0" x2="0" y2="1">
-											<stop offset="0%" stopColor={themePalette.high} stopOpacity={0.55} />
-											<stop offset="100%" stopColor={themePalette.high} stopOpacity={0.08} />
-										</linearGradient>
-									</defs>
+								<LineChart data={costChartTimeline}>
 									<CartesianGrid stroke="rgba(148,163,184,0.2)" strokeDasharray="2 5" />
 									<XAxis
 										dataKey="date"
@@ -1076,20 +1089,21 @@ const DashboardCharts = ({
 										wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
 										content={<CostTooltipCard />}
 									/>
-									<Area
+									<Line
 										type="monotone"
-										dataKey="costUsd"
+										dataKey="chartCostUsd"
 										name="Cost"
 										stroke={themePalette.medium}
-										fill="url(#costFill)"
 										strokeWidth={2.5}
+										dot={false}
 										activeDot={false}
+										connectNulls
 										isAnimationActive={animateCard6}
 										animationDuration={CHART_ANIMATION_MS}
 										animationBegin={0}
 										animationEasing="ease-in-out"
 									/>
-								</AreaChart>
+								</LineChart>
 							</ResponsiveContainer>
 						) : (
 							<ResponsiveContainer width="100%" height="100%">
@@ -1122,6 +1136,7 @@ const DashboardCharts = ({
 											fillOpacity={0.22}
 											strokeWidth={2}
 											activeDot={false}
+											connectNulls
 											isAnimationActive={animateCard6}
 											animationDuration={CHART_ANIMATION_MS}
 											animationBegin={0}
@@ -1240,6 +1255,7 @@ const DashboardCharts = ({
 							const peakHour = peakEntry.hour;
 							const peakTokens = peakEntry.tokens;
 							const personality = classifyCodingPersonality(peakHour);
+							const PersonalityIcon = personality.Icon;
 							const nightSessions = hourlyBreakdown
 								.filter((h) => h.hour >= 0 && h.hour < 6)
 								.reduce((sum, h) => sum + h.sessions, 0);
@@ -1295,7 +1311,7 @@ const DashboardCharts = ({
 
 									<div className="flex flex-col gap-3">
 										<article className="wrapped-tile py-6 text-left">
-											<p className="text-5xl">{personality.emoji}</p>
+											<PersonalityIcon aria-hidden="true" className="h-12 w-12 text-[#fafafa]" strokeWidth={1.8} />
 											<p className="mt-3 text-2xl font-semibold text-[#FAFAFA]">{personality.label}</p>
 											<p className="mt-2 text-sm text-[#A1A1A1]">{personality.description}</p>
 										</article>
