@@ -1,6 +1,8 @@
-import type { ThemeName } from "../lib/themePalettes";
+import type { ThemeName, ThemePalette } from "../lib/themePalettes";
 import { ChevronDown } from "lucide-react";
 import { Spinner } from "@shared/components/ui/spinner";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import ScanningStatus from "./ScanningStatus";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -28,6 +30,7 @@ interface SidebarProps {
 	timeZoneDisabled?: boolean;
 	rangeDisabled?: boolean;
 	isScanning: boolean;
+	themePalette: ThemePalette;
 }
 
 const Sidebar = ({
@@ -45,19 +48,66 @@ const Sidebar = ({
 	timeZoneDisabled = false,
 	rangeDisabled = false,
 	isScanning,
+	themePalette,
 }: SidebarProps) => {
+	const SCAN_MIN_VISIBLE_MS = 1200;
+	const SCAN_COMPLETION_HOLD_MS = 550;
+	const [isIndicatorVisible, setIsIndicatorVisible] = useState(false);
+	const visibleSinceRef = useRef<number>(0);
+	const hideTimerRef = useRef<number | null>(null);
+
+	useEffect(() => {
+		if (isScanning) {
+			if (hideTimerRef.current !== null) {
+				window.clearTimeout(hideTimerRef.current);
+				hideTimerRef.current = null;
+			}
+			if (!isIndicatorVisible) {
+				visibleSinceRef.current = Date.now();
+				setIsIndicatorVisible(true);
+			}
+			return;
+		}
+
+		if (!isIndicatorVisible) return;
+		const elapsed = Date.now() - visibleSinceRef.current;
+		const minVisibleRemaining = Math.max(0, SCAN_MIN_VISIBLE_MS - elapsed);
+		const hideDelayMs = minVisibleRemaining + SCAN_COMPLETION_HOLD_MS;
+
+		hideTimerRef.current = window.setTimeout(() => {
+			setIsIndicatorVisible(false);
+			hideTimerRef.current = null;
+		}, hideDelayMs);
+
+		return () => {
+			if (hideTimerRef.current !== null) {
+				window.clearTimeout(hideTimerRef.current);
+				hideTimerRef.current = null;
+			}
+		};
+	}, [isIndicatorVisible, isScanning]);
+
 	return (
 		<header className="w-full">
 			<div className="wrapped-nav-solid w-full px-4 py-3 sm:px-6">
 				<div className="mx-auto flex w-full max-w-[68rem] items-center justify-between gap-3">
 					<div className="wrapped-nav-content flex items-center gap-2">
 						<p className="text-xs uppercase tracking-[0.22em] text-[#E4E4E6]">Codex Wrapped</p>
-						{isScanning && (
-							<span className="flex items-center gap-1.5 text-[0.6rem] uppercase tracking-[0.14em] text-[#BBC4CF]">
-								<Spinner className="size-3.5 text-[#BBC4CF]" />
-								Scanning...
-							</span>
-						)}
+						<span
+							className="wrapped-scanning-indicator flex items-center gap-1.5 text-[0.6rem] uppercase tracking-[0.14em]"
+							data-visible={isIndicatorVisible}
+							aria-hidden={!isIndicatorVisible}
+							style={
+								{
+									"--scan-text-muted": themePalette.high,
+									"--scan-shimmer-start": themePalette.medium,
+									"--scan-shimmer-peak": themePalette.veryHigh,
+								} as CSSProperties
+							}
+						>
+							<Spinner className="wrapped-scanning-spinner size-3.5" />
+							<ScanningStatus isActive={isScanning} duration={2} repeatDelay={0.5} spread={2} />
+						</span>
 					</div>
 
 					<div className="wrapped-nav-content flex items-center gap-2 sm:gap-3">

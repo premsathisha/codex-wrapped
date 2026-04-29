@@ -36,6 +36,7 @@ import type { ThemePalette } from "../lib/themePalettes";
 import type {
 	BusiestSingleDay,
 	DailyAgentCostsByDate,
+	DashboardDateRange,
 	DailyModelCostsByDate,
 	DailyModelTokensByDate,
 	DailyAgentTokensByDate,
@@ -71,6 +72,7 @@ interface DashboardChartsProps {
 	weekendTokenPercent: number;
 	busiestDayOfWeek: string;
 	busiestSingleDay: BusiestSingleDay | null;
+	selectedRange: DashboardDateRange;
 }
 
 interface HeatmapCell {
@@ -509,6 +511,7 @@ const DashboardCharts = ({
 	weekendTokenPercent,
 	busiestDayOfWeek,
 	busiestSingleDay,
+	selectedRange,
 }: DashboardChartsProps) => {
 	const animateCard3 = Boolean(cardAnimations[3]);
 	const animateCard6 = Boolean(cardAnimations[6]);
@@ -621,6 +624,11 @@ const DashboardCharts = ({
 	const heatmapMonthLabels = useMemo(() => buildHeatmapMonthLabels(heatmapWeeks), [heatmapWeeks]);
 	const heatmapGridWidthPx =
 		Math.max(heatmapWeeks.length, 1) * heatmapCellSizePx + Math.max(0, heatmapWeeks.length - 1) * HEATMAP_GAP_PX;
+	const heatmapTotalWidthPx = heatmapGridWidthPx + HEATMAP_LEFT_GUTTER_PX + HEATMAP_GAP_PX * 2;
+	const shouldLockLast365HeatmapScroll =
+		selectedRange === "last365" &&
+		typeof heatmapTargetWidthPx === "number" &&
+		heatmapTotalWidthPx <= heatmapTargetWidthPx;
 	const heatmapTooltipHostWidthPx = heatmapTooltipHostRef.current?.clientWidth ?? 0;
 	const heatmapTooltipLeftPx =
 		heatmapHoverState === null
@@ -887,7 +895,7 @@ const DashboardCharts = ({
 								<div ref={heatmapTooltipHostRef} className="relative">
 									<div
 										ref={heatmapViewportRef}
-										className="overflow-x-auto pb-1"
+										className={shouldLockLast365HeatmapScroll ? "overflow-x-hidden pb-1" : "overflow-x-auto pb-1"}
 										data-export-scroll-anchor="end"
 										onMouseLeave={clearHeatmapHover}
 									>

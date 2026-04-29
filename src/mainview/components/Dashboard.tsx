@@ -80,12 +80,17 @@ const Dashboard = () => {
 	const [isImportingBackup, setIsImportingBackup] = useState(false);
 	const [isExportingBackup, setIsExportingBackup] = useState(false);
 	const [deletingBackupId, setDeletingBackupId] = useState<string | null>(null);
+	const [isRefreshScanPending, setIsRefreshScanPending] = useState(false);
+	const [pendingTimeZoneSelection, setPendingTimeZoneSelection] = useState<string | null>(null);
 	const activeCardRef = useRef<number>(1);
 	const scrollRef = useRef<HTMLDivElement | null>(null);
 	const animatedCardIndicesRef = useRef<Set<number>>(new Set());
 	const animationTimeoutByCardRef = useRef<Record<number, number>>({});
 	const prefersReducedMotionRef = useRef<boolean>(false);
 	const isUpdatingTimeZoneRef = useRef(false);
+	const refreshPendingTimeoutRef = useRef<number | null>(null);
+	const effectiveIsScanning = isScanning || isRefreshScanPending;
+	const displayedTimeZone = pendingTimeZoneSelection ?? aggregationTimeZone;
 
 	const startCardAnimation = useCallback((index: number) => {
 		if (index <= 0 || prefersReducedMotionRef.current) return;
@@ -120,22 +125,42 @@ const Dashboard = () => {
 	};
 
 	const handleHardRefresh = useCallback(() => {
-		if (isScanning || isUpdatingTimeZoneRef.current) return;
+		if (effectiveIsScanning || isUpdatingTimeZoneRef.current) return;
 
 		void (async () => {
+			setIsRefreshScanPending(true);
+			if (refreshPendingTimeoutRef.current !== null) {
+				window.clearTimeout(refreshPendingTimeoutRef.current);
+			}
+			refreshPendingTimeoutRef.current = window.setTimeout(() => {
+				setIsRefreshScanPending(false);
+				void refresh();
+				refreshPendingTimeoutRef.current = null;
+			}, 12_000);
+
 			try {
 				const scanResult = await rpc.request.triggerScan({ fullScan: true });
 				if (!scanResult.started) {
+					if (refreshPendingTimeoutRef.current !== null) {
+						window.clearTimeout(refreshPendingTimeoutRef.current);
+						refreshPendingTimeoutRef.current = null;
+					}
+					setIsRefreshScanPending(false);
 					await refresh();
 				}
 			} catch (error) {
+				if (refreshPendingTimeoutRef.current !== null) {
+					window.clearTimeout(refreshPendingTimeoutRef.current);
+					refreshPendingTimeoutRef.current = null;
+				}
+				setIsRefreshScanPending(false);
 				await rpc.send.log({
 					level: "error",
 					msg: error instanceof Error ? error.message : "Hard refresh failed.",
 				});
 			}
 		})();
-	}, [isScanning, refresh, rpc]);
+	}, [effectiveIsScanning, refresh, rpc]);
 
 	const timeZoneOptions = useMemo(() => {
 		if (TIME_ZONE_OPTIONS.some((option) => option.value === aggregationTimeZone)) {
@@ -152,10 +177,19 @@ const Dashboard = () => {
 
 	const handleTimeZoneChange = useCallback(
 		(value: string) => {
-			if (!value || value === aggregationTimeZone || isUpdatingTimeZoneRef.current) return;
+			if (
+				!value ||
+				value === aggregationTimeZone ||
+				value === pendingTimeZoneSelection ||
+				isUpdatingTimeZoneRef.current ||
+				effectiveIsScanning
+			) {
+				return;
+			}
 
 			isUpdatingTimeZoneRef.current = true;
 			setIsUpdatingTimeZone(true);
+			setPendingTimeZoneSelection(value);
 
 			void (async () => {
 				try {
@@ -165,15 +199,29 @@ const Dashboard = () => {
 						await refresh();
 					}
 					await loadImportedBackups();
+				} catch (error) {
+					setPendingTimeZoneSelection(null);
+					await rpc.send.log({
+						level: "error",
+						msg: error instanceof Error ? error.message : "Time zone update failed.",
+					});
 				} finally {
+					setPendingTimeZoneSelection(null);
 					isUpdatingTimeZoneRef.current = false;
 					setIsUpdatingTimeZone(false);
 				}
 			})();
 		},
-		[aggregationTimeZone, loadImportedBackups, refresh, rpc],
+		[aggregationTimeZone, pendingTimeZoneSelection, effectiveIsScanning, loadImportedBackups, refresh, rpc],
 	);
 	const themePalette = THEME_PALETTES[selectedTheme];
+
+	useEffect(() => {
+		if (pendingTimeZoneSelection === null) return;
+		if (aggregationTimeZone === pendingTimeZoneSelection) {
+			setPendingTimeZoneSelection(null);
+		}
+	}, [aggregationTimeZone, pendingTimeZoneSelection]);
 
 	useEffect(() => {
 		const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -207,6 +255,24 @@ const Dashboard = () => {
 	useEffect(() => {
 		window.localStorage.setItem(THEME_STORAGE_KEY, selectedTheme);
 	}, [selectedTheme]);
+
+	useEffect(() => {
+		return () => {
+			if (refreshPendingTimeoutRef.current !== null) {
+				window.clearTimeout(refreshPendingTimeoutRef.current);
+				refreshPendingTimeoutRef.current = null;
+			}
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!isScanning) return;
+		if (refreshPendingTimeoutRef.current !== null) {
+			window.clearTimeout(refreshPendingTimeoutRef.current);
+			refreshPendingTimeoutRef.current = null;
+		}
+		setIsRefreshScanPending(false);
+	}, [isScanning]);
 
 	useEffect(() => {
 		void loadImportedBackups();
@@ -292,13 +358,14 @@ const Dashboard = () => {
 			selectedRange={selectedRange}
 			rangeOptions={rangeOptions}
 			onRangeChange={handleRangeChange}
-			selectedTimeZone={aggregationTimeZone}
+			selectedTimeZone={displayedTimeZone}
 			timeZoneOptions={timeZoneOptions}
 			onTimeZoneChange={handleTimeZoneChange}
 			onHardRefresh={handleHardRefresh}
-			hardRefreshDisabled={isScanning || isUpdatingTimeZone}
-			timeZoneDisabled={isScanning || isUpdatingTimeZone}
-			isScanning={isScanning}
+			hardRefreshDisabled={effectiveIsScanning || isUpdatingTimeZone}
+			timeZoneDisabled={effectiveIsScanning || isUpdatingTimeZone}
+			isScanning={effectiveIsScanning}
+			themePalette={themePalette}
 		/>
 	);
 
@@ -476,6 +543,7 @@ const Dashboard = () => {
 						weekendTokenPercent={weekendTokenPercent}
 						busiestDayOfWeek={busiestDayOfWeek}
 						busiestSingleDay={busiestSingleDay}
+						selectedRange={selectedRange}
 					/>
 				</div>
 				<DashboardFooter

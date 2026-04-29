@@ -22,6 +22,9 @@
 	--accent-bg: #0d2449;
 	--accent-border: #63c7ff;
 	--accent-text: #a7e6ff;
+	--scan-text-muted: #bbc4cf;
+	--scan-shimmer-start: #8ea2ba;
+	--scan-shimmer-peak: #f3f7ff;
 }
 
 :root[data-theme="light"] {
@@ -38,6 +41,9 @@
 	--accent-bg: #cbe7ff;
 	--accent-border: #1d4ed8;
 	--accent-text: #15387f;
+	--scan-text-muted: #5b6f87;
+	--scan-shimmer-start: #5f7590;
+	--scan-shimmer-peak: #0f2341;
 }
 
 @media (prefers-color-scheme: light) {
@@ -55,6 +61,9 @@
 		--accent-bg: #cbe7ff;
 		--accent-border: #1d4ed8;
 		--accent-text: #15387f;
+		--scan-text-muted: #5b6f87;
+		--scan-shimmer-start: #5f7590;
+		--scan-shimmer-peak: #0f2341;
 	}
 }
 
@@ -263,6 +272,77 @@ textarea {
 
 .wrapped-button:hover {
 	background: rgba(56, 189, 248, 0.28);
+}
+
+.wrapped-scanning-indicator {
+	color: var(--scan-text-muted);
+	max-width: 0;
+	opacity: 0;
+	overflow: hidden;
+	transform: translateY(-2px);
+	visibility: hidden;
+	white-space: nowrap;
+	transition:
+		opacity 240ms ease,
+		transform 240ms ease,
+		max-width 220ms ease 240ms,
+		visibility 0s linear 460ms;
+}
+
+.wrapped-scanning-indicator[data-visible="true"] {
+	max-width: 18rem;
+	opacity: 1;
+	transform: translateY(0);
+	visibility: visible;
+	transition:
+		max-width 180ms ease,
+		opacity 220ms ease 60ms,
+		transform 220ms ease 60ms;
+}
+
+.wrapped-scanning-spinner {
+	color: var(--scan-text-muted);
+}
+
+.wrapped-scanning-shimmer {
+	position: relative;
+	display: inline-block;
+	overflow: hidden;
+	white-space: nowrap;
+	background: linear-gradient(
+		90deg,
+		var(--scan-shimmer-base-color) 0%,
+		var(--scan-shimmer-base-color) 38%,
+		var(--scan-shimmer-highlight-color) 50%,
+		var(--scan-shimmer-base-color) 62%,
+		var(--scan-shimmer-base-color) 100%
+	);
+	background-size: 260% 100%;
+	background-position: 0 0;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	animation: wrapped-shimmer-sweep var(--scan-shimmer-duration, 2s) ease-in-out infinite alternate;
+}
+
+@keyframes wrapped-shimmer-sweep {
+	0% {
+		background-position: 0 0;
+	}
+	100% {
+		background-position: 100% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wrapped-scanning-indicator {
+		transition: none;
+	}
+
+	.wrapped-scanning-shimmer {
+		background: none;
+		color: var(--scan-shimmer-highlight-color);
+	}
 }
 
 .wrapped-footer {
