@@ -634,5 +634,3 @@ export const codexParser: SessionParser = {
 		}
 	},
 };
-
-export const parseCodex = codexParser.parse;

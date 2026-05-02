@@ -6,7 +6,7 @@ import { fileURLToPath, URL } from "node:url";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   root: ".",
-  publicDir: "public",
+  publicDir: "assets/Website Favicon",
   build: {
     outDir: "dist",
     emptyOutDir: true,

@@ -1,3 +1,4 @@
+import logoUrl from "../../../assets/Website Icon (logo on page : header)/logo.svg?url";
 import type { ThemeName, ThemePalette } from "../lib/themePalettes";
 import { ChevronDown } from "lucide-react";
 import { Spinner } from "@shared/components/ui/spinner";
@@ -92,6 +93,7 @@ const Sidebar = ({
 			<div className="wrapped-nav-solid w-full px-4 py-3 sm:px-6">
 				<div className="mx-auto flex w-full max-w-[68rem] items-center justify-between gap-3">
 					<div className="wrapped-nav-content flex items-center gap-2">
+						<img src={logoUrl} alt="" aria-hidden="true" className="size-5" />
 						<p className="text-xs uppercase tracking-[0.22em] text-[#E4E4E6]">Codex Wrapped</p>
 						<span
 							className="wrapped-scanning-indicator flex items-center gap-1.5 text-[0.6rem] uppercase tracking-[0.14em]"
