@@ -1,4 +1,5 @@
-import { basename } from "node:path";
+import { homedir } from "node:os";
+import { basename, normalize } from "node:path";
 import { EMPTY_TOKEN_USAGE, type TokenUsage } from "../shared/schema";
 import type { Session, SessionEvent, SessionEventKind } from "./session-schema";
 import { computeCost } from "./pricing";
@@ -320,7 +321,9 @@ const normalizeEventShape = (event: SessionEvent, index: number, sessionId: stri
 
 const extractRepoName = (cwd: string | null): string | null => {
 	if (!cwd) return null;
-	const repo = basename(cwd.replace(/[\\/]+$/, ""));
+	const normalizedCwd = normalize(cwd.replace(/[\\/]+$/, ""));
+	if (normalizedCwd === normalize(homedir())) return null;
+	const repo = basename(normalizedCwd);
 	return repo.length > 0 ? repo : null;
 };
 

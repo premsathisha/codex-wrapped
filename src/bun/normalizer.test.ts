@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { homedir } from "node:os";
 import type { SessionEvent } from "./session-schema";
 import { normalizeSession, normalizeTokenUsage } from "./normalizer";
 import type { RawParsedSession } from "./parsers/types";
@@ -132,6 +133,19 @@ describe("normalizeSession costs", () => {
 
 		expect(result.session.startTime).toBeNull();
 		expect(result.session.parsedAt).toBe("2026-02-21T12:34:56.000Z");
+	});
+
+	test("does not treat the home directory as a repository name", () => {
+		const rawSession = makeRawSession("session-home-cwd", [makeEvent({ id: "home-event" })]);
+		const result = normalizeSession({
+			...rawSession,
+			metadata: {
+				...rawSession.metadata,
+				cwd: `${homedir()}/`,
+			},
+		});
+
+		expect(result.session.repoName).toBeNull();
 	});
 });
 

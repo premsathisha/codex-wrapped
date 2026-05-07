@@ -471,7 +471,11 @@ const buildRepoHoverDetails = (repo: TopRepoRow): string =>
 		`Spend: ${formatSpendUsd(repo.costUsd)}`,
 	].join("\n");
 
-const renderTopReposTooltip = ({ active, payload, label }: TooltipContentProps<any, any>) => {
+const renderTopReposTooltip = ({
+	active,
+	payload,
+	label,
+}: TooltipContentProps<number | string | ReadonlyArray<number | string>, string | number>) => {
 	const row = payload?.[0]?.payload as TopRepoRow | undefined;
 	if (!active || !row) return null;
 

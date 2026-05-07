@@ -34,7 +34,7 @@ if (dailyExists) {
     }
   }
 }
-console.log(JSON.stringify({ result, dailyExists, totalSessions }));
+process.stdout.write(JSON.stringify({ result, dailyExists, totalSessions }));
 `;
 
 	const command = Bun.spawnSync(["bun", "-e", script], {

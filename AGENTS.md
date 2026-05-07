@@ -72,7 +72,7 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 3. `feat:` triggers minor releases.
 4. `feat!:` or `BREAKING CHANGE:` triggers major releases.
 5. `chore:`, `docs:`, `refactor:`, `test:`, `ci:` do not trigger releases.
-6. Releases are automated via semantic-release on pushes to `main`.
+6. Releases are published by manually running `.github/workflows/publish.yml`, which uses semantic-release against `main`.
 
 ## Agent Workflow Notes
 1. Do not validate frontend fixes against stale bundles.
