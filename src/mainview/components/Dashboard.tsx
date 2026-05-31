@@ -2,10 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ImportBackupResult, ImportedBackupSummary } from "@shared/types";
 import DashboardCharts from "./DashboardCharts";
 import DashboardFooter from "./DashboardFooter";
-import EmptyState from "./EmptyState";
 import Sidebar from "./Sidebar";
 import StatsCards from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
+import SmoothSurface from "./SmoothSurface";
 import { useDashboardData, type DashboardDateRange } from "../hooks/useDashboardData";
 import { useRPC } from "../hooks/useRPC";
 import { THEME_OPTIONS, THEME_PALETTES, type ThemeName } from "../lib/themePalettes";
@@ -452,13 +452,8 @@ const Dashboard = () => {
 	if (loading && !summary) {
 		return (
 			<>
-				<div ref={scrollRef} className="wrapped-scroll">
+				<div ref={scrollRef} className="wrapped-scroll" aria-busy="true">
 					{sidebar}
-					<DownloadableCard title="Building your coding story">
-						<section data-card-index="1" className="wrapped-card wrapped-card-loading">
-							<EmptyState title="Building your coding story" description="Loading annual summary and timeline." />
-						</section>
-					</DownloadableCard>
 				</div>
 			</>
 		);
@@ -470,20 +465,24 @@ const Dashboard = () => {
 				<div ref={scrollRef} className="wrapped-scroll">
 					{sidebar}
 					<div className="mx-auto w-full max-w-5xl px-4 sm:px-6">
-						<section data-card-index="1" className="wrapped-card wrapped-card-loading wrapped-card-error">
-							<div className="w-full">
-								<p className="wrapped-kicker">Something Went Wrong</p>
-								<h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#FAFAFA] sm:text-4xl">
-									Unable to build wrapped view
-								</h1>
-								<p className="mt-3 break-words text-sm text-[#A1A1A1]">{error}</p>
-								<div className="mt-5">
-									<button type="button" onClick={() => void refresh()} className="export-btn">
-										Retry
-									</button>
+						<SmoothSurface radius={32}>
+							<section data-card-index="1" className="wrapped-card wrapped-card-loading wrapped-card-error">
+								<div className="w-full">
+									<p className="wrapped-kicker">Something Went Wrong</p>
+									<h1 className="mt-2 text-3xl font-semibold tracking-[-0.02em] text-[#FAFAFA] sm:text-4xl">
+										Unable to build wrapped view
+									</h1>
+									<p className="mt-3 break-words text-sm text-[#A1A1A1]">{error}</p>
+									<div className="mt-5">
+										<SmoothSurface radius={8}>
+											<button type="button" onClick={() => void refresh()} className="export-btn">
+												Retry
+											</button>
+										</SmoothSurface>
+									</div>
 								</div>
-							</div>
-						</section>
+							</section>
+						</SmoothSurface>
 					</div>
 				</div>
 			</>

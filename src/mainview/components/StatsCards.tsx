@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatNumber, formatSpendUsd, formatTokens } from "../lib/formatters";
+import SmoothSurface from "./SmoothSurface";
 
 const useInView = <T extends HTMLElement>(threshold = 0.4) => {
 	const ref = useRef<T | null>(null);
@@ -102,16 +103,18 @@ const StatsCards = ({
 	return (
 		<div ref={ref} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 			{stats.map((stat) => (
-				<article key={stat.label} className="wrapped-tile">
-					<p className="wrapped-label">{stat.label}</p>
-					<AnimatedNumber
-						value={stat.value}
-						format={stat.format}
-						durationMs={2000}
-						animate={visible && animateOnMount}
-						className="mt-2 block text-3xl font-semibold tracking-tight text-[#FAFAFA] sm:text-4xl"
-					/>
-				</article>
+				<SmoothSurface key={stat.label} radius={19.2}>
+					<article className="wrapped-tile">
+						<p className="wrapped-label">{stat.label}</p>
+						<AnimatedNumber
+							value={stat.value}
+							format={stat.format}
+							durationMs={2000}
+							animate={visible && animateOnMount}
+							className="mt-2 block text-3xl font-semibold tracking-tight text-[#FAFAFA] sm:text-4xl"
+						/>
+					</article>
+				</SmoothSurface>
 			))}
 		</div>
 	);

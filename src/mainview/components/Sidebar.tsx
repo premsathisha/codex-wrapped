@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { Spinner } from "@shared/components/ui/spinner";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import ScanningStatus from "./ScanningStatus";
+import SmoothSurface from "./SmoothSurface";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -114,13 +115,15 @@ const Sidebar = ({
 
 					<div className="wrapped-nav-content flex items-center gap-2 sm:gap-3">
 						<DropdownMenu>
-							<DropdownMenuTrigger
-								aria-label="Display and data settings"
-								className="wrapped-nav-select inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium outline-none transition enabled:focus:border-sky-300 sm:text-sm"
-							>
-								Display
-								<ChevronDown className="h-3.5 w-3.5" />
-							</DropdownMenuTrigger>
+							<SmoothSurface radius={8}>
+								<DropdownMenuTrigger
+									aria-label="Display and data settings"
+									className="wrapped-nav-select inline-flex h-9 items-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium outline-none transition enabled:focus:border-sky-300 sm:text-sm"
+								>
+									Display
+									<ChevronDown className="h-3.5 w-3.5" />
+								</DropdownMenuTrigger>
+							</SmoothSurface>
 
 							<DropdownMenuContent
 								align="end"

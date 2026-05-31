@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ImportBackupResult, ImportedBackupSummary } from "@shared/types";
 import { toast } from "sonner";
+import SmoothSurface from "./SmoothSurface";
 
 const GITHUB_REPO_URL = import.meta.env.VITE_PROJECT_REPO_URL?.trim() || null;
 const MIT_LICENSE_URL = "https://opensource.org/license/mit";
@@ -112,33 +113,37 @@ const DashboardFooter = ({
 									event.currentTarget.value = "";
 								}}
 							/>
-							<button
-								type="button"
-								className="file-btn"
-								onClick={() => {
-									if (!isImporting) {
-										fileInputRef.current?.click();
-									}
-								}}
-							>
-								<svg
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="1.8"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									aria-hidden="true"
+							<SmoothSurface radius={8}>
+								<button
+									type="button"
+									className="file-btn"
+									onClick={() => {
+										if (!isImporting) {
+											fileInputRef.current?.click();
+										}
+									}}
 								>
-									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-									<polyline points="17 8 12 3 7 8" />
-									<line x1="12" y1="3" x2="12" y2="15" />
-								</svg>
-								{isImporting ? "Importing..." : "Choose file"}
-							</button>
-							<span className="file-tag">CSV</span>
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="1.8"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										aria-hidden="true"
+									>
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+										<polyline points="17 8 12 3 7 8" />
+										<line x1="12" y1="3" x2="12" y2="15" />
+									</svg>
+									{isImporting ? "Importing..." : "Choose file"}
+								</button>
+							</SmoothSurface>
+							<SmoothSurface radius={4}>
+								<span className="file-tag">CSV</span>
+							</SmoothSurface>
 						</div>
 					</div>
 
@@ -149,25 +154,29 @@ const DashboardFooter = ({
 							Download your wrapped backup as a <code>.csv</code> file.
 						</p>
 						<div className="file-input-row">
-							<button type="button" className="export-btn" onClick={onExport} disabled={isExporting}>
-								<svg
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									strokeWidth="1.8"
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									aria-hidden="true"
-								>
-									<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-									<polyline points="7 10 12 15 17 10" />
-									<line x1="12" y1="15" x2="12" y2="3" />
-								</svg>
-								{isExporting ? "Exporting..." : "Export"}
-							</button>
-							<span className="file-tag">CSV</span>
+							<SmoothSurface radius={8}>
+								<button type="button" className="export-btn" onClick={onExport} disabled={isExporting}>
+									<svg
+										width="14"
+										height="14"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="1.8"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										aria-hidden="true"
+									>
+										<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+										<polyline points="7 10 12 15 17 10" />
+										<line x1="12" y1="15" x2="12" y2="3" />
+									</svg>
+									{isExporting ? "Exporting..." : "Export"}
+								</button>
+							</SmoothSurface>
+							<SmoothSurface radius={4}>
+								<span className="file-tag">CSV</span>
+							</SmoothSurface>
 						</div>
 					</div>
 				</div>
@@ -177,31 +186,35 @@ const DashboardFooter = ({
 						<p className="footer-section-label">Imported Backups</p>
 						<div className="mt-3 grid gap-3">
 							{importedBackups.map((backup) => (
-								<article key={backup.backupId} className="wrapped-tile">
-									<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-										<div className="min-w-0">
-											<p className="text-sm font-semibold text-[#FAFAFA]">{backup.originalFilename}</p>
-											<p className="mt-1 text-xs text-[#A1A1A1]">
-												Imported {backup.importedAtUtc.slice(0, 10)} • {formatCoverage(backup)}
-											</p>
-											<p className="mt-1 text-xs text-[#A1A1A1]">
-												Origin {backup.originInstallId.slice(0, 8)} • {backup.isActive ? "Active" : "Replaced"}
-												{backup.contributesData ? " • Contributing" : " • Not contributing"}
-											</p>
-											<p className="mt-1 text-xs text-[#A1A1A1]">
-												Checksum {backup.checksum.slice(0, 10)}… • Export {backup.exportId.slice(0, 8)}
-											</p>
+								<SmoothSurface key={backup.backupId} radius={19.2}>
+									<article className="wrapped-tile">
+										<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+											<div className="min-w-0">
+												<p className="text-sm font-semibold text-[#FAFAFA]">{backup.originalFilename}</p>
+												<p className="mt-1 text-xs text-[#A1A1A1]">
+													Imported {backup.importedAtUtc.slice(0, 10)} • {formatCoverage(backup)}
+												</p>
+												<p className="mt-1 text-xs text-[#A1A1A1]">
+													Origin {backup.originInstallId.slice(0, 8)} • {backup.isActive ? "Active" : "Replaced"}
+													{backup.contributesData ? " • Contributing" : " • Not contributing"}
+												</p>
+												<p className="mt-1 text-xs text-[#A1A1A1]">
+													Checksum {backup.checksum.slice(0, 10)}… • Export {backup.exportId.slice(0, 8)}
+												</p>
+											</div>
+											<SmoothSurface radius={8}>
+												<button
+													type="button"
+													className="export-btn"
+													onClick={() => onDeleteBackup(backup.backupId)}
+													disabled={deletingBackupId === backup.backupId}
+												>
+													{deletingBackupId === backup.backupId ? "Deleting..." : "Delete"}
+												</button>
+											</SmoothSurface>
 										</div>
-										<button
-											type="button"
-											className="export-btn"
-											onClick={() => onDeleteBackup(backup.backupId)}
-											disabled={deletingBackupId === backup.backupId}
-										>
-											{deletingBackupId === backup.backupId ? "Deleting..." : "Delete"}
-										</button>
-									</div>
-								</article>
+									</article>
+								</SmoothSurface>
 							))}
 						</div>
 					</div>

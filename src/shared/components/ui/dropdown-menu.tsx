@@ -1,8 +1,11 @@
 import * as React from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
+import { SmoothCorners } from "@lisse/react";
 
 import { cn } from "@shared/lib/utils";
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
+
+const smoothCorners = (radius: number) => ({ radius, smoothing: 0.72 });
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -29,14 +32,16 @@ function DropdownMenuContent({
 				side={side}
 				sideOffset={sideOffset}
 			>
-				<MenuPrimitive.Popup
-					data-slot="dropdown-menu-content"
-					className={cn(
-						"z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95",
-						className,
-					)}
-					{...props}
-				/>
+				<SmoothCorners asChild corners={smoothCorners(8)} shadowStrategy="box-shadow">
+					<MenuPrimitive.Popup
+						data-slot="dropdown-menu-content"
+						className={cn(
+							"z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95",
+							className,
+						)}
+						{...props}
+					/>
+				</SmoothCorners>
 			</MenuPrimitive.Positioner>
 		</MenuPrimitive.Portal>
 	);
@@ -55,18 +60,20 @@ function DropdownMenuSubTrigger({
 	inset?: boolean;
 }) {
 	return (
-		<MenuPrimitive.SubmenuTrigger
-			data-slot="dropdown-menu-sub-trigger"
-			data-inset={inset}
-			className={cn(
-				"flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				className,
-			)}
-			{...props}
-		>
-			{children}
-			<ChevronRightIcon className="ml-auto" />
-		</MenuPrimitive.SubmenuTrigger>
+		<SmoothCorners asChild corners={smoothCorners(6)} autoEffects={false}>
+			<MenuPrimitive.SubmenuTrigger
+				data-slot="dropdown-menu-sub-trigger"
+				data-inset={inset}
+				className={cn(
+					"flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+					className,
+				)}
+				{...props}
+			>
+				{children}
+				<ChevronRightIcon className="ml-auto" />
+			</MenuPrimitive.SubmenuTrigger>
+		</SmoothCorners>
 	);
 }
 
@@ -107,25 +114,27 @@ function DropdownMenuRadioItem({
 	inset?: boolean;
 }) {
 	return (
-		<MenuPrimitive.RadioItem
-			data-slot="dropdown-menu-radio-item"
-			data-inset={inset}
-			className={cn(
-				"relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				className,
-			)}
-			{...props}
-		>
-			<span
-				className="pointer-events-none absolute right-2 flex items-center justify-center"
-				data-slot="dropdown-menu-radio-item-indicator"
+		<SmoothCorners asChild corners={smoothCorners(6)} autoEffects={false}>
+			<MenuPrimitive.RadioItem
+				data-slot="dropdown-menu-radio-item"
+				data-inset={inset}
+				className={cn(
+					"relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+					className,
+				)}
+				{...props}
 			>
-				<MenuPrimitive.RadioItemIndicator>
-					<CheckIcon />
-				</MenuPrimitive.RadioItemIndicator>
-			</span>
-			{children}
-		</MenuPrimitive.RadioItem>
+				<span
+					className="pointer-events-none absolute right-2 flex items-center justify-center"
+					data-slot="dropdown-menu-radio-item-indicator"
+				>
+					<MenuPrimitive.RadioItemIndicator>
+						<CheckIcon />
+					</MenuPrimitive.RadioItemIndicator>
+				</span>
+				{children}
+			</MenuPrimitive.RadioItem>
+		</SmoothCorners>
 	);
 }
 
@@ -137,15 +146,17 @@ function DropdownMenuItem({
 	inset?: boolean;
 }) {
 	return (
-		<MenuPrimitive.Item
-			data-slot="dropdown-menu-item"
-			data-inset={inset}
-			className={cn(
-				"flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-				className,
-			)}
-			{...props}
-		/>
+		<SmoothCorners asChild corners={smoothCorners(6)} autoEffects={false}>
+			<MenuPrimitive.Item
+				data-slot="dropdown-menu-item"
+				data-inset={inset}
+				className={cn(
+					"flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+					className,
+				)}
+				{...props}
+			/>
+		</SmoothCorners>
 	);
 }
 

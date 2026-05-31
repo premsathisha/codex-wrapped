@@ -10,15 +10,16 @@ import {
 	Cell,
 	Line,
 	LineChart,
-	Rectangle,
 	ResponsiveContainer,
 	XAxis,
 	YAxis,
 } from "recharts";
+import { generateClipPath, generatePath } from "@lisse/core/path";
 import type { TooltipContentProps } from "recharts";
 import { Coffee, Moon, Sunrise, Sun, type LucideIcon } from "lucide-react";
 import { AnimatedNumber } from "./StatsCards";
 import DownloadableCard from "./DownloadableCard";
+import SmoothSurface, { SmoothClippedBox, smoothCorners, smoothCornerSet } from "./SmoothSurface";
 import { ChartContainer, ChartTooltip } from "@shared/components/ui/chart";
 import {
 	formatCompactNumber,
@@ -262,9 +263,16 @@ const buildHeatmapWeeks = (cells: HeatmapCell[]): HeatmapWeek[] => {
 const chartWrapperClass = "h-56 w-full sm:h-64";
 const chartRevealClass = "wrapped-chart-reveal";
 const CHART_ANIMATION_MS = 2000;
+const chartTooltipWrapperStyle: CSSProperties = {
+	zIndex: 20,
+	pointerEvents: "none",
+	transition: "opacity 120ms ease",
+};
 const HEATMAP_TOOLTIP_HALF_WIDTH_PX = 112;
 const HEATMAP_LEFT_GUTTER_PX = 36;
 const HEATMAP_MONTH_ROW_HEIGHT_PX = 18;
+const HEATMAP_CORNER_RADIUS_PX = 4;
+const HEATMAP_LEGEND_CELL_SIZE_PX = 14;
 const HEATMAP_WEEKDAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 const HEATMAP_MONTH_FORMATTER = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
 
@@ -307,9 +315,31 @@ const buildBarTransitionStyle = (style?: CSSProperties): CSSProperties => {
 	};
 };
 
-const renderAnimatedBarShape = (props: BarShapeProps, fill: string) => (
-	<Rectangle {...props} fill={fill} style={buildBarTransitionStyle(props.style)} />
-);
+const toShapeNumber = (value: unknown): number => (typeof value === "number" ? value : Number(value ?? 0));
+
+const resolveBarRadii = (radius: BarShapeProps["radius"]): [number, number, number, number] => {
+	if (Array.isArray(radius)) {
+		const [topLeft = 0, topRight = 0, bottomRight = 0, bottomLeft = 0] = radius;
+		return [toShapeNumber(topLeft), toShapeNumber(topRight), toShapeNumber(bottomRight), toShapeNumber(bottomLeft)];
+	}
+
+	const uniformRadius = toShapeNumber(radius);
+	return [uniformRadius, uniformRadius, uniformRadius, uniformRadius];
+};
+
+const renderAnimatedBarShape = (props: BarShapeProps, fill: string) => {
+	const width = toShapeNumber(props.width);
+	const height = toShapeNumber(props.height);
+	const x = toShapeNumber(props.x);
+	const y = toShapeNumber(props.y);
+
+	if (width <= 0 || height <= 0) return null;
+
+	const [topLeft, topRight, bottomRight, bottomLeft] = resolveBarRadii(props.radius);
+	const d = generatePath(width, height, smoothCornerSet(topLeft, topRight, bottomRight, bottomLeft));
+
+	return <path d={d} fill={fill} style={buildBarTransitionStyle(props.style)} transform={`translate(${x} ${y})`} />;
+};
 
 const HourlyTooltipCard = ({
 	active,
@@ -322,26 +352,28 @@ const HourlyTooltipCard = ({
 	if (!active || !row) return null;
 
 	return (
-		<div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
-			<p className="text-sm font-semibold text-slate-100">{row.label}</p>
-			<p className="mt-1 text-xs text-[#A1A1A1]">
-				Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})
-			</p>
-			<p className="text-xs text-[#A1A1A1]">Cost: {formatUsd(row.costUsd)}</p>
-			<p className="text-xs text-[#A1A1A1]">Sessions: {formatNumber(row.sessions)}</p>
-			{row.byAgent.length > 0 && (
-				<div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
-					{row.byAgent.map((a) => (
-						<p key={a.source} className="flex items-center justify-between gap-3 text-xs text-[#A1A1A1]">
-							<span className="text-[#A1A1A1]">{a.label}</span>
-							<span className="text-[#A1A1A1]">
-								{formatTokens(a.tokens)} · {formatUsd(a.costUsd)} · {formatNumber(a.sessions)} sessions
-							</span>
-						</p>
-					))}
-				</div>
-			)}
-		</div>
+		<SmoothSurface radius={12}>
+			<div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
+				<p className="text-sm font-semibold text-slate-100">{row.label}</p>
+				<p className="mt-1 text-xs text-[#A1A1A1]">
+					Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})
+				</p>
+				<p className="text-xs text-[#A1A1A1]">Cost: {formatUsd(row.costUsd)}</p>
+				<p className="text-xs text-[#A1A1A1]">Sessions: {formatNumber(row.sessions)}</p>
+				{row.byAgent.length > 0 && (
+					<div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
+						{row.byAgent.map((a) => (
+							<p key={a.source} className="flex items-center justify-between gap-3 text-xs text-[#A1A1A1]">
+								<span className="text-[#A1A1A1]">{a.label}</span>
+								<span className="text-[#A1A1A1]">
+									{formatTokens(a.tokens)} · {formatUsd(a.costUsd)} · {formatNumber(a.sessions)} sessions
+								</span>
+							</p>
+						))}
+					</div>
+				)}
+			</div>
+		</SmoothSurface>
 	);
 };
 
@@ -369,17 +401,19 @@ const CostTooltipCard = ({
 	if (entries.length === 0) return null;
 
 	return (
-		<div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
-			<p className="text-sm font-semibold text-[#FAFAFA]">{formatShortDate(String(label))}</p>
-			<div className="mt-1.5 space-y-1">
-				{entries.map((entry) => (
-					<p key={entry.label} className="flex items-center justify-between gap-3 text-xs text-[#A1A1A1]">
-						<span>{entry.label}</span>
-						<span>{formatUsd(entry.value)}</span>
-					</p>
-				))}
+		<SmoothSurface radius={12}>
+			<div className="rounded-xl border border-slate-400/45 bg-black px-3 py-2 shadow-2xl">
+				<p className="text-sm font-semibold text-[#FAFAFA]">{formatShortDate(String(label))}</p>
+				<div className="mt-1.5 space-y-1">
+					{entries.map((entry) => (
+						<p key={entry.label} className="flex items-center justify-between gap-3 text-xs text-[#A1A1A1]">
+							<span>{entry.label}</span>
+							<span>{formatUsd(entry.value)}</span>
+						</p>
+					))}
+				</div>
 			</div>
-		</div>
+		</SmoothSurface>
 	);
 };
 
@@ -480,14 +514,16 @@ const renderTopReposTooltip = ({
 	if (!active || !row) return null;
 
 	return (
-		<div className="rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl">
-			<p className="mb-1 text-sm font-semibold text-[#FAFAFA]">{typeof label === "string" ? label : "Repository"}</p>
-			<p>Sessions: {formatNumber(row.sessions)}</p>
-			<p>
-				Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})
-			</p>
-			<p>Spend: {formatSpendUsd(row.costUsd)}</p>
-		</div>
+		<SmoothSurface radius={12}>
+			<div className="rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl">
+				<p className="mb-1 text-sm font-semibold text-[#FAFAFA]">{typeof label === "string" ? label : "Repository"}</p>
+				<p>Sessions: {formatNumber(row.sessions)}</p>
+				<p>
+					Tokens: {formatTokens(row.tokens)} ({formatNumber(row.tokens)})
+				</p>
+				<p>Spend: {formatSpendUsd(row.costUsd)}</p>
+			</div>
+		</SmoothSurface>
 	);
 };
 
@@ -625,14 +661,22 @@ const DashboardCharts = ({
 	const heatmapGridStyle: CSSProperties = {
 		gridTemplateColumns: `repeat(${Math.max(heatmapWeeks.length, 1)}, ${heatmapCellSizePx}px)`,
 	};
+	const heatmapCellClipPath = useMemo(
+		() => generateClipPath(heatmapCellSizePx, heatmapCellSizePx, smoothCorners(HEATMAP_CORNER_RADIUS_PX)),
+		[heatmapCellSizePx],
+	);
+	const heatmapLegendCellClipPath = useMemo(
+		() =>
+			generateClipPath(
+				HEATMAP_LEGEND_CELL_SIZE_PX,
+				HEATMAP_LEGEND_CELL_SIZE_PX,
+				smoothCorners(HEATMAP_CORNER_RADIUS_PX),
+			),
+		[],
+	);
 	const heatmapMonthLabels = useMemo(() => buildHeatmapMonthLabels(heatmapWeeks), [heatmapWeeks]);
 	const heatmapGridWidthPx =
 		Math.max(heatmapWeeks.length, 1) * heatmapCellSizePx + Math.max(0, heatmapWeeks.length - 1) * HEATMAP_GAP_PX;
-	const heatmapTotalWidthPx = heatmapGridWidthPx + HEATMAP_LEFT_GUTTER_PX + HEATMAP_GAP_PX * 2;
-	const shouldLockLast365HeatmapScroll =
-		selectedRange === "last365" &&
-		typeof heatmapTargetWidthPx === "number" &&
-		heatmapTotalWidthPx <= heatmapTargetWidthPx;
 	const heatmapTooltipHostWidthPx = heatmapTooltipHostRef.current?.clientWidth ?? 0;
 	const heatmapTooltipLeftPx =
 		heatmapHoverState === null
@@ -834,6 +878,8 @@ const DashboardCharts = ({
 											animationDuration={CHART_ANIMATION_MS}
 											animationBegin={0}
 											animationEasing="ease-in-out"
+											shape={renderBarShape}
+											activeBar={renderActiveBarShape}
 										>
 											{chartModelRows.map((row) => (
 												<Cell key={row.model} fill={row.color} />
@@ -845,25 +891,27 @@ const DashboardCharts = ({
 
 							<div className="space-y-2 pr-1" data-export-expand="vertical">
 								{topModelRows.map((row) => (
-									<article
-										key={row.model}
-										className="wrapped-tile"
-										title={`${row.model}: ${formatNumber(row.tokens)} tokens (${row.percentage.toFixed(1)}%)`}
-									>
-										<div className="flex items-center justify-between text-sm text-[#A1A1A1]">
-											<span className="truncate pr-3">{row.model}</span>
-											<span>{row.percentage.toFixed(1)}%</span>
-										</div>
-										<div className="mt-2 h-2 rounded-full bg-slate-700/45">
-											<div
-												className="h-full rounded-full transition-all duration-700"
-												style={{ width: `${row.percentage}%`, backgroundColor: row.color }}
-											/>
-										</div>
-										<p className="mt-2 text-xs text-[#A1A1A1]">
-											{formatTokens(row.tokens)} ({formatNumber(row.tokens)})
-										</p>
-									</article>
+									<SmoothSurface key={row.model} radius={19.2}>
+										<article
+											className="wrapped-tile"
+											title={`${row.model}: ${formatNumber(row.tokens)} tokens (${row.percentage.toFixed(1)}%)`}
+										>
+											<div className="flex items-center justify-between text-sm text-[#A1A1A1]">
+												<span className="truncate pr-3">{row.model}</span>
+												<span>{row.percentage.toFixed(1)}%</span>
+											</div>
+											<SmoothClippedBox radius={999} className="mt-2 h-2 rounded-full bg-slate-700/45">
+												<SmoothClippedBox
+													radius={999}
+													className="h-full rounded-full transition-all duration-700"
+													style={{ width: `${row.percentage}%`, backgroundColor: row.color }}
+												/>
+											</SmoothClippedBox>
+											<p className="mt-2 text-xs text-[#A1A1A1]">
+												{formatTokens(row.tokens)} ({formatNumber(row.tokens)})
+											</p>
+										</article>
+									</SmoothSurface>
 								))}
 							</div>
 						</div>
@@ -873,174 +921,210 @@ const DashboardCharts = ({
 
 			<DownloadableCard title="Codex" filenamePart="heatmap">
 				<section data-card-index="5" className="wrapped-card wrapped-card-activity">
-					<div className="rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7">
-						<div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-							<h2 className="text-[1.9rem] font-semibold tracking-tight text-[#FAFAFA]">Codex</h2>
-							<div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 sm:gap-10">
-								<div className="text-right">
-									<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Input Tokens</p>
-									<p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(inputTokens)}</p>
-								</div>
-								<div className="text-right">
-									<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Output Tokens</p>
-									<p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(outputTokens)}</p>
-								</div>
-								<div className="text-right">
-									<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Total Tokens</p>
-									<p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(totalTokens)}</p>
+					<SmoothSurface radius={24}>
+						<div className="rounded-3xl border border-white/10 bg-black px-5 py-5 sm:px-8 sm:py-7">
+							<div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+								<h2 className="text-[1.9rem] font-semibold tracking-tight text-[#FAFAFA]">Codex</h2>
+								<div className="grid w-full grid-cols-1 gap-3 sm:w-auto sm:grid-cols-3 sm:gap-10">
+									<div className="text-right">
+										<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Input Tokens</p>
+										<p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(inputTokens)}</p>
+									</div>
+									<div className="text-right">
+										<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Output Tokens</p>
+										<p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(outputTokens)}</p>
+									</div>
+									<div className="text-right">
+										<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Total Tokens</p>
+										<p className="text-2xl font-semibold text-[#FAFAFA]">{formatTokens(totalTokens)}</p>
+									</div>
 								</div>
 							</div>
-						</div>
 
-						{heatmap.length === 0 ? (
-							<p className="text-sm text-[#A1A1A1]">No activity timeline available.</p>
-						) : (
-							<>
-								<div ref={heatmapTooltipHostRef} className="relative">
-									<div
-										ref={heatmapViewportRef}
-										className={shouldLockLast365HeatmapScroll ? "overflow-x-hidden pb-1" : "overflow-x-auto pb-1"}
-										data-export-scroll-anchor="end"
-										onMouseLeave={clearHeatmapHover}
-									>
-										<div className="inline-grid grid-cols-[auto_auto] gap-x-2 gap-y-2">
-											<div style={{ width: HEATMAP_LEFT_GUTTER_PX }} />
-											<div
-												className="relative"
-												style={{ width: heatmapGridWidthPx, height: HEATMAP_MONTH_ROW_HEIGHT_PX }}
-											>
-												{heatmapMonthLabels.map((month) => (
-													<span
-														key={`month-${month.weekIndex}-${month.label}`}
-														className="absolute top-0 text-[11px] leading-none text-[#A1A1A1]"
-														style={{ left: month.weekIndex * (heatmapCellSizePx + HEATMAP_GAP_PX) }}
-													>
-														{month.label}
-													</span>
-												))}
-											</div>
+							{heatmap.length === 0 ? (
+								<p className="text-sm text-[#A1A1A1]">No activity timeline available.</p>
+							) : (
+								<>
+									<div ref={heatmapTooltipHostRef} className="relative">
+										<div
+											ref={heatmapViewportRef}
+											className={
+												selectedRange === "last365"
+													? "overflow-x-hidden overflow-y-hidden pb-1"
+													: "overflow-x-auto overflow-y-hidden pb-1"
+											}
+											data-export-scroll-anchor="end"
+											onMouseLeave={clearHeatmapHover}
+										>
+											<div className="inline-grid grid-cols-[auto_auto] gap-x-2 gap-y-2">
+												<div style={{ width: HEATMAP_LEFT_GUTTER_PX }} />
+												<div
+													className="relative"
+													style={{ width: heatmapGridWidthPx, height: HEATMAP_MONTH_ROW_HEIGHT_PX }}
+												>
+													{heatmapMonthLabels.map((month) => (
+														<span
+															key={`month-${month.weekIndex}-${month.label}`}
+															className="absolute top-0 text-[11px] leading-none text-[#A1A1A1]"
+															style={{ left: month.weekIndex * (heatmapCellSizePx + HEATMAP_GAP_PX) }}
+														>
+															{month.label}
+														</span>
+													))}
+												</div>
 
-											<div
-												className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-[#A1A1A1]"
-												style={{ width: HEATMAP_LEFT_GUTTER_PX }}
-											>
-												{HEATMAP_WEEKDAY_LABELS.map((label, dayIndex) => (
-													<div
-														key={`day-label-${dayIndex}`}
-														className="flex items-center justify-end"
-														style={{ height: heatmapCellSizePx }}
-													>
-														{label}
-													</div>
-												))}
-											</div>
+												<div
+													className="grid grid-rows-7 gap-1 pr-1 text-[11px] leading-none text-[#A1A1A1]"
+													style={{ width: HEATMAP_LEFT_GUTTER_PX }}
+												>
+													{HEATMAP_WEEKDAY_LABELS.map((label, dayIndex) => (
+														<div
+															key={`day-label-${dayIndex}`}
+															className="flex items-center justify-end"
+															style={{ height: heatmapCellSizePx }}
+														>
+															{label}
+														</div>
+													))}
+												</div>
 
-											<div className="inline-grid gap-1" style={heatmapGridStyle}>
-												{heatmapWeeks.map((week, weekIndex) => (
-													<div key={`week-${weekIndex}`} className="grid grid-rows-7 gap-1">
-														{week.map((cell, dayIndex) => {
-															if (!cell) {
+												<div className="inline-grid gap-1" style={heatmapGridStyle}>
+													{heatmapWeeks.map((week, weekIndex) => (
+														<div key={`week-${weekIndex}`} className="grid grid-rows-7 gap-1">
+															{week.map((cell, dayIndex) => {
+																if (!cell) {
+																	return (
+																		<div
+																			key={`empty-${weekIndex}-${dayIndex}`}
+																			className="rounded-[4px] opacity-0"
+																			style={{
+																				width: heatmapCellSizePx,
+																				height: heatmapCellSizePx,
+																				clipPath: heatmapCellClipPath,
+																			}}
+																			onMouseEnter={clearHeatmapHover}
+																		/>
+																	);
+																}
+
+																const background = getHeatmapColor(themePalette, cell.intensity, cell.tokens > 0);
+
 																return (
 																	<div
-																		key={`empty-${weekIndex}-${dayIndex}`}
-																		className="rounded-[4px] opacity-0"
-																		style={{ width: heatmapCellSizePx, height: heatmapCellSizePx }}
-																		onMouseEnter={clearHeatmapHover}
+																		key={cell.date}
+																		className="rounded-[4px]"
+																		style={{
+																			width: heatmapCellSizePx,
+																			height: heatmapCellSizePx,
+																			background,
+																			clipPath: heatmapCellClipPath,
+																		}}
+																		aria-label={buildActivityTooltip(cell, dailyAgentTokensByDate)}
+																		onMouseEnter={(event) => updateHeatmapHover(event, cell)}
+																		onMouseMove={(event) => updateHeatmapHover(event, cell)}
 																	/>
 																);
-															}
-
-															const background = getHeatmapColor(themePalette, cell.intensity, cell.tokens > 0);
-
-															return (
-																<div
-																	key={cell.date}
-																	className="rounded-[4px]"
-																	style={{ width: heatmapCellSizePx, height: heatmapCellSizePx, background }}
-																	aria-label={buildActivityTooltip(cell, dailyAgentTokensByDate)}
-																	onMouseEnter={(event) => updateHeatmapHover(event, cell)}
-																	onMouseMove={(event) => updateHeatmapHover(event, cell)}
-																/>
-															);
-														})}
-													</div>
-												))}
+															})}
+														</div>
+													))}
+												</div>
 											</div>
 										</div>
+
+										{heatmapHoverState !== null && (
+											<SmoothSurface radius={12}>
+												<div
+													className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl"
+													style={{
+														left: heatmapTooltipLeftPx,
+														top: heatmapTooltipTopPx,
+														transform: "translate(-50%, -100%)",
+													}}
+												>
+													<p className="text-sm font-semibold text-[#FAFAFA]">
+														{formatDate(heatmapHoverState.cell.date)}
+													</p>
+													<p className="mt-1 text-xs text-[#A1A1A1]">
+														Tokens: {formatTokens(heatmapHoverState.cell.tokens)} (
+														{formatNumber(heatmapHoverState.cell.tokens)})
+													</p>
+													<p className="text-xs text-[#A1A1A1]">
+														Sessions: {formatNumber(heatmapHoverState.cell.sessions)}
+													</p>
+													<p className="text-xs text-[#A1A1A1]">
+														Spend: {formatSpendUsd(heatmapHoverState.cell.costUsd)}
+													</p>
+													<div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
+														{heatmapTooltipAgentRows.map((entry) => (
+															<p
+																key={entry.label}
+																className="flex items-center justify-between gap-2 text-xs text-[#A1A1A1]"
+															>
+																<span style={{ color: entry.color }}>{entry.label}</span>
+																<span>{formatTokens(entry.tokens)}</span>
+															</p>
+														))}
+													</div>
+												</div>
+											</SmoothSurface>
+										)}
 									</div>
 
-									{heatmapHoverState !== null && (
-										<div
-											className="pointer-events-none absolute z-20 w-56 rounded-xl border border-white/20 bg-black px-3 py-2 text-xs text-slate-100 shadow-xl"
-											style={{
-												left: heatmapTooltipLeftPx,
-												top: heatmapTooltipTopPx,
-												transform: "translate(-50%, -100%)",
-											}}
-										>
-											<p className="text-sm font-semibold text-[#FAFAFA]">{formatDate(heatmapHoverState.cell.date)}</p>
-											<p className="mt-1 text-xs text-[#A1A1A1]">
-												Tokens: {formatTokens(heatmapHoverState.cell.tokens)} (
-												{formatNumber(heatmapHoverState.cell.tokens)})
-											</p>
-											<p className="text-xs text-[#A1A1A1]">
-												Sessions: {formatNumber(heatmapHoverState.cell.sessions)}
-											</p>
-											<p className="text-xs text-[#A1A1A1]">Spend: {formatSpendUsd(heatmapHoverState.cell.costUsd)}</p>
-											<div className="mt-1.5 border-t border-slate-700/60 pt-1.5">
-												{heatmapTooltipAgentRows.map((entry) => (
-													<p
-														key={entry.label}
-														className="flex items-center justify-between gap-2 text-xs text-[#A1A1A1]"
-													>
-														<span style={{ color: entry.color }}>{entry.label}</span>
-														<span>{formatTokens(entry.tokens)}</span>
-													</p>
-												))}
-											</div>
-										</div>
-									)}
-								</div>
+									<div className="mt-4 mr-auto flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#A1A1A1]">
+										<span>Less</span>
+										<span
+											className="h-3.5 w-3.5 rounded-[4px]"
+											style={{ background: themePalette.less, clipPath: heatmapLegendCellClipPath }}
+										/>
+										<span
+											className="h-3.5 w-3.5 rounded-[4px]"
+											style={{ background: themePalette.slightlyLess, clipPath: heatmapLegendCellClipPath }}
+										/>
+										<span
+											className="h-3.5 w-3.5 rounded-[4px]"
+											style={{ background: themePalette.medium, clipPath: heatmapLegendCellClipPath }}
+										/>
+										<span
+											className="h-3.5 w-3.5 rounded-[4px]"
+											style={{ background: themePalette.high, clipPath: heatmapLegendCellClipPath }}
+										/>
+										<span
+											className="h-3.5 w-3.5 rounded-[4px]"
+											style={{ background: themePalette.veryHigh, clipPath: heatmapLegendCellClipPath }}
+										/>
+										<span>More</span>
+									</div>
 
-								<div className="mt-4 mr-auto flex w-fit items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-[#A1A1A1]">
-									<span>Less</span>
-									<span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.less }} />
-									<span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.slightlyLess }} />
-									<span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.medium }} />
-									<span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.high }} />
-									<span className="h-3.5 w-3.5 rounded-[4px]" style={{ background: themePalette.veryHigh }} />
-									<span>More</span>
-								</div>
-
-								<div className="mt-6 flex flex-col gap-y-6 sm:grid sm:grid-cols-2 sm:gap-y-6 lg:flex lg:flex-row lg:items-start lg:justify-between lg:gap-y-0">
-									<article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-start">
-										<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Most Used Model</p>
-										<p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
-											{mostUsedModel ? mostUsedModel.model : "-"}
-										</p>
-									</article>
-									<article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
-										<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Recent Use (Last 30 Days)</p>
-										<p className="mt-1 w-full text-center text-2xl font-semibold text-[#FAFAFA]">
-											{recentModelUsage ? recentModelUsage.model : "-"}
-										</p>
-									</article>
-									<article className="min-w-0 flex flex-col items-center text-center">
-										<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Longest Streak</p>
-										<p className="mt-1 w-full text-center text-2xl font-semibold text-[#FAFAFA]">
-											{formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
-										</p>
-									</article>
-									<article className="min-w-0 flex flex-col items-end">
-										<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Current Streak</p>
-										<p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
-											{formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
-										</p>
-									</article>
-								</div>
-							</>
-						)}
-					</div>
+									<div className="mt-6 flex flex-col gap-y-6 sm:grid sm:grid-cols-2 sm:gap-y-6 lg:flex lg:flex-row lg:items-start lg:justify-between lg:gap-y-0">
+										<article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-start">
+											<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Most Used Model</p>
+											<p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
+												{mostUsedModel ? mostUsedModel.model : "-"}
+											</p>
+										</article>
+										<article className="min-w-0 max-w-[22%] overflow-hidden flex flex-col items-center">
+											<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Recent Use (Last 30 Days)</p>
+											<p className="mt-1 w-full text-center text-2xl font-semibold text-[#FAFAFA]">
+												{recentModelUsage ? recentModelUsage.model : "-"}
+											</p>
+										</article>
+										<article className="min-w-0 flex flex-col items-center text-center">
+											<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Longest Streak</p>
+											<p className="mt-1 w-full text-center text-2xl font-semibold text-[#FAFAFA]">
+												{formatNumber(longestStreakDays)} {longestStreakDays === 1 ? "day" : "days"}
+											</p>
+										</article>
+										<article className="min-w-0 flex flex-col items-end">
+											<p className="text-xs uppercase tracking-[0.14em] text-[#A1A1A1]">Current Streak</p>
+											<p className="mt-1 text-2xl font-semibold text-[#FAFAFA]">
+												{formatNumber(currentStreakDays)} {currentStreakDays === 1 ? "day" : "days"}
+											</p>
+										</article>
+									</div>
+								</>
+							)}
+						</div>
+					</SmoothSurface>
 				</section>
 			</DownloadableCard>
 
@@ -1053,32 +1137,38 @@ const DashboardCharts = ({
 					</header>
 
 					<div className="grid gap-4 md:grid-cols-3">
-						<article className="wrapped-tile">
-							<p className="wrapped-label">Total Spend</p>
-							<AnimatedNumber
-								value={selectedTotalCostUsd}
-								animate={animateCard6}
-								durationMs={CHART_ANIMATION_MS}
-								format={formatSpendUsd}
-								className="mt-2 block text-4xl font-semibold text-[#FAFAFA]"
-							/>
-						</article>
-						<article className="wrapped-tile">
-							<p className="wrapped-label">Daily Average</p>
-							<AnimatedNumber
-								value={selectedDailyAverageCostUsd}
-								animate={animateCard6}
-								durationMs={CHART_ANIMATION_MS}
-								format={formatUsd}
-								className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
-							/>
-						</article>
-						<article className="wrapped-tile">
-							<p className="wrapped-label">Most Expensive Day</p>
-							<p className="mt-2 block text-3xl font-semibold text-[#FAFAFA]">
-								{selectedMostExpensiveDay ? formatShortDate(selectedMostExpensiveDay.date) : "-"}
-							</p>
-						</article>
+						<SmoothSurface radius={19.2}>
+							<article className="wrapped-tile">
+								<p className="wrapped-label">Total Spend</p>
+								<AnimatedNumber
+									value={selectedTotalCostUsd}
+									animate={animateCard6}
+									durationMs={CHART_ANIMATION_MS}
+									format={formatSpendUsd}
+									className="mt-2 block text-4xl font-semibold text-[#FAFAFA]"
+								/>
+							</article>
+						</SmoothSurface>
+						<SmoothSurface radius={19.2}>
+							<article className="wrapped-tile">
+								<p className="wrapped-label">Daily Average</p>
+								<AnimatedNumber
+									value={selectedDailyAverageCostUsd}
+									animate={animateCard6}
+									durationMs={CHART_ANIMATION_MS}
+									format={formatUsd}
+									className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
+								/>
+							</article>
+						</SmoothSurface>
+						<SmoothSurface radius={19.2}>
+							<article className="wrapped-tile">
+								<p className="wrapped-label">Most Expensive Day</p>
+								<p className="mt-2 block text-3xl font-semibold text-[#FAFAFA]">
+									{selectedMostExpensiveDay ? formatShortDate(selectedMostExpensiveDay.date) : "-"}
+								</p>
+							</article>
+						</SmoothSurface>
 					</div>
 
 					<div className={`relative mt-6 h-56 sm:h-64 ${animateCard6 ? chartRevealClass : ""}`}>
@@ -1098,7 +1188,8 @@ const DashboardCharts = ({
 									<YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
 									<ChartTooltip
 										cursor={false}
-										wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+										isAnimationActive={false}
+										wrapperStyle={chartTooltipWrapperStyle}
 										content={<CostTooltipCard />}
 									/>
 									<Line
@@ -1133,7 +1224,8 @@ const DashboardCharts = ({
 									<YAxis tick={{ fill: "#cbd5e1", fontSize: 11 }} tickLine={false} axisLine={false} />
 									<ChartTooltip
 										cursor={false}
-										wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+										isAnimationActive={false}
+										wrapperStyle={chartTooltipWrapperStyle}
 										content={<CostTooltipCard />}
 									/>
 									{groupedCostSeries.map((series) => (
@@ -1176,28 +1268,30 @@ const DashboardCharts = ({
 						<div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
 							<div className="space-y-2">
 								{topRepos.map((repo) => (
-									<article key={repo.repo} className="wrapped-tile" title={buildRepoHoverDetails(repo)}>
-										<p className="truncate text-sm font-semibold text-[#FAFAFA]">{repo.repo}</p>
-										<div className="mt-2 flex items-center justify-between text-xs text-[#A1A1A1]">
-											<span>
-												<AnimatedNumber
-													value={repo.tokens}
-													animate={animateCard7}
-													durationMs={CHART_ANIMATION_MS}
-													format={(value) => formatTokens(Math.max(0, Math.round(value)))}
-												/>{" "}
-												tokens
-											</span>
-											<span>
-												<AnimatedNumber
-													value={repo.costUsd}
-													animate={animateCard7}
-													durationMs={CHART_ANIMATION_MS}
-													format={formatUsd}
-												/>
-											</span>
-										</div>
-									</article>
+									<SmoothSurface key={repo.repo} radius={19.2}>
+										<article className="wrapped-tile" title={buildRepoHoverDetails(repo)}>
+											<p className="truncate text-sm font-semibold text-[#FAFAFA]">{repo.repo}</p>
+											<div className="mt-2 flex items-center justify-between text-xs text-[#A1A1A1]">
+												<span>
+													<AnimatedNumber
+														value={repo.tokens}
+														animate={animateCard7}
+														durationMs={CHART_ANIMATION_MS}
+														format={(value) => formatTokens(Math.max(0, Math.round(value)))}
+													/>{" "}
+													tokens
+												</span>
+												<span>
+													<AnimatedNumber
+														value={repo.costUsd}
+														animate={animateCard7}
+														durationMs={CHART_ANIMATION_MS}
+														format={formatUsd}
+													/>
+												</span>
+											</div>
+										</article>
+									</SmoothSurface>
 								))}
 							</div>
 
@@ -1224,7 +1318,8 @@ const DashboardCharts = ({
 									/>
 									<ChartTooltip
 										cursor={false}
-										wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+										isAnimationActive={false}
+										wrapperStyle={chartTooltipWrapperStyle}
 										content={renderTopReposTooltip}
 									/>
 									<Bar
@@ -1297,7 +1392,8 @@ const DashboardCharts = ({
 											<ChartTooltip
 												cursor={false}
 												allowEscapeViewBox={{ x: true, y: true }}
-												wrapperStyle={{ zIndex: 20, pointerEvents: "none" }}
+												isAnimationActive={false}
+												wrapperStyle={chartTooltipWrapperStyle}
 												content={<HourlyTooltipCard />}
 											/>
 											<Bar
@@ -1322,39 +1418,45 @@ const DashboardCharts = ({
 									</ChartContainer>
 
 									<div className="flex flex-col gap-3">
-										<article className="wrapped-tile py-6 text-left">
-											<PersonalityIcon aria-hidden="true" className="h-12 w-12 text-[#fafafa]" strokeWidth={1.8} />
-											<p className="mt-3 text-2xl font-semibold text-[#FAFAFA]">{personality.label}</p>
-											<p className="mt-2 text-sm text-[#A1A1A1]">{personality.description}</p>
-										</article>
+										<SmoothSurface radius={19.2}>
+											<article className="wrapped-tile py-6 text-left">
+												<PersonalityIcon aria-hidden="true" className="h-12 w-12 text-[#fafafa]" strokeWidth={1.8} />
+												<p className="mt-3 text-2xl font-semibold text-[#FAFAFA]">{personality.label}</p>
+												<p className="mt-2 text-sm text-[#A1A1A1]">{personality.description}</p>
+											</article>
+										</SmoothSurface>
 
-										<article className="wrapped-tile">
-											<p className="wrapped-label">Peak Hour</p>
-											<AnimatedNumber
-												value={peakHour}
-												animate={animateCard8}
-												durationMs={CHART_ANIMATION_MS}
-												format={(v) => formatHourLabel(Math.round(v))}
-												className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
-											/>
-											<p className="mt-1 text-xs text-[#A1A1A1]">
-												{formatTokens(peakTokens)} tokens in your busiest hour
-											</p>
-										</article>
+										<SmoothSurface radius={19.2}>
+											<article className="wrapped-tile">
+												<p className="wrapped-label">Peak Hour</p>
+												<AnimatedNumber
+													value={peakHour}
+													animate={animateCard8}
+													durationMs={CHART_ANIMATION_MS}
+													format={(v) => formatHourLabel(Math.round(v))}
+													className="mt-2 block text-3xl font-semibold text-[#FAFAFA]"
+												/>
+												<p className="mt-1 text-xs text-[#A1A1A1]">
+													{formatTokens(peakTokens)} tokens in your busiest hour
+												</p>
+											</article>
+										</SmoothSurface>
 
-										<article className="wrapped-tile">
-											<p className="wrapped-label">Fun Stats</p>
-											<ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[#A1A1A1]">
-												<li>{formatNumber(nightSessions)} sessions after midnight</li>
-												<li>{weekendTokenPercent}% of tokens on weekends</li>
-												{busiestDayOfWeek && <li>{busiestDayOfWeek} is your power day</li>}
-												{busiestSingleDay && (
-													<li>
-														Busiest day: {formatDate(busiestSingleDay.date)} ({formatTokens(busiestSingleDay.tokens)})
-													</li>
-												)}
-											</ol>
-										</article>
+										<SmoothSurface radius={19.2}>
+											<article className="wrapped-tile">
+												<p className="wrapped-label">Fun Stats</p>
+												<ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-[#A1A1A1]">
+													<li>{formatNumber(nightSessions)} sessions after midnight</li>
+													<li>{weekendTokenPercent}% of tokens on weekends</li>
+													{busiestDayOfWeek && <li>{busiestDayOfWeek} is your power day</li>}
+													{busiestSingleDay && (
+														<li>
+															Busiest day: {formatDate(busiestSingleDay.date)} ({formatTokens(busiestSingleDay.tokens)})
+														</li>
+													)}
+												</ol>
+											</article>
+										</SmoothSurface>
 									</div>
 								</div>
 							);
