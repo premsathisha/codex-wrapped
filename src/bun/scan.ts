@@ -8,6 +8,7 @@ import {
 } from "./history";
 import { normalizeSession } from "./normalizer";
 import { parseFile } from "./parsers";
+import type { RawParsedSession } from "./parsers";
 import type { Session } from "./session-schema";
 import {
 	dailyStoreNeedsTimeZoneBackfill,
@@ -17,7 +18,7 @@ import {
 	writeDailyStore,
 	writeScanState,
 } from "./store";
-import { prefetchPricing } from "./pricing";
+import { prefetchPricingForModels } from "./pricing";
 
 export interface ScanOptions {
 	fullScan?: boolean;
@@ -39,6 +40,13 @@ interface NormalizedSessionCandidate {
 	fileSizeBytes: number;
 }
 
+interface ParsedSessionCandidate {
+	parsed: RawParsedSession;
+	filePath: string;
+	fileMtimeMs: number;
+	fileSizeBytes: number;
+}
+
 const isPreferredDuplicate = (next: NormalizedSessionCandidate, current: NormalizedSessionCandidate): boolean => {
 	if (next.fileMtimeMs !== current.fileMtimeMs) {
 		return next.fileMtimeMs > current.fileMtimeMs;
@@ -52,7 +60,6 @@ const isPreferredDuplicate = (next: NormalizedSessionCandidate, current: Normali
 };
 
 export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> => {
-	await prefetchPricing();
 	const aggregationTimeZone = resolveAggregationTimeZone(options.timeZone);
 	const shouldFullScan = Boolean(options.fullScan) || (await dailyStoreNeedsTimeZoneBackfill(aggregationTimeZone));
 	const settings = await getSettings();
@@ -76,6 +83,7 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
 
 	let parsedSessionCount = 0;
 	let errors = 0;
+	const parsedSessions: ParsedSessionCandidate[] = [];
 	const normalizedSessions: NormalizedSessionCandidate[] = [];
 	const normalizedSessionIndexById = new Map<string, number>();
 
@@ -91,14 +99,29 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
 			continue;
 		}
 
-		const normalized = normalizeSession(parsed);
+		parsedSessions.push({
+			parsed,
+			filePath: candidate.path,
+			fileMtimeMs: candidate.mtime,
+			fileSizeBytes: candidate.size,
+		});
+
+		parsedSessionCount += 1;
+	}
+
+	await prefetchPricingForModels(
+		parsedSessions.flatMap(({ parsed }) => [parsed.metadata.model, ...parsed.events.map((event) => event.model)]),
+	);
+
+	for (const parsedCandidate of parsedSessions) {
+		const normalized = normalizeSession(parsedCandidate.parsed);
 		const { session } = normalized;
 		const normalizedCandidate: NormalizedSessionCandidate = {
 			session,
 			events: normalized.events,
-			filePath: candidate.path,
-			fileMtimeMs: candidate.mtime,
-			fileSizeBytes: candidate.size,
+			filePath: parsedCandidate.filePath,
+			fileMtimeMs: parsedCandidate.fileMtimeMs,
+			fileSizeBytes: parsedCandidate.fileSizeBytes,
 		};
 		const dedupeKey = `${session.source}:${session.id}`;
 		const existingIndex = normalizedSessionIndexById.get(dedupeKey);
@@ -112,14 +135,12 @@ export const runScan = async (options: ScanOptions = {}): Promise<ScanResult> =>
 			}
 		}
 
-		nextScanState[candidate.path] = {
-			source: candidate.source,
-			fileSize: candidate.size,
-			mtimeMs: candidate.mtime,
+		nextScanState[parsedCandidate.filePath] = {
+			source: session.source,
+			fileSize: parsedCandidate.fileSizeBytes,
+			mtimeMs: parsedCandidate.fileMtimeMs,
 			parsedAt: session.parsedAt,
 		};
-
-		parsedSessionCount += 1;
 	}
 
 	const scanned = normalizedSessions.length;

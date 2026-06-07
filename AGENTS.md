@@ -3,6 +3,11 @@
 ## Project Overview
 Codex Wrapped is a local-first Bun web app that scans local AI coding session logs and renders a Wrapped-style dashboard with stats, trends, and breakdowns.
 
+## Repository Map
+1. Read `docs/REPO_MAP.md` before broad scanning or indexing.
+2. Use the map as the first navigation aid, not as a restriction. Inspect any files needed to understand the task, verify the map, or investigate missing context.
+3. When architecture, meaningful files, or folder responsibilities change, update only the affected sections of `docs/REPO_MAP.md`.
+
 ## Non-Negotiables
 1. Use Bun for all runtime, scripts, tests, and tooling commands.
 2. Keep the app local-first; do not add hosted API dependencies for core behavior.
@@ -11,7 +16,7 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 5. Keep `README.md` and `AGENTS.md` aligned with actual scripts and runtime behavior.
 
 ## Project Structure
-- `bin/cli.ts`: CLI launcher (`--help`, `--version`, `--rebuild`, `--uninstall`) and server bootstrap.
+- `bin/cli.ts`: CLI launcher (`--help`, `--version`, `--uninstall`) and server bootstrap.
 - `bin/launch-macos.sh`: macOS launcher that starts the local app and opens the local URL.
 - `src/bun/*`: Bun server routes, session discovery/parsing, aggregation, local store persistence.
 - `src/mainview/*`: React UI (dashboard/cards/charts/hooks/styles).
@@ -24,7 +29,7 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 ## Build, Test, Run
 - Install dependencies: `bun install`
 - Run app (normal flow): `bun ./bin/cli.ts`
-- Run app with fresh frontend at startup: `bun ./bin/cli.ts --rebuild`
+- Run app with fresh frontend: `bun run build && bun ./bin/cli.ts`
 - Dev mode: `bun run dev`
 - HMR mode: `bun run dev:hmr`
 - Build frontend bundle: `bun run build`
@@ -40,7 +45,7 @@ Codex Wrapped is a local-first Bun web app that scans local AI coding session lo
 ## Frontend Build & Validation Rules
 1. `bun ./bin/cli.ts` serves static assets from `dist` unless `VITE_DEV_SERVER_URL` is set.
 2. After any frontend change (`src/mainview/*`, `index.html`, shared styling), always run `bun run build` before validating in the app.
-3. For launcher/normal CLI validation, prefer `bun ./bin/cli.ts --rebuild` so the running app cannot use stale assets.
+3. For launcher/normal CLI validation, run `bun run build` before `bun ./bin/cli.ts` so the running app cannot use stale assets.
 4. If a server is already running on `127.0.0.1:3210`, restart it before validating changes.
 5. For user-facing fixes, validate against the live local endpoint, not only tests.
 

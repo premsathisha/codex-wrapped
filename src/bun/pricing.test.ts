@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { __resetPricingStateForTests, computeCost, prefetchPricing } from "./pricing";
+import {
+	__resetPricingStateForTests,
+	computeCost,
+	hasLocalPricing,
+	prefetchPricing,
+	prefetchPricingForModels,
+} from "./pricing";
 
 const originalFetch = globalThis.fetch;
 
@@ -13,6 +19,58 @@ afterEach(() => {
 });
 
 describe("computeCost", () => {
+	test("recognizes models covered by built-in pricing", () => {
+		expect(hasLocalPricing("gpt-5.4")).toBe(true);
+		expect(hasLocalPricing("gpt-5.4-2026-01-01")).toBe(true);
+		expect(hasLocalPricing("openrouter/openai/gpt-5:free")).toBe(true);
+		expect(hasLocalPricing("acme-1")).toBe(false);
+	});
+
+	test("does not fetch remote pricing when all models are covered locally", async () => {
+		let fetchCalls = 0;
+		globalThis.fetch = (async () => {
+			fetchCalls += 1;
+			throw new Error("Remote pricing should not be requested.");
+		}) as unknown as typeof fetch;
+
+		await prefetchPricingForModels(["gpt-5.4", "gpt-5.3-codex", null, ""]);
+
+		expect(fetchCalls).toBe(0);
+	});
+
+	test("fetches remote pricing when an unknown model needs a price", async () => {
+		let fetchCalls = 0;
+		globalThis.fetch = (async () => {
+			fetchCalls += 1;
+			return new Response(
+				JSON.stringify({
+					acme: {
+						id: "acme",
+						models: {
+							"acme-1": {
+								id: "acme-1",
+								cost: {
+									input: 3,
+									output: 12,
+									cache_read: 0.5,
+									cache_write: 0.25,
+								},
+							},
+						},
+					},
+				}),
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+				},
+			);
+		}) as unknown as typeof fetch;
+
+		await prefetchPricingForModels(["gpt-5.4", "acme-1"]);
+
+		expect(fetchCalls).toBe(1);
+	});
+
 	test("matches codexbar-style codex billing for cached input without billing reasoning separately", () => {
 		const cost = computeCost(
 			{

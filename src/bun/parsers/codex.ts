@@ -433,7 +433,6 @@ export const codexParser: SessionParser = {
 					cwd = cwd ?? getString(payload?.cwd);
 					gitBranch = gitBranch ?? getString(git?.branch);
 					cliVersion = cliVersion ?? getString(payload?.cli_version);
-					model = model ?? getString(payload?.model_provider);
 					lineageParentId = lineageParentId ?? forkedFromId ?? parentThreadId;
 					isSubagent = isSubagent || Boolean(threadSpawn) || forkedFromId !== null;
 

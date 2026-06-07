@@ -253,6 +253,31 @@ const isOpenRouterFreeModel = (model: string): boolean => {
 	return normalized === "openrouter/free" || (normalized.startsWith("openrouter/") && normalized.endsWith(":free"));
 };
 
+export const hasLocalPricing = (model: string | null | undefined): boolean => {
+	if (typeof model !== "string") return false;
+	const normalizedModel = model.toLowerCase().trim();
+	if (normalizedModel.length === 0) return false;
+	const aliasedModel = applyModelAlias(normalizedModel);
+
+	return Boolean(
+		isOpenRouterFreeModel(normalizedModel) ||
+			PRICING[aliasedModel] ||
+			findPricingByPrefix(aliasedModel) ||
+			PRICING[normalizedModel] ||
+			findPricingByPrefix(normalizedModel),
+	);
+};
+
+export const prefetchPricingForModels = async (models: Iterable<string | null | undefined>): Promise<void> => {
+	for (const model of models) {
+		if (typeof model !== "string" || model.trim().length === 0) continue;
+		if (!hasLocalPricing(model)) {
+			await prefetchPricing();
+			return;
+		}
+	}
+};
+
 const buildModelCandidates = (model: string): string[] => {
 	const normalizedModel = model.toLowerCase();
 	const aliasedModel = applyModelAlias(normalizedModel);

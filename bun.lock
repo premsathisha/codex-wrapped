@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "ai-stats",
+      "name": "codex-wrapped",
       "dependencies": {
         "@base-ui/react": "^1.3.0",
         "@lisse/react": "^0.4.0",

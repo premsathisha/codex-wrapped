@@ -98,6 +98,9 @@ Run tests:
 bun test
 ```
 
+See [docs/TESTING.md](docs/TESTING.md) for the full automated and manual
+regression checklist.
+
 Set up repo-managed git hooks (pre-commit + pre-push):
 
 ```bash
@@ -124,7 +127,6 @@ bun ./bin/cli.ts --help
 ```
 
 - `--version` or `-v`: show app version
-- `--rebuild`: rebuild frontend assets before launch
 - `--uninstall`: remove local Codex Wrapped data at `~/.codex-wrapped`
 
 ## How It Works
@@ -147,6 +149,7 @@ Codex Wrapped treats the backup CSV schema as stable. Import/export column layou
 - `src/bun` — scanning, parsing, aggregation, persistence
 - `src/mainview` — React dashboard UI
 - `src/shared` — shared schemas/types
+- `docs/TESTING.md` — automated and manual regression checklist
 - `~/.codex` — source Codex session logs
 - `~/.codex-wrapped` — local scan/import history, imported CSV copies, and the materialized dashboard store
 
@@ -197,7 +200,7 @@ When an import is rejected, the popup message shows the backend reason directly.
 
 ## Troubleshooting
 
-- If the UI looks stale, run `bun ./bin/cli.ts --rebuild`.
+- If the UI looks stale during development, run `bun run build` before restarting `bun ./bin/cli.ts`.
 - If data seems outdated, trigger a refresh/scan from the app and ensure your Codex directory exists.
 - To move to a new computer, export a CSV backup from the footer on the old machine, then import that CSV from the footer on the new machine.
 - To save a card image, use the save icon on the top-right edge of each card; desktop browsers download PNG, and supported mobile browsers may open native save options.

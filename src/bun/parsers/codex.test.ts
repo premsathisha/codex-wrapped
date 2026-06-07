@@ -6,6 +6,85 @@ import { normalizeSession } from "../normalizer";
 import { codexParser } from "./codex";
 
 describe("codexParser", () => {
+	test("does not treat the model provider as the model", async () => {
+		const fixtureDir = mkdtempSync(join(tmpdir(), "ai-stats-codex-"));
+
+		try {
+			const filePath = join(fixtureDir, "rollout-2026-02-03T11-38-55-provider-only.jsonl");
+			const content = JSON.stringify({
+				type: "session_meta",
+				timestamp: "2026-02-03T11:38:55Z",
+				payload: {
+					id: "session-provider-only",
+					cwd: "/tmp/project",
+					model_provider: "openai",
+				},
+			});
+
+			writeFileSync(filePath, content, "utf8");
+			const fileStat = statSync(filePath);
+
+			const parsed = await codexParser.parse({
+				path: filePath,
+				source: "codex",
+				mtime: fileStat.mtimeMs,
+				size: fileStat.size,
+			});
+
+			expect(parsed).not.toBeNull();
+			if (!parsed) return;
+
+			expect(parsed.metadata.model).toBeNull();
+			expect(normalizeSession(parsed).session.model).toBeNull();
+		} finally {
+			rmSync(fixtureDir, { recursive: true, force: true });
+		}
+	});
+
+	test("uses the actual model from turn context", async () => {
+		const fixtureDir = mkdtempSync(join(tmpdir(), "ai-stats-codex-"));
+
+		try {
+			const filePath = join(fixtureDir, "rollout-2026-02-03T11-38-55-turn-model.jsonl");
+			const content = [
+				JSON.stringify({
+					type: "session_meta",
+					timestamp: "2026-02-03T11:38:55Z",
+					payload: {
+						id: "session-turn-model",
+						cwd: "/tmp/project",
+						model_provider: "openai",
+					},
+				}),
+				JSON.stringify({
+					type: "turn_context",
+					timestamp: "2026-02-03T11:38:56Z",
+					payload: {
+						model: "gpt-5.4",
+					},
+				}),
+			].join("\n");
+
+			writeFileSync(filePath, content, "utf8");
+			const fileStat = statSync(filePath);
+
+			const parsed = await codexParser.parse({
+				path: filePath,
+				source: "codex",
+				mtime: fileStat.mtimeMs,
+				size: fileStat.size,
+			});
+
+			expect(parsed).not.toBeNull();
+			if (!parsed) return;
+
+			expect(parsed.metadata.model).toBe("gpt-5.4");
+			expect(normalizeSession(parsed).session.model).toBe("gpt-5.4");
+		} finally {
+			rmSync(fixtureDir, { recursive: true, force: true });
+		}
+	});
+
 	test("generates unique event IDs when tool call and output share call_id", async () => {
 		const fixtureDir = mkdtempSync(join(tmpdir(), "ai-stats-codex-"));
 

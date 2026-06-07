@@ -7,6 +7,7 @@ interface IsolatedScanResult {
 	result: { scanned: number; total: number; errors: number };
 	dailyExists: boolean;
 	totalSessions: number;
+	pricingFetchCalls: number;
 }
 
 const tempDirs: string[] = [];
@@ -17,10 +18,15 @@ const makeTempDir = (prefix: string): string => {
 	return dir;
 };
 
-const runIsolatedScan = (homeDir: string, codexHome: string): IsolatedScanResult => {
+const runIsolatedScan = (homeDir: string, codexHome: string, fullScan = true): IsolatedScanResult => {
 	const script = `
+let pricingFetchCalls = 0;
+globalThis.fetch = async () => {
+  pricingFetchCalls += 1;
+  throw new Error("Remote pricing fetch should not be required.");
+};
 const { runScan } = await import("./src/bun/scan.ts");
-const result = await runScan({ fullScan: true, sources: ["codex"] });
+const result = await runScan({ fullScan: ${fullScan}, sources: ["codex"] });
 const dailyPath = process.env.HOME + "/.codex-wrapped/daily.json";
 const dailyFile = Bun.file(dailyPath);
 const dailyExists = await dailyFile.exists();
@@ -34,7 +40,7 @@ if (dailyExists) {
     }
   }
 }
-process.stdout.write(JSON.stringify({ result, dailyExists, totalSessions }));
+process.stdout.write(JSON.stringify({ result, dailyExists, totalSessions, pricingFetchCalls }));
 `;
 
 	const command = Bun.spawnSync(["bun", "-e", script], {
@@ -62,6 +68,28 @@ const writeGoodCodexSession = (filePath: string, sessionId: string) => {
 		},
 	})}\n`;
 	writeFileSync(filePath, goodContent, "utf8");
+};
+
+const writeLocallyPricedCodexSession = (filePath: string, sessionId: string) => {
+	const content = [
+		JSON.stringify({
+			timestamp: "2026-03-12T00:00:00.000Z",
+			type: "session_meta",
+			payload: {
+				id: sessionId,
+				cwd: "/tmp/project",
+				model_provider: "openai",
+			},
+		}),
+		JSON.stringify({
+			timestamp: "2026-03-12T00:00:01.000Z",
+			type: "turn_context",
+			payload: {
+				model: "gpt-5.4",
+			},
+		}),
+	].join("\n");
+	writeFileSync(filePath, `${content}\n`, "utf8");
 };
 
 const writeBadCodexSession = (filePath: string) => {
@@ -149,5 +177,27 @@ describe("runScan parse error resilience", () => {
 		expect(run.result.scanned).toBe(1);
 		expect(run.dailyExists).toBe(true);
 		expect(run.totalSessions).toBe(1);
+	});
+
+	test("does not fetch remote pricing for locally priced models on scan or reload", () => {
+		const homeDir = makeTempDir("codexwrapped-home-");
+		const codexHome = makeTempDir("codexwrapped-codex-");
+
+		const sessionsDir = join(codexHome, "sessions", "2026", "03", "12");
+		mkdirSync(sessionsDir, { recursive: true });
+
+		writeLocallyPricedCodexSession(
+			join(sessionsDir, "rollout-2026-03-12T00-00-00-local-pricing.jsonl"),
+			"session-local-pricing",
+		);
+
+		const first = runIsolatedScan(homeDir, codexHome);
+		const reload = runIsolatedScan(homeDir, codexHome, false);
+
+		expect(first.result.errors).toBe(0);
+		expect(first.pricingFetchCalls).toBe(0);
+		expect(reload.result.errors).toBe(0);
+		expect(reload.pricingFetchCalls).toBe(0);
+		expect(reload.totalSessions).toBe(1);
 	});
 });

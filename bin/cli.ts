@@ -21,19 +21,6 @@ async function uninstallData(): Promise<void> {
 	await Bun.$`rm -rf ${HOME}/.codex-wrapped ${legacyDataDir}`.quiet();
 }
 
-async function runBuild(): Promise<void> {
-	const proc = Bun.spawn(["bun", "run", "build"], {
-		cwd: PKG_ROOT,
-		stdout: "inherit",
-		stderr: "inherit",
-		env: { ...process.env },
-	});
-	const code = await proc.exited;
-	if (code !== 0) {
-		throw new Error(`Build failed with exit code ${code}`);
-	}
-}
-
 async function main() {
 	const version = await getPackageVersion();
 
@@ -41,7 +28,6 @@ async function main() {
 		console.log("Usage: codex-wrapped [options]\n");
 		console.log("Options:");
 		console.log("  --version, -v   Show package version");
-		console.log("  --rebuild       Rebuild frontend assets before launch");
 		console.log("  --uninstall     Remove ~/.codex-wrapped data");
 		console.log("  --help, -h      Show this help");
 		return;
@@ -57,11 +43,6 @@ async function main() {
 		await uninstallData();
 		console.log("Done.");
 		return;
-	}
-
-	if (process.argv.includes("--rebuild")) {
-		console.log("Rebuilding frontend assets...");
-		await runBuild();
 	}
 
 	await startWebServer();
