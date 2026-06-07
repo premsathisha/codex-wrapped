@@ -97,7 +97,7 @@ Purpose: public images and brand assets served by Vite or used by the UI.
 Edit here when:
 - favicon, logo, or marketing screenshot assets change.
 Important files:
-- `screenshot.jpeg`
+- `Website.jpeg`
 - `Website Favicon/`
 - `Website Icon (logo on page : header)/`
 
@@ -281,7 +281,7 @@ Important files:
 ### `assets/`
 | File | Purpose |
 |---|---|
-| `screenshot.jpeg` | Provides the canonical marketing and documentation screenshot used to show the product visually in places like the README or other explanatory surfaces. It is part of how the repo communicates the product without running it. |
+| `Website.jpeg` | Provides the canonical marketing and documentation screenshot used to show the product visually in places like the README or other explanatory surfaces. It is part of how the repo communicates the product without running it. |
 
 ### `assets/Website Favicon/`
 | File | Purpose |
@@ -450,7 +450,7 @@ Important files:
 - If port `3210` is occupied, use `PORT=4321 bun ./bin/cli.ts` or another free port during local verification.
 
 ## Known Generated Or External Files
-- `assets/screenshot.jpeg`: exported screenshot asset, likely regenerated when the UI changes materially.
+- `assets/Website.jpeg`: exported screenshot asset, likely regenerated when the UI changes materially.
 - `assets/Website Favicon/*`: exported icon assets, not application logic.
 - `assets/Website Icon (logo on page : header)/*`: branded raster/vector exports, not source-of-truth code.
 - `ThirdPartyNotices.txt`: external attribution file.

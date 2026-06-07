@@ -6,7 +6,7 @@ Not affiliated with or endorsed by OpenAI.
 
 ## Screenshot
 
-![Codex Wrapped dashboard screenshot](assets/screenshot.jpeg)
+![Codex Wrapped dashboard screenshot](assets/Website.jpeg)
 
 ## Who This Is For
 
