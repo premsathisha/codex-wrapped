@@ -1,98 +1,83 @@
-# Repository Guidelines
+# AGENTS.md
 
-## Project Overview
-Codex Wrapped is a local-first Bun web app that scans local AI coding session logs and renders a Wrapped-style dashboard with stats, trends, and breakdowns.
+This file is the repo-specific operating guide for agents working in Codex Wrapped. It should help you make good decisions quickly without turning into a second repo map.
 
-## Repository Map
-1. Read `docs/REPO_MAP.md` before broad scanning or indexing.
-2. Use the map as the first navigation aid, not as a restriction. Inspect any files needed to understand the task, verify the map, or investigate missing context.
-3. When architecture, meaningful files, or folder responsibilities change, update only the affected sections of `docs/REPO_MAP.md`.
+## Start Here
+- Read `docs/REPO MAP.md` before broad scanning or indexing.
+- Use the repo map as the navigation layer and this file as the policy layer.
+- When architecture, meaningful files, or folder responsibilities change, update only the affected parts of `docs/REPO MAP.md`.
+- Read `docs/TESTING.md` before claiming a behavior change is verified.
 
-## Non-Negotiables
-1. Use Bun for all runtime, scripts, tests, and tooling commands.
-2. Keep the app local-first; do not add hosted API dependencies for core behavior.
-3. Preserve desktop and mobile behavior.
-4. Preserve the current frontend visual system/component structure unless a redesign is explicitly requested.
-5. Keep `README.md` and `AGENTS.md` aligned with actual scripts and runtime behavior.
+## Product Priorities
+- Keep the app local-first. Core scanning, storage, aggregation, import/export, and dashboard behavior should keep working without a hosted backend.
+- Prefer the fastest-feeling user path when tradeoffs are unclear, but not at the expense of data integrity or understandable behavior.
+- Favor good defaults over extra knobs. This app should feel useful immediately after launch.
+- Preserve convenience and low friction. Avoid adding blocking setup, noisy confirmations, or new manual steps unless the task explicitly calls for them.
+- Be thoughtful about safety: convenience is good, but not if it weakens local data handling or opens unsafe external behavior.
 
-## Project Structure
-- `bin/cli.ts`: CLI launcher (`--help`, `--version`, `--uninstall`) and server bootstrap.
-- `bin/launch-macos.sh`: macOS launcher that starts the local app and opens the local URL.
-- `src/bun/*`: Bun server routes, session discovery/parsing, aggregation, local store persistence.
-- `src/mainview/*`: React UI (dashboard/cards/charts/hooks/styles).
-- `src/mainview/components/DashboardFooter.tsx`: CSV import/export actions, imported backup list, and popup import result alerts.
-- `src/mainview/components/DownloadableCard.tsx`: shared card wrapper for saving/sharing wrapped cards as PNG.
-- `src/shared/components/ui/sonner.tsx`: shared shadcn Sonner toaster used for popup alerts.
-- `src/shared/*`: shared schemas/types used by backend and frontend.
-- `index.html`: Vite entry HTML for the frontend bundle.
+## Core Invariants
+- Never mutate or delete source Codex session logs under `~/.codex` as part of normal feature work.
+- Aggregated app data under `~/.codex-wrapped` is a product surface, not disposable scratch data.
+- Treat CSV import/export as a stable user contract. Do not casually change column meaning, validation behavior, duplicate handling, or import rejection semantics.
+- Backend-produced import/export feedback text is user-facing contract. Do not replace specific rejection reasons with vague UI copy.
+- Pricing fallback is allowed, but it is fallback-only. Do not make remote pricing metadata a hard dependency for normal app use.
 
-## Build, Test, Run
-- Install dependencies: `bun install`
-- Run app (normal flow): `bun ./bin/cli.ts`
-- Run app with fresh frontend: `bun run build && bun ./bin/cli.ts`
-- Dev mode: `bun run dev`
-- HMR mode: `bun run dev:hmr`
-- Build frontend bundle: `bun run build`
-- Typecheck: `bun run typecheck`
-- Lint: `bun run lint`
-- Format check: `bun run format:check`
-- Format (write): `bun run format`
-- Tests: `bun test`
-- Set up git hooks (pre-commit + pre-push): `bun run prepare`
-- Clean artifacts: `bun run clean`
-- Default local URL: `http://127.0.0.1:3210`
+## Data And Storage Rules
+- Be careful with timezone-sensitive aggregation, day boundaries, and historical rematerialization. Small date mistakes here create misleading Wrapped results.
+- If you touch persistence, review both the default `~/.codex-wrapped` flow and any override path using `CODEX_WRAPPED_DATA_DIR`.
+- Preserve legacy-data migration behavior from older storage locations unless the task explicitly includes a migration change.
+- Keep scans deterministic and non-destructive. A rescan should improve or refresh local state, not produce surprising churn.
+- When changing repo/model/tool grouping logic, validate that the top lists, totals, and time-series views still agree with one another.
 
-## Frontend Build & Validation Rules
-1. `bun ./bin/cli.ts` serves static assets from `dist` unless `VITE_DEV_SERVER_URL` is set.
-2. After any frontend change (`src/mainview/*`, `index.html`, shared styling), always run `bun run build` before validating in the app.
-3. For launcher/normal CLI validation, run `bun run build` before `bun ./bin/cli.ts` so the running app cannot use stale assets.
-4. If a server is already running on `127.0.0.1:3210`, restart it before validating changes.
-5. For user-facing fixes, validate against the live local endpoint, not only tests.
+## UI And Experience Rules
+- Preserve the existing Wrapped-style visual language unless the user explicitly asks for a redesign.
+- Performance matters. Avoid UI choices that make scanning, filter changes, or dashboard transitions feel sluggish.
+- For Lisse-style surface work, audit all relevant layers: shared wrappers, CSS-only surfaces, chart containers, export cards, and third-party shells such as Sonner toasts.
+- Do not smooth or round surfaces that are intentionally sharp, especially chart details or comparison elements where that shape is part of the design.
+- Save-as-image behavior is a real product feature. Treat export-card layout, clipping, and share/download behavior as first-class, not cosmetic.
+- Reduced-motion behavior and narrow-width layout are part of the supported experience. Do not assume desktop-only validation is enough.
 
-## Data & Runtime Notes
-1. Aggregated app data is stored locally in `~/.codex-wrapped`.
-2. Current enabled source is Codex (`~/.codex`).
-3. Scans and summaries must remain deterministic and local-only.
-4. Never mutate or delete source session logs in `~/.codex` as part of normal feature/fix work.
-5. CSV import responses are backend-driven; frontend import toasts must preserve backend `message` text (including rejection reasons like overlap/similarity/already-shown outcomes).
-6. Import feedback is shown as popup alerts (`Backup imported` success, `Import rejected` amber/error) and should display again on repeated import attempts, even when the message text is identical.
-7. CSV backup format is stable: do not change import/export schema columns, meanings, or version behavior unless a PRE explicitly defines the migration plan and schema-version strategy.
+## Build, Test, And Verify
+- Use Bun and the repo scripts rather than ad hoc replacements.
+- Default checks after meaningful code edits:
+  - `bun run typecheck`
+  - `bun run lint`
+  - `bun run format:check`
+  - `bun test`
+- Frontend changes must be validated against a fresh build, not stale assets:
+  - `bun run build`
+  - `bun ./bin/cli.ts`
+- Use `bun run dev:hmr` only for active iteration. Before handoff, rebuild and verify the normal live app flow.
+- If a change touches package contents, launcher behavior, or publishable assets, also run `bun pm pack --dry-run`.
 
-## Coding Principles
-1. Prefer small, targeted changes over broad rewrites.
-2. Reuse existing utilities/components before adding new abstractions.
-3. Preserve accessibility and responsive behavior when touching UI.
-4. Treat usage/pricing/date logic as data-integrity-sensitive code; add/adjust tests for regressions.
-5. Keep naming and file organization consistent with existing patterns.
+## Verification Expectations
+- For dashboard UI changes, verify the affected surface in the live local app.
+- For chart or summary changes, verify totals, labels, and rankings stay internally consistent.
+- For import/export work, test:
+  - successful import
+  - duplicate import rejection
+  - no-op or overlap rejection behavior
+  - the exact user-facing success or rejection message
+- For visual/export work, verify:
+  - narrow viewport behavior
+  - chart readability at boundary counts
+  - PNG save flow
+  - reduced-motion behavior when relevant
+- For scan or aggregation work, confirm results remain stable across a refresh and do not corrupt prior local history.
+- If you cannot run a relevant check, say that plainly in the handoff.
 
-## Testing Expectations
-1. Run `bun run typecheck` and relevant tests after code edits; run full `bun test` for cross-cutting changes.
-2. For parsing/pricing/aggregation changes, include or update focused tests in `src/bun/*`.
-3. For frontend formatting/visual logic changes, include or update tests in `src/mainview/*` where practical.
-4. If you cannot run a required check, explicitly call it out in handoff.
+## Packaging And Release Notes
+- This repo publishes a deliberately narrow file set. If you change packaging, confirm the intended files still ship and unwanted files still stay out.
+- Keep `README.md`, CLI behavior, and package contents aligned when commands or launch behavior change.
+- Release-related changes should preserve the distinction between source, built frontend output, and runtime files used by the published package.
 
-## Commit & Release Notes
-1. Use Conventional Commits.
-2. `fix:` triggers patch releases.
-3. `feat:` triggers minor releases.
-4. `feat!:` or `BREAKING CHANGE:` triggers major releases.
-5. `chore:`, `docs:`, `refactor:`, `test:`, `ci:` do not trigger releases.
-6. Releases are published by manually running `.github/workflows/publish.yml`, which uses semantic-release against `main`.
+## Boundaries
+- Do not turn `AGENTS.md` into a second `docs/REPO MAP.md`. Structural indexing belongs in the repo map.
+- Prefer small, targeted changes over broad rewrites unless the task clearly requires a larger refactor.
+- Do not introduce hosted dependencies, telemetry, or background network behavior for core product paths unless explicitly requested.
+- Avoid destructive cleanup of user data, imported backups, or local history unless the user explicitly asks.
 
-## Agent Workflow Notes
-1. Do not validate frontend fixes against stale bundles.
-2. After any frontend tweak, rebuild `dist` (`bun run build`) before checking the UI.
-3. After edits affecting runtime behavior, verify with live local API/UI where possible.
-4. If scan/persistence logic changes, sanity-check `scan` completion and dashboard totals from local endpoints.
-5. Prefer non-destructive operations; do not remove user data or rewrite source logs unless explicitly requested.
-6. For card export changes, validate save/share behavior from the card download button against the live local UI.
-7. For import/export footer changes, validate popup import alert behavior for both success and rejection paths, including repeated identical retries.
-8. Keep the Codex heatmap card static on load/reload (no reveal/count-up intro animation), while preserving existing animations on other cards/charts.
-
-## Regression Guardrails
-1. For scan lifecycle changes, verify start/failure/success all terminate loading state (`scanStarted`/`scanCompleted`) and only one refresh path is active per scan.
-2. For timezone/date changes, add or update tests that cover midnight boundary behavior and fallback code paths (formatter fallback must stay timezone-consistent).
-3. For chart series/count changes, verify color arrays cover the rendered item count and stay visible/unique at boundary indexes (especially top repos and top models).
-4. For session metrics, ensure `scanned` reflects unique ingested sessions, not raw processed candidates, and add tests for duplicate-file scenarios.
-5. For download/export handlers, avoid synchronous object URL revocation immediately after click; use deferred cleanup.
-6. For accessibility settings (`prefers-reduced-motion`), treat media query changes as live updates, not mount-time snapshots.
+## Handoff Expectations
+- Summaries should explain what changed, what was verified, and any remaining risk areas.
+- If a change touched data contracts, import/export, pricing, or time handling, call that out explicitly.
+- If a change likely needs a follow-up rebuild, export check, or manual UI pass, say so clearly.
