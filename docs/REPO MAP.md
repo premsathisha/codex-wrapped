@@ -1,5 +1,5 @@
 # Repo Map
-Last Updated: 2026-06-04
+Last Updated: 2026-06-09
 
 ## Use This Map First
 This file is the canonical repository map for coding agents. Read it before broad scanning or indexing, then freely inspect any files needed to understand the task, verify the map, or investigate missing context.
@@ -20,24 +20,23 @@ Codex Wrapped is a local-first Bun app that scans Codex session logs, normalizes
 - `src/bun/index.ts`: backend server, RPC, SSE, scan orchestration, and static asset serving.
 - `src/mainview/index.ts`: React root mount.
 - `index.html`: Vite HTML shell.
-- Exact commands used by the repo:
-  - `bun install`
-  - `bun ./bin/cli.ts`
-  - `bun run build`
-  - `bun run dev`
-  - `bun run dev:hmr`
-  - `bun run typecheck`
-  - `bun run lint`
-  - `bun run format:check`
-  - `bun run format`
-  - `bun test`
-  - `bun run prepare`
-  - `bun run clean`
-  - `bun pm pack --dry-run`
-  - `bun ./bin/cli.ts --help`
-  - `bun ./bin/cli.ts --version`
-  - `bun ./bin/cli.ts --uninstall`
-  - `PORT=4321 bun ./bin/cli.ts`
+
+## Key Commands
+- Install: `bun install`
+- Run app: `bun ./bin/cli.ts`
+- Build: `bun run build`
+- Standard dev loop: `bun run dev`
+- Hot-reload dev loop: `bun run dev:hmr`
+- Typecheck: `bun run typecheck`
+- Lint: `bun run lint`
+- Format check: `bun run format:check`
+- Format: `bun run format`
+- Tests: `bun test`
+- Prepare hooks/tooling: `bun run prepare`
+- Clean generated output: `bun run clean`
+- Packaging sanity check: `bun pm pack --dry-run`
+- CLI help/version/uninstall: `bun ./bin/cli.ts --help`, `bun ./bin/cli.ts --version`, `bun ./bin/cli.ts --uninstall`
+- Alternate port example: `PORT=4321 bun ./bin/cli.ts`
 
 ## Folder Map
 ### `.`
@@ -417,7 +416,7 @@ Important files:
 | `utils.ts` | Houses small shared utility helpers such as class-name composition, allowing many components to reuse the same low-level behavior without copy-pasting tiny helpers. It is the “common glue” shelf for simple shared frontend utilities. |
 
 ## Architecture Notes
-- Local-first by design: source logs live under `~/.codex` and the materialized dashboard state lives under `~/.codex-wrapped`.
+- Local-first by design: the app reads source session logs from user-local storage and writes its own materialized dashboard state outside the repository.
 - The backend flow is discovery -> parse -> normalize -> aggregate -> persist -> summarize -> serve.
 - `src/bun/index.ts` exposes the local RPC surface and SSE events that the React app consumes through `src/mainview/hooks/useRPC.ts`.
 - Normal app startup serves built assets from `dist`; the dev HMR path uses Vite on port `5173` and points the backend at `VITE_DEV_SERVER_URL`.
@@ -450,16 +449,15 @@ Important files:
 - If port `3210` is occupied, use `PORT=4321 bun ./bin/cli.ts` or another free port during local verification.
 
 ## Known Generated Or External Files
-- `assets/Website.jpeg`: exported screenshot asset, likely regenerated when the UI changes materially.
-- `assets/Website Favicon/*`: exported icon assets, not application logic.
-- `assets/Website Icon (logo on page : header)/*`: branded raster/vector exports, not source-of-truth code.
-- `ThirdPartyNotices.txt`: external attribution file.
-- `LICENSE`: external legal text.
-- `dist/`: generated build output; do not treat it as source.
+- Generated build output, caches, and other ignored local artifacts are intentionally omitted from this map.
+- Exported branding assets may be tracked in the repo, but they should be treated as outputs or design exports rather than core application logic.
+- `ThirdPartyNotices.txt` and `LICENSE` are external/legal surfaces rather than implementation files.
 
 ## Stale Or Unclear Areas
 - `Open Codex Wrapped.command` is macOS-only and should be verified on a Mac if launcher behavior changes.
 - The image assets in `assets/` look export-like rather than hand-authored source art. If branding changes, update the upstream design source first.
+- `Open Codex Wrapped.command`, `bin/cli.ts`, and the README should stay aligned on launch behavior, default URL, and user-facing startup instructions.
+- The grouped command list in this map should stay aligned with `package.json` so public docs do not drift from the repo's actual command surface.
 
 ## How To Update This Map
 1. Update only the affected section.
