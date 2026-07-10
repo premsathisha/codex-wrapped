@@ -33,7 +33,15 @@ describe("computeCost", () => {
 			throw new Error("Remote pricing should not be requested.");
 		}) as unknown as typeof fetch;
 
-		await prefetchPricingForModels(["gpt-5.4", "gpt-5.3-codex", null, ""]);
+		await prefetchPricingForModels([
+			"gpt-5.6-sol",
+			"gpt-5.6-terra",
+			"gpt-5.6-luna",
+			"gpt-5.4",
+			"gpt-5.3-codex",
+			null,
+			"",
+		]);
 
 		expect(fetchCalls).toBe(0);
 	});
@@ -135,6 +143,27 @@ describe("computeCost", () => {
 			(200_000 * 0.5) / 1_000_000; // cache read
 
 		expect(computeCost(usage, "gpt-5.5") ?? 0).toBeCloseTo(expected, 12);
+	});
+
+	test("uses local pricing for the gpt-5.6 family, including cache writes", () => {
+		const usage = {
+			inputTokens: 1_000_000,
+			outputTokens: 500_000,
+			cacheReadTokens: 200_000,
+			cacheWriteTokens: 100_000,
+			reasoningTokens: 0,
+		};
+		const models = [
+			["gpt-5.6-sol", 5, 30, 0.5, 6.25],
+			["gpt-5.6-terra", 2.5, 15, 0.25, 3.125],
+			["gpt-5.6-luna", 1, 6, 0.1, 1.25],
+		] as const;
+
+		for (const [model, input, output, cacheRead, cacheWrite] of models) {
+			const expected = input + output / 2 + cacheRead / 5 + cacheWrite / 10;
+			expect(hasLocalPricing(model)).toBe(true);
+			expect(computeCost(usage, model) ?? 0).toBeCloseTo(expected, 12);
+		}
 	});
 
 	test("uses local pricing for gpt-5.2 and its dated snapshot alias", () => {

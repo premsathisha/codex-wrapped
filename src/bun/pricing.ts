@@ -29,6 +29,9 @@ const FETCH_TIMEOUT_MS = 2_500;
 
 export const PRICING: Record<string, ModelPricing> = {
 	"gpt-5": { inputPer1M: 1.25, outputPer1M: 10, cacheReadPer1M: 0.125, cacheWritePer1M: 0 },
+	"gpt-5.6-sol": { inputPer1M: 5, outputPer1M: 30, cacheReadPer1M: 0.5, cacheWritePer1M: 6.25 },
+	"gpt-5.6-terra": { inputPer1M: 2.5, outputPer1M: 15, cacheReadPer1M: 0.25, cacheWritePer1M: 3.125 },
+	"gpt-5.6-luna": { inputPer1M: 1, outputPer1M: 6, cacheReadPer1M: 0.1, cacheWritePer1M: 1.25 },
 	"gpt-5.2": { inputPer1M: 1.75, outputPer1M: 14, cacheReadPer1M: 0.175, cacheWritePer1M: 0 },
 	"gpt-5.2-codex": { inputPer1M: 1.75, outputPer1M: 14, cacheReadPer1M: 0.175, cacheWritePer1M: 0 },
 	"gpt-5.3-codex": { inputPer1M: 1.75, outputPer1M: 14, cacheReadPer1M: 0.175, cacheWritePer1M: 0 },
