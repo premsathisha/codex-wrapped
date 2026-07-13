@@ -1,6 +1,6 @@
-# Codex Wrapped
+# Codex Wrapped — Local Analytics for OpenAI Codex
 
-Codex Wrapped is a local dashboard that turns your Codex session history into a Spotify Wrapped-style report. It helps you see how often you use Codex, what you work on, which models and repos show up most, and how your activity changes over time. Everything runs locally on your machine, and the app can fall back to built-in pricing data when a model is not available locally.
+Codex Wrapped is a private, local analytics dashboard for OpenAI Codex. It reads your Codex session history and visualizes usage statistics including sessions, tokens, estimated costs, models, repositories, tools, and coding activity over time—a Spotify Wrapped-style report for your coding workflow.
 
 Not affiliated with or endorsed by OpenAI.
 
